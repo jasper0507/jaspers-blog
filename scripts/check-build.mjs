@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 
 const routes = ["", "posts", "shuoshuo", "tags", "archives", "about", "search"];
 const pages = Object.fromEntries(
@@ -11,6 +11,13 @@ const pages = Object.fromEntries(
   ),
 );
 const sitemap = await readFile("dist/sitemap.xml", "utf8");
+const styles = (
+  await Promise.all(
+    (await readdir("dist/_astro"))
+      .filter(file => file.endsWith(".css"))
+      .map(file => readFile(`dist/_astro/${file}`, "utf8")),
+  )
+).join("\n");
 
 for (const [route, html] of Object.entries(pages)) {
   assert.equal(
@@ -31,6 +38,19 @@ assert.match(pages[""], /了了有何不了/);
 assert.match(pages[""], /最近文章/);
 assert.match(pages[""], /最近说说/);
 assert.match(pages[""], /暂无说说/);
+for (const segment of ["115", "117", "118", "119"]) {
+  assert.match(
+    pages[""],
+    new RegExp(`/fonts/noto-serif-sc-${segment}\\.woff2`),
+    `首页应预加载禅语使用的 Noto Serif SC ${segment} 分段`,
+  );
+  await access(`dist/fonts/noto-serif-sc-${segment}.woff2`);
+}
+assert.doesNotMatch(
+  styles,
+  /fonts\.(?:googleapis|gstatic)\.com/,
+  "构建产物不得请求第三方字体服务",
+);
 assert.match(pages[""], /<script type="application\/ld\+json">/);
 assert.match(pages[""], /"@type":"WebSite"/);
 assert.match(pages.about, /Jasper/);

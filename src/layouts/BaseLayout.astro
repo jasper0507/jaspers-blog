@@ -1,4 +1,5 @@
 ---
+import "../styles/fonts.css";
 import "../styles/global.css";
 
 interface PageData {
@@ -38,6 +39,18 @@ const structuredData = JSON.stringify({
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
+    {
+      path === "/" &&
+        ["115", "117", "118", "119"].map(segment => (
+          <link
+            rel="preload"
+            href={`/fonts/noto-serif-sc-${segment}.woff2`}
+            as="font"
+            type="font/woff2"
+            crossorigin
+          />
+        ))
+    }
     <link rel="canonical" href={canonical} />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="zh_CN" />
