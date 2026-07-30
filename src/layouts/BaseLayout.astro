@@ -1,0 +1,263 @@
+---
+import "../styles/global.css";
+
+interface PageData {
+  title?: string;
+  description?: string;
+  pageClass?: string;
+}
+
+interface Props extends PageData {
+  frontmatter?: PageData;
+}
+
+const siteTitle = "Jasper's Blog";
+const pageData = Astro.props.frontmatter ?? Astro.props;
+const title = pageData.title ? `${pageData.title} | ${siteTitle}` : siteTitle;
+const description =
+  pageData.description ?? "Jasper 的个人技术博客，记录技术文章与说说。";
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const path = Astro.url.pathname;
+const inArticles = ["/posts/", "/tags/", "/archives/"].some(prefix =>
+  path.startsWith(prefix),
+);
+const year = new Date().getFullYear();
+const structuredData = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: siteTitle,
+  url: Astro.site,
+  inLanguage: "zh-CN",
+}).replaceAll("<", "\\u003c");
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:site_name" content={siteTitle} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <title>{title}</title>
+    <script type="application/ld+json" set:html={structuredData} is:inline />
+    <script is:inline>
+      (() => {
+        const key = "jasper-theme";
+        const root = document.documentElement;
+
+        try {
+          const saved = localStorage.getItem(key);
+          if (saved === "light" || saved === "dark") root.dataset.theme = saved;
+        } catch (error) {
+          console.warn("无法读取主题设置，将跟随系统主题。", error);
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+          const button = document.querySelector("#theme-toggle");
+          if (!(button instanceof HTMLButtonElement)) return;
+
+          const currentTheme = () =>
+            root.dataset.theme ??
+            (matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light");
+
+          const updateButton = () => {
+            const current = currentTheme();
+            const label =
+              current === "dark" ? "切换至亮色主题" : "切换至暗色主题";
+            button.dataset.theme = current;
+            button.setAttribute("aria-label", label);
+            button.title = label;
+          };
+
+          button.addEventListener("click", () => {
+            const next = currentTheme() === "dark" ? "light" : "dark";
+            root.dataset.theme = next;
+            try {
+              localStorage.setItem(key, next);
+            } catch (error) {
+              console.warn("无法保存主题设置。", error);
+            }
+            updateButton();
+          });
+
+          matchMedia("(prefers-color-scheme: dark)").addEventListener(
+            "change",
+            updateButton,
+          );
+          updateButton();
+
+          const menu = document.querySelector("#article-menu");
+          const trigger = document.querySelector("#article-menu-trigger");
+          if (
+            !(menu instanceof HTMLDivElement) ||
+            !(trigger instanceof HTMLButtonElement)
+          )
+            return;
+
+          const setExpanded = expanded =>
+            trigger.setAttribute("aria-expanded", String(expanded));
+          const closeMenu = dismissed => {
+            delete menu.dataset.open;
+            setExpanded(false);
+            if (dismissed) menu.dataset.dismissed = "";
+          };
+
+          trigger.addEventListener("click", () => {
+            const open = menu.dataset.open === undefined;
+            menu.toggleAttribute("data-open", open);
+            delete menu.dataset.dismissed;
+            setExpanded(open);
+          });
+          menu.addEventListener("focusin", () => {
+            delete menu.dataset.dismissed;
+            setExpanded(true);
+          });
+          menu.addEventListener("focusout", event => {
+            if (
+              !(event.relatedTarget instanceof Node) ||
+              !menu.contains(event.relatedTarget)
+            ) {
+              if (menu.dataset.open === undefined) setExpanded(false);
+              delete menu.dataset.dismissed;
+            }
+          });
+          menu.addEventListener(
+            "pointerleave",
+            () => delete menu.dataset.dismissed,
+          );
+          document.addEventListener("click", event => {
+            if (event.target instanceof Node && !menu.contains(event.target)) {
+              closeMenu(true);
+            }
+          });
+          document.addEventListener("keydown", event => {
+            if (
+              event.key === "Escape" &&
+              (menu.dataset.open !== undefined ||
+                menu.matches(":focus-within"))
+            ) {
+              trigger.focus();
+              closeMenu(true);
+            }
+          });
+        });
+      })();
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="/" aria-label="Jasper 首页">Jasper</a>
+        <nav aria-label="主导航">
+          <ul class="nav-list">
+            <li>
+              <div class="article-menu" id="article-menu">
+                <button
+                  id="article-menu-trigger"
+                  type="button"
+                  aria-expanded="false"
+                  aria-controls="article-menu-list"
+                  data-active={inArticles || undefined}
+                >
+                  文章
+                  <svg viewBox="0 0 12 12" aria-hidden="true">
+                    <path d="m2.5 4 3.5 3.5L9.5 4"></path>
+                  </svg>
+                </button>
+                <ul class="article-menu-list" id="article-menu-list">
+                  <li>
+                    <a
+                      href="/posts/"
+                      aria-current={path.startsWith("/posts/") ? "page" : undefined}
+                    >
+                      全部文章
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/tags/"
+                      aria-current={path.startsWith("/tags/") ? "page" : undefined}
+                    >
+                      标签
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/archives/"
+                      aria-current={path.startsWith("/archives/") ? "page" : undefined}
+                    >
+                      归档
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </li>
+            <li>
+              <a
+                href="/shuoshuo/"
+                aria-current={path.startsWith("/shuoshuo/") ? "page" : undefined}
+              >
+                说说
+              </a>
+            </li>
+            <li>
+              <a
+                href="/about/"
+                aria-current={path.startsWith("/about/") ? "page" : undefined}
+              >
+                关于
+              </a>
+            </li>
+            <li>
+              <a
+                href="/search/"
+                aria-current={path.startsWith("/search/") ? "page" : undefined}
+              >
+                搜索
+              </a>
+            </li>
+          </ul>
+        </nav>
+        <button
+          class="theme-toggle"
+          id="theme-toggle"
+          type="button"
+          aria-label="切换主题"
+          title="切换主题"
+        >
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.5"></circle>
+            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+          </svg>
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20.4 15.4A8.5 8.5 0 0 1 8.6 3.6 8.5 8.5 0 1 0 20.4 15.4Z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+    <main id="main-content" class={pageData.pageClass}>
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <p>© {year} Jasper. 保留所有权利。</p>
+        <ul aria-label="联系方式">
+          <li><a href="https://github.com/jasper0507">GitHub</a></li>
+          <li>
+            <a href="mailto:jasper0507.self@gmail.com">邮箱</a>
+          </li>
+        </ul>
+      </div>
+    </footer>
+  </body>
+</html>
