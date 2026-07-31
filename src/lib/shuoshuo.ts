@@ -21,10 +21,7 @@ export async function getPublishedShuoshuo() {
 
   return entries
     .filter(isPublished)
-    .sort(
-      (left, right) =>
-        right.data.publishedAt.getTime() - left.data.publishedAt.getTime(),
-    );
+    .sort((left, right) => right.data.publishedAt.getTime() - left.data.publishedAt.getTime());
 }
 
 export function formatShuoshuoDate(date: Date) {

@@ -14,20 +14,20 @@
 
 ## 永久短名
 
-| 原文件 | 新文件名 |
-| --- | --- |
-| `零基础利用Github、Hexo搭建个人博客-超详细版.md` | `github-hexo-blog-guide.md` |
-| `LoRA-FAIR论文精读.md` | `lora-fair-paper-notes.md` |
-| `Go语言笔记-长期更新.md` | `go-notes.md` |
-| `git新手入门参考.md` | `git-beginner-guide.md` |
-| `Gin笔记-长期更新.md` | `gin-notes.md` |
-| `FedRD论文精读.md` | `fedrd-paper-notes.md` |
-| `DSFedMed论文精读.md` | `dsfedmed-paper-notes.md` |
-| `DEeR论文精读.md` | `deer-paper-notes.md` |
-| `如何新增博客内容？.md` | `hexo-icarus-content-guide.md` |
-| `Transformer论文逐段精读.md` | `transformer-paper-notes.md` |
-| `Markdown快速上手语法.md` | `markdown-quick-start.md` |
-| `新手安装Docker教程（Windows11-WSL2）.md` | `docker-on-windows-wsl2.md` |
-| `数据结构与算法-长期更新.md` | `data-structures-and-algorithms.md` |
-| `深度学习笔记.md` | `deep-learning-notes.md` |
-| `计算机网络笔记.md` | `computer-networks-notes.md` |
+| 原文件                                           | 新文件名                            |
+| ------------------------------------------------ | ----------------------------------- |
+| `零基础利用Github、Hexo搭建个人博客-超详细版.md` | `github-hexo-blog-guide.md`         |
+| `LoRA-FAIR论文精读.md`                           | `lora-fair-paper-notes.md`          |
+| `Go语言笔记-长期更新.md`                         | `go-notes.md`                       |
+| `git新手入门参考.md`                             | `git-beginner-guide.md`             |
+| `Gin笔记-长期更新.md`                            | `gin-notes.md`                      |
+| `FedRD论文精读.md`                               | `fedrd-paper-notes.md`              |
+| `DSFedMed论文精读.md`                            | `dsfedmed-paper-notes.md`           |
+| `DEeR论文精读.md`                                | `deer-paper-notes.md`               |
+| `如何新增博客内容？.md`                          | `hexo-icarus-content-guide.md`      |
+| `Transformer论文逐段精读.md`                     | `transformer-paper-notes.md`        |
+| `Markdown快速上手语法.md`                        | `markdown-quick-start.md`           |
+| `新手安装Docker教程（Windows11-WSL2）.md`        | `docker-on-windows-wsl2.md`         |
+| `数据结构与算法-长期更新.md`                     | `data-structures-and-algorithms.md` |
+| `深度学习笔记.md`                                | `deep-learning-notes.md`            |
+| `计算机网络笔记.md`                              | `computer-networks-notes.md`        |

@@ -1,11 +1,7 @@
 ---
 import { render } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import {
-  formatShuoshuoDate,
-  getPublishedShuoshuo,
-  getShuoshuoLabel,
-} from "../../lib/shuoshuo";
+import { formatShuoshuoDate, getPublishedShuoshuo, getShuoshuoLabel } from "../../lib/shuoshuo";
 
 const shuoshuo = await Promise.all(
   (await getPublishedShuoshuo()).map(async entry => ({
@@ -15,11 +11,7 @@ const shuoshuo = await Promise.all(
 );
 ---
 
-<BaseLayout
-  title="说说"
-  description="Jasper 发布的轻量文字与照片内容。"
-  pageClass="page-shell"
->
+<BaseLayout title="说说" description="Jasper 发布的轻量文字与照片内容。" pageClass="page-shell">
   <section class="page-intro" aria-labelledby="shuoshuo-title">
     <h1 id="shuoshuo-title">说说</h1>
     <p>{shuoshuo.length ? "轻量文字与照片。" : "暂无说说"}</p>
@@ -34,12 +26,10 @@ const shuoshuo = await Promise.all(
           return (
             <li>
               <article aria-label={label} data-pagefind-body>
-                <h2 class="sr-only" id={entry.id}>{label}</h2>
-                <a
-                  class="shuoshuo-anchor"
-                  href={`#${entry.id}`}
-                  aria-label={`${label}的永久链接`}
-                >
+                <h2 class="sr-only" id={entry.id}>
+                  {label}
+                </h2>
+                <a class="shuoshuo-anchor" href={`#${entry.id}`} aria-label={`${label}的永久链接`}>
                   <time datetime={entry.data.publishedAt.toISOString()}>
                     {formatShuoshuoDate(entry.data.publishedAt)}
                   </time>

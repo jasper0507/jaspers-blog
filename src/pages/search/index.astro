@@ -3,16 +3,12 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getPublishedPosts } from "../../lib/posts";
 import { getPublishedShuoshuo } from "../../lib/shuoshuo";
 
-const hasPublishedContent = (
-  await Promise.all([getPublishedPosts(), getPublishedShuoshuo()])
-).some(entries => entries.length > 0);
+const hasPublishedContent = (await Promise.all([getPublishedPosts(), getPublishedShuoshuo()])).some(
+  entries => entries.length > 0,
+);
 ---
 
-<BaseLayout
-  title="搜索"
-  description="搜索 Jasper 的技术文章与说说。"
-  pageClass="page-shell"
->
+<BaseLayout title="搜索" description="搜索 Jasper 的技术文章与说说。" pageClass="page-shell">
   <Fragment slot="head">
     <link rel="stylesheet" href="/pagefind/pagefind-component-ui.css" />
   </Fragment>
@@ -20,15 +16,15 @@ const hasPublishedContent = (
     <h1>搜索</h1>
     <p>统一检索技术文章与说说。</p>
   </section>
+  {/* ponytail: 当前索引很小；内容规模明显增长时再恢复 Worker。 */}
+  <pagefind-config no-worker lang="zh-cn"></pagefind-config>
   <pagefind-searchbox show-sub-results></pagefind-searchbox>
   {
     !hasPublishedContent && (
-      <p class="empty-state" data-pagefind-body>暂无可搜索内容。</p>
+      <p class="empty-state" data-pagefind-body>
+        暂无可搜索内容。
+      </p>
     )
   }
-  <script
-    is:inline
-    type="module"
-    src="/pagefind/pagefind-component-ui.js"
-  ></script>
+  <script is:inline type="module" src="/pagefind/pagefind-component-ui.js"></script>
 </BaseLayout>

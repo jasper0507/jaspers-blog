@@ -6,10 +6,7 @@ import { escapeXml } from "../lib/xml";
 export const GET: APIRoute = async ({ site }) => {
   if (!site) throw new Error("缺少站点地址，无法生成 RSS。");
 
-  const [posts, shuoshuo] = await Promise.all([
-    getPublishedPosts(),
-    getPublishedShuoshuo(),
-  ]);
+  const [posts, shuoshuo] = await Promise.all([getPublishedPosts(), getPublishedShuoshuo()]);
   const items = [
     ...posts.map(post => ({
       title: post.data.title,
@@ -23,10 +20,7 @@ export const GET: APIRoute = async ({ site }) => {
       publishedAt: entry.data.publishedAt,
       path: `/shuoshuo/#${entry.id}`,
     })),
-  ].sort(
-    (left, right) =>
-      right.publishedAt.getTime() - left.publishedAt.getTime(),
-  );
+  ].sort((left, right) => right.publishedAt.getTime() - left.publishedAt.getTime());
 
   const channelUrl = new URL("/rss.xml", site).href;
   const itemXml = items

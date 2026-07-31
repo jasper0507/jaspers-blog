@@ -53,9 +53,7 @@ const kraftPaperTheme = {
 const transformerCodeTitle = {
   name: "kraft-code-title",
   pre(node) {
-    const title = this.options.meta?.__raw?.match(
-      /(?:^|\s)title=["']([^"']+)["']/,
-    )?.[1];
+    const title = this.options.meta?.__raw?.match(/(?:^|\s)title=["']([^"']+)["']/)?.[1];
     if (title) node.properties["data-title"] = title;
   },
 };

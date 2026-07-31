@@ -3,15 +3,7 @@ import { getPublishedPosts, POSTS_PER_PAGE } from "../lib/posts";
 import { getTagSlug } from "../lib/tags";
 import { escapeXml } from "../lib/xml";
 
-const staticRoutes = [
-  "/",
-  "/posts/",
-  "/shuoshuo/",
-  "/tags/",
-  "/archives/",
-  "/about/",
-  "/search/",
-];
+const staticRoutes = ["/", "/posts/", "/shuoshuo/", "/tags/", "/archives/", "/about/", "/search/"];
 
 export const GET: APIRoute = async ({ site }) => {
   if (!site) throw new Error("缺少站点地址，无法生成 sitemap。");
@@ -22,14 +14,12 @@ export const GET: APIRoute = async ({ site }) => {
     (_, index) => `/posts/${index + 2}/`,
   );
   const postRoutes = posts.map(post => `/posts/${post.id}/`);
-  const tagRoutes = [
-    ...new Set(posts.flatMap(post => post.data.tags.map(getTagSlug))),
-  ].map(slug => `/tags/${slug}/`);
+  const tagRoutes = [...new Set(posts.flatMap(post => post.data.tags.map(getTagSlug)))].map(
+    slug => `/tags/${slug}/`,
+  );
   const routes = [...staticRoutes, ...pageRoutes, ...postRoutes, ...tagRoutes];
   const urls = routes
-    .map(
-      route => `<url><loc>${escapeXml(new URL(route, site).href)}</loc></url>`,
-    )
+    .map(route => `<url><loc>${escapeXml(new URL(route, site).href)}</loc></url>`)
     .join("");
 
   return new Response(

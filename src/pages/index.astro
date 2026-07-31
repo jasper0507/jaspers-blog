@@ -2,16 +2,11 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { render } from "astro:content";
 import { formatPostDate, getPublishedPosts } from "../lib/posts";
-import {
-  getPublishedShuoshuo,
-  getShuoshuoLabel,
-} from "../lib/shuoshuo";
+import { getPublishedShuoshuo, getShuoshuoLabel } from "../lib/shuoshuo";
 
 const [latestPost] = await getPublishedPosts();
 const [latestShuoshuo] = await getPublishedShuoshuo();
-const LatestShuoshuoContent = latestShuoshuo
-  ? (await render(latestShuoshuo)).Content
-  : undefined;
+const LatestShuoshuoContent = latestShuoshuo ? (await render(latestShuoshuo)).Content : undefined;
 ---
 
 <BaseLayout pageClass="home">
@@ -59,9 +54,7 @@ const LatestShuoshuoContent = latestShuoshuo
               class="shuoshuo-preview"
               aria-label={getShuoshuoLabel(latestShuoshuo.data.publishedAt)}
             >
-              <div
-                class="post-body shuoshuo-body shuoshuo-summary"
-              >
+              <div class="post-body shuoshuo-body shuoshuo-summary">
                 <LatestShuoshuoContent />
               </div>
               <a href={`/shuoshuo/#${latestShuoshuo.id}`}>

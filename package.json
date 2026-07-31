@@ -8,6 +8,8 @@
   },
   "scripts": {
     "dev": "astro dev",
+    "format": "prettier --write \"src/**/*.{astro,js,ts}\" \"src/styles/global.css\" \"scripts/**/*.mjs\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
+    "format:check": "prettier --check \"src/**/*.{astro,js,ts}\" \"src/styles/global.css\" \"scripts/**/*.mjs\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
     "check": "astro check",
     "build": "astro build && pagefind --site dist",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
@@ -16,7 +18,7 @@
     "test:shuoshuo:command": "node scripts/check-new-shuoshuo.mjs",
     "test:shuoshuo": "node scripts/check-shuoshuo.mjs",
     "test:visual": "npm run build && node scripts/check-visual.mjs",
-    "test": "npm run check && npm run test:migration && npm run test:shuoshuo:command && npm run build && npm run test:dist && npm run test:shuoshuo"
+    "test": "npm run format:check && npm run check && npm run test:migration && npm run test:shuoshuo:command && npm run build && npm run test:dist && node scripts/check-visual.mjs && npm run test:shuoshuo"
   },
   "dependencies": {
     "astro": "7.1.6"
@@ -29,9 +31,18 @@
     "katex": "0.18.1",
     "pagefind": "1.5.2",
     "playwright-core": "1.61.1",
+    "prettier": "3.9.6",
+    "prettier-plugin-astro": "0.14.1",
     "rehype-katex": "7.0.1",
     "remark-github-blockquote-alert": "2.1.0",
     "remark-math": "6.0.0",
     "typescript": "6.0.3"
+  },
+  "prettier": {
+    "arrowParens": "avoid",
+    "printWidth": 100,
+    "plugins": [
+      "prettier-plugin-astro"
+    ]
   }
 }

@@ -136,14 +136,11 @@ function unquote(value) {
 }
 
 export function normalizeShanghaiDate(value) {
-  const match = value.match(
-    /^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{2}):(\d{2}):(\d{2})$/,
-  );
+  const match = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{2}):(\d{2}):(\d{2})$/);
   if (!match) throw new Error(`无法解析旧文章时间：${value}`);
   const [, year, month, day, hour, minute, second] = match;
   const numbers = [month, day, hour, minute, second].map(Number);
-  const [monthNumber, dayNumber, hourNumber, minuteNumber, secondNumber] =
-    numbers;
+  const [monthNumber, dayNumber, hourNumber, minuteNumber, secondNumber] = numbers;
   const daysInMonth = new Date(Date.UTC(Number(year), monthNumber, 0)).getUTCDate();
   if (
     monthNumber < 1 ||
@@ -234,9 +231,7 @@ export function transformLegacyBody(body, title, migration) {
       else if (
         sequence[0] === fence.character &&
         sequence.length >= fence.length &&
-        new RegExp(`^ {0,3}${fence.character}{${fence.length},}[ \\t]*$`).test(
-          line,
-        )
+        new RegExp(`^ {0,3}${fence.character}{${fence.length},}[ \\t]*$`).test(line)
       ) {
         fence = undefined;
       }
@@ -256,9 +251,7 @@ export function transformLegacyBody(body, title, migration) {
         `<h6 role="heading" aria-level="7" id="${migration.slug}-depth-7-${escapeHtml(slug)}">${escapeHtml(headingText(heading[4]))}</h6>`,
       ];
     }
-    return [
-      `${heading[1]}${"#".repeat(heading[2].length + 1)}${heading[3]}${heading[4]}`,
-    ];
+    return [`${heading[1]}${"#".repeat(heading[2].length + 1)}${heading[3]}${heading[4]}`];
   });
 
   let transformed = lines.join("\n");
@@ -293,13 +286,8 @@ async function main() {
   const sourceDir = process.argv[2];
   if (!sourceDir) throw new Error("用法：node scripts/migrate-hexo.mjs <旧 Hexo _posts 目录>");
 
-  const expectedSources = [
-    ...POST_MIGRATIONS.map(({ source }) => source),
-    "hello-world.md",
-  ].sort();
-  const actualSources = (await readdir(sourceDir))
-    .filter(file => file.endsWith(".md"))
-    .sort();
+  const expectedSources = [...POST_MIGRATIONS.map(({ source }) => source), "hello-world.md"].sort();
+  const actualSources = (await readdir(sourceDir)).filter(file => file.endsWith(".md")).sort();
   if (JSON.stringify(actualSources) !== JSON.stringify(expectedSources)) {
     throw new Error("旧 Hexo 文章清单与已确认的 15 篇迁移映射不一致");
   }
@@ -321,11 +309,7 @@ async function main() {
   }
 
   for (const asset of LEGACY_ASSETS) {
-    const targetDir = path.join(
-      projectRoot,
-      "public/images/posts",
-      asset.post,
-    );
+    const targetDir = path.join(projectRoot, "public/images/posts", asset.post);
     await mkdir(targetDir, { recursive: true });
     await copyFile(
       path.join(sourceDir, asset.sourceDir, asset.source),

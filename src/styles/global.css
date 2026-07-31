@@ -18,13 +18,9 @@
   --shell-width: 70rem;
   --gutter: 2rem;
   --font-serif:
-    "Source Serif 4", "Noto Serif SC", Georgia, "Songti SC",
-    "Source Han Serif SC", serif;
-  --font-sans:
-    "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
-    sans-serif;
-  --font-mono:
-    "IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    "Source Serif 4", "Noto Serif SC", Georgia, "Songti SC", "Source Han Serif SC", serif;
+  --font-sans: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 html[data-theme="light"] {

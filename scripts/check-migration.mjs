@@ -2,11 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import {
-  migrateLegacyPost,
-  parseLegacyPost,
-  POST_MIGRATIONS,
-} from "./migrate-hexo.mjs";
+import { migrateLegacyPost, parseLegacyPost, POST_MIGRATIONS } from "./migrate-hexo.mjs";
 
 const legacy = `---
 # 旧主题注释
@@ -52,33 +48,21 @@ assert.match(
   migrated,
   /<h6 role="heading" aria-level="7" id="github-hexo-blog-guide-depth-7-边界标题">边界标题<\/h6>/,
 );
-assert.match(
-  migrated,
-  /\/images\/posts\/github-hexo-blog-guide\/theme-installation-example\.jpg/,
-);
-assert.match(
-  migrated,
-  /https:\/\/blog\.jasper0507\.cc\.cd\/posts\/hexo-icarus-content-guide\//,
-);
+assert.match(migrated, /\/images\/posts\/github-hexo-blog-guide\/theme-installation-example\.jpg/);
+assert.match(migrated, /https:\/\/blog\.jasper0507\.cc\.cd\/posts\/hexo-icarus-content-guide\//);
 
 assert.throws(
   () => parseLegacyPost(legacy.replace("date: 2026-1-2", "date: 2026-2-30")),
   /无法解析旧文章时间/,
 );
 assert.throws(
-  () =>
-    parseLegacyPost(
-      legacy.replace("tags:\n  - 联邦学习\n  - Go", "tags: Go"),
-    ),
+  () => parseLegacyPost(legacy.replace("tags:\n  - 联邦学习\n  - Go", "tags: Go")),
   /tags 必须是非空列表/,
 );
 
 if (process.env.LEGACY_HEXO_DIR) {
   for (const migration of POST_MIGRATIONS) {
-    const source = await readFile(
-      path.join(process.env.LEGACY_HEXO_DIR, migration.source),
-      "utf8",
-    );
+    const source = await readFile(path.join(process.env.LEGACY_HEXO_DIR, migration.source), "utf8");
     assert.equal(
       createHash("sha256").update(source).digest("hex"),
       migration.sourceSha256,

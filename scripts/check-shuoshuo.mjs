@@ -19,32 +19,23 @@ const fixtureEnvironment = {
   SHUOSHUO_CONTENT_DIR: "./tests/fixtures/shuoshuo",
 };
 const buildSearchFixture = async (directory, environment) => {
-  await execFileAsync(
-    process.execPath,
-    [astro, "build", "--force", "--outDir", directory],
-    { cwd: root, env: environment },
-  );
+  await execFileAsync(process.execPath, [astro, "build", "--force", "--outDir", directory], {
+    cwd: root,
+    env: environment,
+  });
   await execFileAsync(pagefind, ["--site", directory], { cwd: root });
 };
 const getIndexedPageCount = async directory =>
   Object.values(
-    JSON.parse(
-      await readFile(join(directory, "pagefind/pagefind-entry.json"), "utf8"),
-    ).languages,
+    JSON.parse(await readFile(join(directory, "pagefind/pagefind-entry.json"), "utf8")).languages,
   ).reduce((sum, language) => sum + language.page_count, 0);
 
 try {
-  await Promise.all([
-    mkdir(emptyPostsDirectory),
-    mkdir(emptyShuoshuoDirectory),
-  ]);
+  await Promise.all([mkdir(emptyPostsDirectory), mkdir(emptyShuoshuoDirectory)]);
   await buildSearchFixture(outDir, fixtureEnvironment);
 
   const home = await readFile(join(outDir, "index.html"), "utf8");
-  const timeline = await readFile(
-    join(outDir, "shuoshuo/index.html"),
-    "utf8",
-  );
+  const timeline = await readFile(join(outDir, "shuoshuo/index.html"), "utf8");
   const rss = await readFile(join(outDir, "rss.xml"), "utf8");
   const searchIndex = JSON.parse(
     await readFile(join(outDir, "pagefind/pagefind-entry.json"), "utf8"),
@@ -88,31 +79,22 @@ try {
   assert.doesNotMatch(rss, /这是一条不应公开的草稿/);
 
   const shuoshuoOnlyOutDir = join(temporaryDirectory, "shuoshuo-only-dist");
-  await buildSearchFixture(
-    shuoshuoOnlyOutDir,
-    { ...fixtureEnvironment, POST_CONTENT_DIR: emptyPostsDirectory },
-  );
-  const shuoshuoOnlyRss = await readFile(
-    join(shuoshuoOnlyOutDir, "rss.xml"),
-    "utf8",
-  );
+  await buildSearchFixture(shuoshuoOnlyOutDir, {
+    ...fixtureEnvironment,
+    POST_CONTENT_DIR: emptyPostsDirectory,
+  });
+  const shuoshuoOnlyRss = await readFile(join(shuoshuoOnlyOutDir, "rss.xml"), "utf8");
   assert.equal((shuoshuoOnlyRss.match(/<item>/g) ?? []).length, 2);
   assert.doesNotMatch(shuoshuoOnlyRss, /Markdown快速上手语法/);
   assert.equal(await getIndexedPageCount(shuoshuoOnlyOutDir), 1);
 
   const emptyOutDir = join(temporaryDirectory, "empty-dist");
-  await buildSearchFixture(
-    emptyOutDir,
-    {
-      ...process.env,
-      POST_CONTENT_DIR: emptyPostsDirectory,
-      SHUOSHUO_CONTENT_DIR: emptyShuoshuoDirectory,
-    },
-  );
-  assert.doesNotMatch(
-    await readFile(join(emptyOutDir, "rss.xml"), "utf8"),
-    /<item>/,
-  );
+  await buildSearchFixture(emptyOutDir, {
+    ...process.env,
+    POST_CONTENT_DIR: emptyPostsDirectory,
+    SHUOSHUO_CONTENT_DIR: emptyShuoshuoDirectory,
+  });
+  assert.doesNotMatch(await readFile(join(emptyOutDir, "rss.xml"), "utf8"), /<item>/);
   assert.equal(await getIndexedPageCount(emptyOutDir), 1);
 
   const styles = (
@@ -128,10 +110,7 @@ try {
     const searchPage = await browser.newPage();
     await searchPage.route("http://pagefind.test/**", async route => {
       const pathname = new URL(route.request().url()).pathname;
-      const target = resolve(
-        outDir,
-        `.${pathname === "/" ? "/index.html" : pathname}`,
-      );
+      const target = resolve(outDir, `.${pathname === "/" ? "/index.html" : pathname}`);
       assert.ok(target.startsWith(`${outDir}/`));
       await route.fulfill({ path: target });
     });
@@ -140,9 +119,7 @@ try {
       const pagefind = await import("/pagefind/pagefind.js");
       await pagefind.options({ noWorker: true });
       const search = async term =>
-        Promise.all(
-          (await pagefind.search(term)).results.map(result => result.data()),
-        );
+        Promise.all((await pagefind.search(term)).results.map(result => result.data()));
       return {
         post: await search("Markdown快速上手语法"),
         shuoshuo: await search("这是发布时间最新的公开说说"),
@@ -150,9 +127,7 @@ try {
       };
     });
     assert.ok(
-      searchResults.post.some(
-        result => result.url === "/posts/markdown-quick-start/",
-      ),
+      searchResults.post.some(result => result.url === "/posts/markdown-quick-start/"),
       "搜索应链接到技术文章永久链接",
     );
     assert.ok(
@@ -160,18 +135,20 @@ try {
         .flatMap(result => result.sub_results)
         .some(
           result =>
-            result.title === "说说 · 2026年2月3日 09:30" &&
-            result.url === `/shuoshuo/#${stableId}`,
+            result.title === "说说 · 2026年2月3日 09:30" && result.url === `/shuoshuo/#${stableId}`,
         ),
       "搜索应使用机器标签并链接到说说稳定锚点",
     );
     assert.equal(searchResults.draft.length, 0, "搜索不得收录说说草稿");
     await searchPage.close();
 
-    const homeScript = [...home.matchAll(/<script>([\s\S]*?)<\/script>/g)]
-      .find(([, source]) => source.includes("shuoshuo-summary"));
+    const homeScript = [...home.matchAll(/<script>([\s\S]*?)<\/script>/g)].find(([, source]) =>
+      source.includes("shuoshuo-summary"),
+    );
     assert.ok(homeScript, "首页摘要增强脚本应内联");
-    const homePage = await browser.newPage({ viewport: { width: 320, height: 800 } });
+    const homePage = await browser.newPage({
+      viewport: { width: 320, height: 800 },
+    });
     await homePage.route("https://example.com/**", route => route.abort());
     await homePage.setContent(home.replace(homeScript[0], ""));
     await homePage.addStyleTag({ content: styles });
@@ -188,15 +165,14 @@ try {
     );
     await homeSummary.locator("a").focus();
     assert.equal(
-      await homeSummary.locator("a").evaluate(
-        element => element === document.activeElement,
-      ),
+      await homeSummary.locator("a").evaluate(element => element === document.activeElement),
       false,
     );
     await homePage.close();
 
-    const inlineScript = [...timeline.matchAll(/<script>([\s\S]*?)<\/script>/g)]
-      .find(([, source]) => source.includes("data-shuoshuo-toggle"));
+    const inlineScript = [...timeline.matchAll(/<script>([\s\S]*?)<\/script>/g)].find(
+      ([, source]) => source.includes("data-shuoshuo-toggle"),
+    );
     assert.ok(inlineScript, "说说展开脚本应内联到时间流页面");
     const pageMarkup = timeline.replace(inlineScript[0], "");
 
@@ -208,14 +184,9 @@ try {
       });
       await page.addStyleTag({ content: styles });
       await page.addScriptTag({ content: inlineScript[1] });
-      await page.evaluate(
-        id => history.replaceState(null, "", `#${id}`),
-        stableId,
-      );
+      await page.evaluate(id => history.replaceState(null, "", `#${id}`), stableId);
       const toggle = page.locator(`[data-shuoshuo-toggle="${stableId}"]`);
-      const body = page.locator(
-        `article:has([id="${stableId}"]) .shuoshuo-body`,
-      );
+      const body = page.locator(`article:has([id="${stableId}"]) .shuoshuo-body`);
       const hiddenLink = body.locator("a");
 
       assert.equal(
@@ -226,24 +197,14 @@ try {
       assert.equal(await toggle.getAttribute("aria-expanded"), "false");
       assert.equal(await body.getAttribute("inert"), "");
       await hiddenLink.focus();
-      assert.equal(
-        await hiddenLink.evaluate(
-          element => element === document.activeElement,
-        ),
-        false,
-      );
+      assert.equal(await hiddenLink.evaluate(element => element === document.activeElement), false);
       await toggle.focus();
       await page.keyboard.press("Enter");
       assert.equal(await toggle.getAttribute("aria-expanded"), "true");
       assert.equal(await body.getAttribute("data-collapsed"), null);
       assert.equal(await body.getAttribute("inert"), null);
       await hiddenLink.focus();
-      assert.equal(
-        await hiddenLink.evaluate(
-          element => element === document.activeElement,
-        ),
-        true,
-      );
+      assert.equal(await hiddenLink.evaluate(element => element === document.activeElement), true);
       await toggle.focus();
       assert.equal(await toggle.textContent(), "收起");
       await page.keyboard.press("Space");
@@ -258,13 +219,7 @@ try {
 } finally {
   await execFileAsync(
     process.execPath,
-    [
-      astro,
-      "build",
-      "--force",
-      "--outDir",
-      join(temporaryDirectory, "production-dist"),
-    ],
+    [astro, "build", "--force", "--outDir", join(temporaryDirectory, "production-dist")],
     {
       cwd: root,
       env: {

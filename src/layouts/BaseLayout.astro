@@ -17,13 +17,10 @@ interface Props extends PageData {
 const siteTitle = "Jasper's Blog";
 const pageData = Astro.props.frontmatter ?? Astro.props;
 const title = pageData.title ? `${pageData.title} | ${siteTitle}` : siteTitle;
-const description =
-  pageData.description ?? "Jasper 的个人技术博客，记录技术文章与说说。";
+const description = pageData.description ?? "Jasper 的个人技术博客，记录技术文章与说说。";
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const path = Astro.url.pathname;
-const inArticles = ["/posts/", "/tags/", "/archives/"].some(prefix =>
-  path.startsWith(prefix),
-);
+const inArticles = ["/posts/", "/tags/", "/archives/"].some(prefix => path.startsWith(prefix));
 const year = new Date().getFullYear();
 const structuredData = JSON.stringify(
   pageData.structuredData ??
@@ -93,14 +90,11 @@ const structuredData = JSON.stringify(
 
           const currentTheme = () =>
             root.dataset.theme ??
-            (matchMedia("(prefers-color-scheme: dark)").matches
-              ? "dark"
-              : "light");
+            (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 
           const updateButton = () => {
             const current = currentTheme();
-            const label =
-              current === "dark" ? "切换至亮色主题" : "切换至暗色主题";
+            const label = current === "dark" ? "切换至亮色主题" : "切换至暗色主题";
             button.dataset.theme = current;
             button.setAttribute("aria-label", label);
             button.title = label;
@@ -117,22 +111,14 @@ const structuredData = JSON.stringify(
             updateButton();
           });
 
-          matchMedia("(prefers-color-scheme: dark)").addEventListener(
-            "change",
-            updateButton,
-          );
+          matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateButton);
           updateButton();
 
           const menu = document.querySelector("#article-menu");
           const trigger = document.querySelector("#article-menu-trigger");
-          if (
-            !(menu instanceof HTMLDivElement) ||
-            !(trigger instanceof HTMLButtonElement)
-          )
-            return;
+          if (!(menu instanceof HTMLDivElement) || !(trigger instanceof HTMLButtonElement)) return;
 
-          const setExpanded = expanded =>
-            trigger.setAttribute("aria-expanded", String(expanded));
+          const setExpanded = expanded => trigger.setAttribute("aria-expanded", String(expanded));
           const closeMenu = dismissed => {
             delete menu.dataset.open;
             setExpanded(false);
@@ -151,18 +137,12 @@ const structuredData = JSON.stringify(
             setExpanded(true);
           });
           menu.addEventListener("focusout", event => {
-            if (
-              !(event.relatedTarget instanceof Node) ||
-              !menu.contains(event.relatedTarget)
-            ) {
+            if (!(event.relatedTarget instanceof Node) || !menu.contains(event.relatedTarget)) {
               if (menu.dataset.open === undefined) setExpanded(false);
               delete menu.dataset.dismissed;
             }
           });
-          menu.addEventListener(
-            "pointerleave",
-            () => delete menu.dataset.dismissed,
-          );
+          menu.addEventListener("pointerleave", () => delete menu.dataset.dismissed);
           document.addEventListener("click", event => {
             if (event.target instanceof Node && !menu.contains(event.target)) {
               closeMenu(true);
@@ -171,8 +151,7 @@ const structuredData = JSON.stringify(
           document.addEventListener("keydown", event => {
             if (
               event.key === "Escape" &&
-              (menu.dataset.open !== undefined ||
-                menu.matches(":focus-within"))
+              (menu.dataset.open !== undefined || menu.matches(":focus-within"))
             ) {
               trigger.focus();
               closeMenu(true);
@@ -213,10 +192,7 @@ const structuredData = JSON.stringify(
                     </a>
                   </li>
                   <li>
-                    <a
-                      href="/tags/"
-                      aria-current={path.startsWith("/tags/") ? "page" : undefined}
-                    >
+                    <a href="/tags/" aria-current={path.startsWith("/tags/") ? "page" : undefined}>
                       标签
                     </a>
                   </li>
@@ -240,18 +216,12 @@ const structuredData = JSON.stringify(
               </a>
             </li>
             <li>
-              <a
-                href="/about/"
-                aria-current={path.startsWith("/about/") ? "page" : undefined}
-              >
+              <a href="/about/" aria-current={path.startsWith("/about/") ? "page" : undefined}>
                 关于
               </a>
             </li>
             <li>
-              <a
-                href="/search/"
-                aria-current={path.startsWith("/search/") ? "page" : undefined}
-              >
+              <a href="/search/" aria-current={path.startsWith("/search/") ? "page" : undefined}>
                 搜索
               </a>
             </li>
@@ -266,7 +236,9 @@ const structuredData = JSON.stringify(
         >
           <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="3.5"></circle>
-            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+            <path
+              d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+            ></path>
           </svg>
           <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M20.4 15.4A8.5 8.5 0 0 1 8.6 3.6 8.5 8.5 0 1 0 20.4 15.4Z"></path>

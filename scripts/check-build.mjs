@@ -34,9 +34,7 @@ const pages = Object.fromEntries(
 );
 const sitemap = await readFile("dist/sitemap.xml", "utf8");
 const rss = await readFile("dist/rss.xml", "utf8");
-const searchIndex = JSON.parse(
-  await readFile("dist/pagefind/pagefind-entry.json", "utf8"),
-);
+const searchIndex = JSON.parse(await readFile("dist/pagefind/pagefind-entry.json", "utf8"));
 const styles = (
   await Promise.all(
     (await readdir("dist/_astro"))
@@ -44,6 +42,26 @@ const styles = (
       .map(file => readFile(`dist/_astro/${file}`, "utf8")),
   )
 ).join("\n");
+const [nodeVersion, deploymentGuide, thirdPartyNotices, packageManifest] = await Promise.all([
+  readFile(".node-version", "utf8"),
+  readFile("docs/deployment.md", "utf8"),
+  readFile("THIRD_PARTY_NOTICES.md", "utf8"),
+  readFile("package.json", "utf8").then(JSON.parse),
+]);
+
+assert.equal(nodeVersion.trim(), "22.16.0");
+assert.equal(packageManifest.scripts.build, "astro build && pagefind --site dist");
+assert.match(deploymentGuide, /Node\.js `22\.16\.0`/);
+assert.match(deploymentGuide, /包管理器：`npm`/);
+assert.match(deploymentGuide, /构建命令：`npm run build`/);
+assert.match(deploymentGuide, /输出目录：`dist`/);
+assert.match(deploymentGuide, /正式分支：`main`/);
+assert.match(deploymentGuide, /https:\/\/blog\.jasper0507\.cc\.cd/);
+assert.doesNotMatch(deploymentGuide, /(?:token|secret|password)\s*[:=]\s*\S+/i);
+assert.match(thirdPartyNotices, /AstroPaper/);
+assert.match(thirdPartyNotices, /Copyright \(c\) 2023 Sat Naing/);
+assert.match(thirdPartyNotices, /MIT License/);
+assert.match(thirdPartyNotices, /原创技术文章、说说和图片不适用上述 MIT 许可/);
 
 const publicPostSlugs = (await readdir("dist/posts", { withFileTypes: true }))
   .filter(entry => entry.isDirectory())
@@ -68,15 +86,11 @@ for (const { slug } of POST_MIGRATIONS) {
   const markdown = await readFile(`src/content/posts/${slug}.md`, "utf8");
   const frontmatter = markdown.match(/^---\n([\s\S]*?)\n---/)?.[1];
   assert.ok(frontmatter, `${slug} 应有 frontmatter`);
-  const jsonField = name =>
-    JSON.parse(frontmatter.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1]);
-  const dateField = name =>
-    frontmatter.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1];
+  const jsonField = name => JSON.parse(frontmatter.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1]);
+  const dateField = name => frontmatter.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1];
   const title = jsonField("title");
   const description = jsonField("description");
-  const tags = [...frontmatter.matchAll(/^  - (.+)$/gm)].map(([, tag]) =>
-    JSON.parse(tag),
-  );
+  const tags = [...frontmatter.matchAll(/^  - (.+)$/gm)].map(([, tag]) => JSON.parse(tag));
   postMetadata.push({
     slug,
     title,
@@ -87,10 +101,7 @@ for (const { slug } of POST_MIGRATIONS) {
   const page = pages[`posts/${slug}`];
   const canonical = `https://blog.jasper0507.cc.cd/posts/${slug}/`;
 
-  assert.match(
-    page,
-    new RegExp(`<h1 id="post-title">${escapeRegExp(escapeHtml(title))}</h1>`),
-  );
+  assert.match(page, new RegExp(`<h1 id="post-title">${escapeRegExp(escapeHtml(title))}</h1>`));
   assert.match(page, new RegExp(`<link rel="canonical" href="${canonical}">`));
   assert.match(page, new RegExp(escapeRegExp(escapeHtml(description))));
   assert.ok(tags.length > 0, `${slug} 应保留分类与标签`);
@@ -109,14 +120,11 @@ for (const { slug } of POST_MIGRATIONS) {
 
 const orderedPosts = postMetadata.toSorted(
   (left, right) =>
-    new Date(right.publishedAt) - new Date(left.publishedAt) ||
-    left.slug.localeCompare(right.slug),
+    new Date(right.publishedAt) - new Date(left.publishedAt) || left.slug.localeCompare(right.slug),
 );
 const latestPost = orderedPosts[0];
 const listedPostSlugs = html =>
-  [...html.matchAll(/<h[23]><a href="\/posts\/([^/]+)\/">/g)].map(
-    ([, slug]) => slug,
-  );
+  [...html.matchAll(/<h[23]><a href="\/posts\/([^/]+)\/">/g)].map(([, slug]) => slug);
 
 assert.deepEqual(listedPostSlugs(pages.posts), [
   ...orderedPosts.slice(0, 10).map(({ slug }) => slug),
@@ -130,14 +138,8 @@ for (const metadata of orderedPosts) {
   );
   assert.ok(page, `${metadata.slug} 应出现在文章分页中`);
   assert.match(page, new RegExp(escapeRegExp(escapeHtml(metadata.title))));
-  assert.match(
-    page,
-    new RegExp(escapeRegExp(escapeHtml(metadata.description))),
-  );
-  assert.match(
-    page,
-    new RegExp(`datetime="${new Date(metadata.publishedAt).toISOString()}"`),
-  );
+  assert.match(page, new RegExp(escapeRegExp(escapeHtml(metadata.description))));
+  assert.match(page, new RegExp(`datetime="${new Date(metadata.publishedAt).toISOString()}"`));
   for (const tag of metadata.tags) {
     assert.match(page, new RegExp(escapeRegExp(escapeHtml(tag))));
   }
@@ -191,18 +193,11 @@ assert.match(
 );
 
 for (const [route, html] of Object.entries(pages)) {
-  assert.equal(
-    (html.match(/<h1(?:\s|>)/g) ?? []).length,
-    1,
-    `/${route} 应有且仅有一个主标题`,
-  );
+  assert.equal((html.match(/<h1(?:\s|>)/g) ?? []).length, 1, `/${route} 应有且仅有一个主标题`);
 }
 
 assert.match(pages[""], /<title>Jasper(?:'|&#39;)s Blog<\/title>/);
-assert.match(
-  pages[""],
-  /<link rel="canonical" href="https:\/\/blog\.jasper0507\.cc\.cd\/">/,
-);
+assert.match(pages[""], /<link rel="canonical" href="https:\/\/blog\.jasper0507\.cc\.cd\/">/);
 assert.match(pages[""], /见了便做/);
 assert.match(pages[""], /做了便放下/);
 assert.match(pages[""], /了了有何不了/);
@@ -211,9 +206,7 @@ assert.match(pages[""], new RegExp(escapeRegExp(latestPost.title)));
 assert.match(pages[""], new RegExp(`/posts/${latestPost.slug}/`));
 assert.match(pages[""], /最近说说/);
 assert.match(pages[""], /暂无说说/);
-const articleMenu = pages[""].match(
-  /<ul class="article-menu-list"[^>]*>([\s\S]*?)<\/ul>/,
-)?.[1];
+const articleMenu = pages[""].match(/<ul class="article-menu-list"[^>]*>([\s\S]*?)<\/ul>/)?.[1];
 assert.ok(articleMenu, "首页应包含文章菜单");
 assert.deepEqual(
   [...articleMenu.matchAll(/href="([^"]+)"/g)].map(([, href]) => href),
@@ -237,11 +230,7 @@ for (const segment of ["115", "117", "118", "119"]) {
   );
   await access(`dist/fonts/noto-serif-sc-${segment}.woff2`);
 }
-assert.doesNotMatch(
-  styles,
-  /fonts\.(?:googleapis|gstatic)\.com/,
-  "构建产物不得请求第三方字体服务",
-);
+assert.doesNotMatch(styles, /fonts\.(?:googleapis|gstatic)\.com/, "构建产物不得请求第三方字体服务");
 assert.match(pages[""], /<script type="application\/ld\+json">/);
 assert.match(pages[""], /"@type":"WebSite"/);
 const postListPages = `${pages.posts}\n${pages["posts/2"]}`;
@@ -286,6 +275,7 @@ await access("dist/pagefind/pagefind-component-ui.js");
 await access("dist/pagefind/pagefind-component-ui.css");
 assert.equal(searchIndex.languages["zh-cn"].page_count, POST_MIGRATIONS.length);
 assert.match(pages.search, /<pagefind-searchbox[^>]*show-sub-results/);
+assert.match(pages.search, /<pagefind-config[^>]*no-worker[^>]*lang="zh-cn"/);
 assert.match(pages.search, /\/pagefind\/pagefind-component-ui\.js/);
 assert.match(pages[""], /href="\/rss\.xml"[^>]*>RSS<\/a>/);
 
@@ -308,10 +298,7 @@ for (const [route, html] of Object.entries(pages)) {
   assert.match(html, new RegExp(`<link rel="canonical" href="${canonicalUrl}"`));
   assert.match(html, /<meta property="og:title" content="[^"]+">/);
   assert.match(html, /<meta property="og:description" content="[^"]+">/);
-  assert.match(
-    html,
-    new RegExp(`<meta property="og:url" content="${canonicalUrl}"`),
-  );
+  assert.match(html, new RegExp(`<meta property="og:url" content="${canonicalUrl}"`));
 }
 assert.match(post, /<meta property="og:type" content="article">/);
 assert.match(post, /"@type":"BlogPosting"/);
@@ -322,19 +309,23 @@ try {
   const root = fileURLToPath(new URL("..", import.meta.url));
   let buildError;
   try {
-    await execFileAsync(process.execPath, [
-      join(root, "node_modules/astro/bin/astro.mjs"),
-      "build",
-      "--force",
-      "--outDir",
-      invalidTagOutDir,
-    ], {
-      cwd: root,
-      env: {
-        ...process.env,
-        POST_CONTENT_DIR: "./tests/fixtures/posts-invalid-tag",
+    await execFileAsync(
+      process.execPath,
+      [
+        join(root, "node_modules/astro/bin/astro.mjs"),
+        "build",
+        "--force",
+        "--outDir",
+        invalidTagOutDir,
+      ],
+      {
+        cwd: root,
+        env: {
+          ...process.env,
+          POST_CONTENT_DIR: "./tests/fixtures/posts-invalid-tag",
+        },
       },
-    });
+    );
   } catch (error) {
     buildError = error;
   }

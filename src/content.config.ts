@@ -39,8 +39,7 @@ const posts = defineCollection({
 
 const shuoshuo = defineCollection({
   loader: glob({
-    base:
-      process.env.SHUOSHUO_CONTENT_DIR ?? "./src/content/shuoshuo",
+    base: process.env.SHUOSHUO_CONTENT_DIR ?? "./src/content/shuoshuo",
     pattern: "**/*.md",
   }),
   schema: z.object({

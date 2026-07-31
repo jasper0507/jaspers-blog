@@ -9,6 +9,16 @@ const postScreenshotDir = "artifacts/issue-3";
 const postPath = "/posts/markdown-quick-start/";
 const widths = [1440, 768, 375, 320];
 const themes = ["light", "dark"];
+const smokePaths = [
+  "/",
+  "/posts/",
+  postPath,
+  "/shuoshuo/",
+  "/tags/",
+  "/archives/",
+  "/search/",
+  "/about/",
+];
 const expectedColors = {
   light: {
     background: "rgb(245, 244, 242)",
@@ -22,14 +32,7 @@ const expectedColors = {
 
 const server = spawn(
   process.execPath,
-  [
-    "node_modules/astro/bin/astro.mjs",
-    "preview",
-    "--host",
-    "127.0.0.1",
-    "--port",
-    "4321",
-  ],
+  ["node_modules/astro/bin/astro.mjs", "preview", "--host", "127.0.0.1", "--port", "4321"],
   { stdio: ["ignore", "pipe", "pipe"] },
 );
 
@@ -48,9 +51,7 @@ async function waitForServer() {
     }
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  throw new Error(
-    `Astro 预览服务器未启动：${lastError?.message ?? "未知错误"}\n${serverOutput}`,
-  );
+  throw new Error(`Astro 预览服务器未启动：${lastError?.message ?? "未知错误"}\n${serverOutput}`);
 }
 
 function assertNear(actual, expected, tolerance = 1) {
@@ -58,6 +59,23 @@ function assertNear(actual, expected, tolerance = 1) {
     Math.abs(actual - expected) <= tolerance,
     `期望 ${actual} 接近 ${expected}（误差 ${tolerance}）`,
   );
+}
+
+function contrastRatio(foreground, background) {
+  const luminance = color => {
+    const channels = color
+      .match(/[\d.]+/g)
+      ?.slice(0, 3)
+      .map(Number);
+    assert.equal(channels?.length, 3, `无法解析颜色：${color}`);
+    const [red, green, blue] = channels.map(channel => {
+      const value = color.startsWith("color(") ? channel : channel / 255;
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  };
+  const values = [luminance(foreground), luminance(background)];
+  return (Math.max(...values) + 0.05) / (Math.min(...values) + 0.05);
 }
 
 try {
@@ -93,8 +111,8 @@ try {
           return {
             scrollWidth: document.documentElement.scrollWidth,
             mainWidth: main.getBoundingClientRect().width,
-            gridColumns: getComputedStyle(grid).gridTemplateColumns
-              .split(" ")
+            gridColumns: getComputedStyle(grid)
+              .gridTemplateColumns.split(" ")
               .map(Number.parseFloat),
             heroWidth: hero.getBoundingClientRect().width,
             heroPaddingLeft: Number.parseFloat(heroStyle.paddingLeft),
@@ -104,19 +122,13 @@ try {
             letterSpacing: Number.parseFloat(titleStyle.letterSpacing),
             lineHeight: Number.parseFloat(titleStyle.lineHeight),
             lineOffsets: lines.map(
-              line =>
-                line.getBoundingClientRect().left -
-                lines[0].getBoundingClientRect().left,
+              line => line.getBoundingClientRect().left - lines[0].getBoundingClientRect().left,
             ),
-            lineRight: Math.max(
-              ...lines.map(line => line.getBoundingClientRect().right),
-            ),
+            lineRight: Math.max(...lines.map(line => line.getBoundingClientRect().right)),
             lineCount: lines.length,
             background: bodyStyle.backgroundColor,
             text: bodyStyle.color,
-            accent: getComputedStyle(
-              document.querySelector(".hero-kicker"),
-            ).color,
+            accent: getComputedStyle(document.querySelector(".hero-kicker")).color,
             notoReady: document.fonts.check(
               '400 66px "Noto Serif SC"',
               "见了便做，做了便放下，了了有何不了。",
@@ -144,9 +156,7 @@ try {
         assertNear(actual.lineOffsets[2] / actual.fontSize, 1.3, 0.03);
         assert.ok(actual.lineRight <= width, `${width}px 禅语不得溢出视口`);
         assert.ok(
-          actual.fontResources.some(url =>
-            url.includes("/fonts/noto-serif-sc-"),
-          ),
+          actual.fontResources.some(url => url.includes("/fonts/noto-serif-sc-")),
           "禅语应加载自托管 Noto Serif SC 分段字体",
         );
 
@@ -182,13 +192,20 @@ try {
           const titleStyle = getComputedStyle(title);
           const tocStyle = getComputedStyle(toc);
           const bodyStyle = getComputedStyle(document.body);
+          const codeStyle = getComputedStyle(document.querySelector(".post-body .astro-code"));
+          const formulaStyle = getComputedStyle(document.querySelector(".post-body .katex"));
+          const alert = document.createElement("aside");
+          alert.className = "markdown-alert";
+          alert.textContent = "提示块可读性验收";
+          card.append(alert);
+          const alertStyle = getComputedStyle(alert);
           const wideContent = [
             ...document.querySelectorAll(
               ".post-body table, .post-body .astro-code, .post-body .katex-display",
             ),
           ];
 
-          return {
+          const result = {
             scrollWidth: document.documentElement.scrollWidth,
             bodyScrollWidth: document.body.scrollWidth,
             mainWidth: main.getBoundingClientRect().width,
@@ -207,6 +224,13 @@ try {
             tocDisplay: tocStyle.display,
             tocWidth: toc.getBoundingClientRect().width,
             background: bodyStyle.backgroundColor,
+            contrastSamples: [
+              [bodyStyle.color, bodyStyle.backgroundColor, "页面正文"],
+              [cardStyle.color, cardStyle.backgroundColor, "技术文章正文"],
+              [codeStyle.color, codeStyle.backgroundColor, "代码块"],
+              [formulaStyle.color, cardStyle.backgroundColor, "公式"],
+              [alertStyle.color, alertStyle.backgroundColor, "提示块"],
+            ],
             wideContentContained: wideContent.every(
               element => element.getBoundingClientRect().width <= card.clientWidth,
             ),
@@ -233,6 +257,8 @@ try {
                   : null,
               })),
           };
+          alert.remove();
+          return result;
         });
 
         assert.equal(
@@ -245,12 +271,15 @@ try {
           article.cardBackground,
           theme === "light" ? "rgb(250, 249, 245)" : "rgb(47, 46, 42)",
         );
-        assert.match(
-          article.titleFontFamily,
-          /^"Source Serif 4", "Noto Serif SC"/,
-        );
+        assert.match(article.titleFontFamily, /^"Source Serif 4", "Noto Serif SC"/);
         assert.equal(article.titleFontWeight, "500");
         assert.equal(article.wideContentContained, true);
+        for (const [foreground, background, label] of article.contrastSamples) {
+          assert.ok(
+            contrastRatio(foreground, background) >= 4.5,
+            `${theme} ${label}颜色对比不足：${foreground} / ${background}`,
+          );
+        }
 
         if (width === 1440) {
           assertNear(article.mainWidth, 1120);
@@ -283,9 +312,7 @@ try {
     const intermediatePage = await intermediateContext.newPage();
     await intermediatePage.goto(`${host}${postPath}`);
     assert.equal(
-      await intermediatePage.evaluate(
-        () => document.documentElement.scrollWidth,
-      ),
+      await intermediatePage.evaluate(() => document.documentElement.scrollWidth),
       1024,
       "1024px 文章页不得横向溢出",
     );
@@ -307,6 +334,137 @@ try {
     await context.close();
 
     for (const width of [1440, 320]) {
+      const smokeContext = await browser.newContext({
+        viewport: { width, height: 960 },
+        colorScheme: "light",
+      });
+      try {
+        for (const path of smokePaths) {
+          const smokePage = await smokeContext.newPage();
+          const pageErrors = [];
+          const fontRequests = [];
+          const failedRequests = [];
+          const consoleErrors = [];
+          smokePage.on("pageerror", error => pageErrors.push(error.message));
+          smokePage.on("requestfailed", request =>
+            failedRequests.push([request.url(), request.failure()?.errorText]),
+          );
+          smokePage.on("console", message => {
+            if (message.type() === "error") consoleErrors.push(message.text());
+          });
+          smokePage.on("request", request => {
+            if (request.resourceType() === "font") fontRequests.push(request.url());
+          });
+          await smokePage.goto(`${host}${path}`, { waitUntil: "networkidle" });
+          await smokePage.evaluate(() => document.fonts.ready);
+
+          const smoke = await smokePage.evaluate(() => {
+            const headingLevels = [...document.querySelectorAll("h1,h2,h3,h4,h5,h6")]
+              .filter(heading => !heading.classList.contains("sr-only"))
+              .map(heading => Number(heading.tagName.slice(1)));
+            const unnamedActions = [
+              ...document.querySelectorAll("a[href], button, input, select, textarea, summary"),
+            ]
+              .filter(element => !element.closest("[aria-hidden='true']"))
+              .filter(element => !(element instanceof HTMLInputElement && element.disabled))
+              .filter(
+                element =>
+                  ![
+                    element.getAttribute("aria-label") ?? "",
+                    element.getAttribute("title") ?? "",
+                    element.textContent ?? "",
+                    element.querySelector("img[alt]")?.getAttribute("alt") ?? "",
+                    element instanceof HTMLInputElement ? element.placeholder : "",
+                  ].some(value => value.trim()),
+              )
+              .map(element => element.outerHTML.slice(0, 160));
+            return {
+              h1Count: document.querySelectorAll("h1").length,
+              headingLevels,
+              emptyHeadings: [...document.querySelectorAll("h1,h2,h3,h4,h5,h6")].filter(
+                heading => !heading.textContent?.trim(),
+              ).length,
+              unnamedActions,
+              scrollWidth: document.documentElement.scrollWidth,
+              forbiddenUi: document.querySelectorAll(
+                "[class*='comment'], [class*='share'], [class*='analytics'], a[href*='/photos'], a[href*='/source'], a[hreflang]",
+              ).length,
+            };
+          });
+
+          assert.equal(smoke.h1Count, 1, `${path} 应有且仅有一个主标题`);
+          assert.equal(smoke.headingLevels[0], 1, `${path} 应从主标题开始`);
+          assert.equal(smoke.emptyHeadings, 0, `${path} 标题必须具有名称`);
+          assert.deepEqual(smoke.unnamedActions, [], `${path} 存在无名称操作控件`);
+          assert.equal(smoke.scrollWidth, width, `${width}px ${path} 不得横向溢出`);
+          assert.equal(smoke.forbiddenUi, 0, `${path} 不得出现规格外模块`);
+          assert.ok(
+            fontRequests.every(url => new URL(url).origin === host),
+            `${path} 字体必须由站点自托管`,
+          );
+
+          await smokePage.keyboard.press("Tab");
+          const skipLink = smokePage.locator(".skip-link");
+          assert.equal(
+            await skipLink.evaluate(element => element === document.activeElement),
+            true,
+            `${path} 首个键盘焦点应为跳转导航`,
+          );
+          const skipFocus = await skipLink.evaluate(element => {
+            const style = getComputedStyle(element);
+            return {
+              outlineStyle: style.outlineStyle,
+              outlineWidth: style.outlineWidth,
+              top: element.getBoundingClientRect().top,
+            };
+          });
+          assert.notEqual(skipFocus.outlineStyle, "none");
+          assert.notEqual(skipFocus.outlineWidth, "0px");
+          assert.ok(skipFocus.top >= 0, `${path} 跳转导航聚焦时应可见`);
+          await smokePage.keyboard.press("Enter");
+          assert.match(smokePage.url(), /#main-content$/);
+
+          if (path === "/search/") {
+            const searchInput = smokePage.locator("pagefind-searchbox input");
+            await searchInput.focus();
+            await searchInput.fill("Markdown快速上手语法");
+            const result = smokePage.getByRole("option", { name: /Markdown快速上手语法/ }).first();
+            try {
+              await result.waitFor({ state: "visible", timeout: 5_000 });
+            } catch (error) {
+              throw new Error(
+                `搜索组件未返回结果：${JSON.stringify({
+                  markup: await smokePage
+                    .locator("pagefind-searchbox")
+                    .evaluate(element => element.outerHTML),
+                  pageErrors,
+                  consoleErrors,
+                  failedRequests,
+                })}`,
+                { cause: error },
+              );
+            }
+            assert.equal(new URL(await result.getAttribute("href"), host).pathname, postPath);
+            await searchInput.press("Enter");
+            await smokePage.waitForURL(`${host}${postPath}`);
+          }
+
+          assert.deepEqual(pageErrors, [], `${path} 不得产生页面脚本错误`);
+          assert.deepEqual(consoleErrors, [], `${path} 不得产生控制台错误`);
+          assert.deepEqual(
+            failedRequests.filter(([url]) => new URL(url).origin === host),
+            [],
+            `${path} 不得有站内资源加载失败`,
+          );
+
+          await smokePage.close();
+        }
+      } finally {
+        await smokeContext.close();
+      }
+    }
+
+    for (const width of [1440, 320]) {
       const navigationContext = await browser.newContext({
         viewport: { width, height: 960 },
         hasTouch: width === 320,
@@ -317,9 +475,10 @@ try {
       const menu = navigationPage.locator("#article-menu");
       const trigger = navigationPage.locator("#article-menu-trigger");
       const list = navigationPage.locator("#article-menu-list");
-      assert.deepEqual(await list.locator("a").evaluateAll(links =>
-        links.map(link => link.getAttribute("href")),
-      ), ["/posts/", "/tags/", "/archives/"]);
+      assert.deepEqual(
+        await list.locator("a").evaluateAll(links => links.map(link => link.getAttribute("href"))),
+        ["/posts/", "/tags/", "/archives/"],
+      );
 
       if (width === 1440) {
         await menu.hover();
