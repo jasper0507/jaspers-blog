@@ -1,7 +1,12 @@
 import { getCollection } from "astro:content";
+import { tags } from "./tags";
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "long",
+  timeZone: "Asia/Shanghai",
+});
+const yearFormatter = new Intl.DateTimeFormat("en", {
+  year: "numeric",
   timeZone: "Asia/Shanghai",
 });
 
@@ -16,10 +21,26 @@ export async function getPublishedPosts() {
     .filter(post => !post.data.draft)
     .sort(
       (left, right) =>
-        right.data.publishedAt.getTime() - left.data.publishedAt.getTime(),
+        right.data.publishedAt.getTime() - left.data.publishedAt.getTime() ||
+        left.id.localeCompare(right.id),
     );
 }
 
 export function formatPostDate(date: Date) {
   return dateFormatter.format(date);
+}
+
+export function getPostYear(date: Date) {
+  return yearFormatter.format(date);
+}
+
+export async function getPublishedPostTags() {
+  const posts = await getPublishedPosts();
+
+  return tags
+    .map(tag => ({
+      ...tag,
+      posts: posts.filter(post => post.data.tags.includes(tag.name)),
+    }))
+    .filter(tag => tag.posts.length > 0);
 }

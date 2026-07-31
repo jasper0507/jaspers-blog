@@ -1,5 +1,10 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import PostList from "../../components/PostList.astro";
+import { getPostYear, getPublishedPosts } from "../../lib/posts";
+
+const posts = await getPublishedPosts();
+const years = [...new Set(posts.map(post => getPostYear(post.data.publishedAt)))];
 ---
 
 <BaseLayout
@@ -7,8 +12,21 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
   description="按时间浏览 Jasper 的技术文章。"
   pageClass="page-shell"
 >
-  <section class="page-intro">
-    <h1>归档</h1>
-    <p>暂无可归档的技术文章。</p>
+  <section class="page-intro" aria-labelledby="archives-title">
+    <h1 id="archives-title">归档</h1>
+    <p>按发布时间浏览技术文章。</p>
   </section>
+  {
+    years.map(year => (
+      <section class="archive-year" aria-labelledby={`archive-${year}`}>
+        <h2 id={`archive-${year}`}>{year} 年</h2>
+        <PostList
+          posts={posts.filter(
+            post => getPostYear(post.data.publishedAt) === year,
+          )}
+          headingLevel="h3"
+        />
+      </section>
+    ))
+  }
 </BaseLayout>

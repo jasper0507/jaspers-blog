@@ -126,9 +126,10 @@ const structuredData = JSON.stringify({
 
           trigger.addEventListener("click", () => {
             const open = menu.dataset.open === undefined;
-            menu.toggleAttribute("data-open", open);
+            if (!open) return closeMenu(true);
+            menu.dataset.open = "";
             delete menu.dataset.dismissed;
-            setExpanded(open);
+            setExpanded(true);
           });
           menu.addEventListener("focusin", () => {
             delete menu.dataset.dismissed;

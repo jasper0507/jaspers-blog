@@ -1,5 +1,8 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getPublishedPostTags } from "../../lib/posts";
+
+const tags = await getPublishedPostTags();
 ---
 
 <BaseLayout
@@ -7,8 +10,19 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
   description="按标签浏览 Jasper 的技术文章。"
   pageClass="page-shell"
 >
-  <section class="page-intro">
-    <h1>标签</h1>
-    <p>暂无可浏览的标签。</p>
+  <section class="page-intro" aria-labelledby="tags-title">
+    <h1 id="tags-title">标签</h1>
+    <p>按主题浏览技术文章。</p>
   </section>
+  <ul class="tag-list">
+    {
+      tags.map(tag => (
+        <li>
+          <a href={`/tags/${tag.slug}/`}>
+            {tag.name}<span>{tag.posts.length} 篇</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
 </BaseLayout>

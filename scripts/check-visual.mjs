@@ -305,6 +305,80 @@ try {
       "手动主题选择应在刷新后保留",
     );
     await context.close();
+
+    for (const width of [1440, 320]) {
+      const navigationContext = await browser.newContext({
+        viewport: { width, height: 960 },
+        hasTouch: width === 320,
+      });
+      const navigationPage = await navigationContext.newPage();
+      await navigationPage.goto(host);
+
+      const menu = navigationPage.locator("#article-menu");
+      const trigger = navigationPage.locator("#article-menu-trigger");
+      const list = navigationPage.locator("#article-menu-list");
+      assert.deepEqual(await list.locator("a").evaluateAll(links =>
+        links.map(link => link.getAttribute("href")),
+      ), ["/posts/", "/tags/", "/archives/"]);
+
+      if (width === 1440) {
+        await menu.hover();
+        await list.waitFor({ state: "visible", timeout: 1_000 });
+        await navigationPage.mouse.move(width - 1, 1);
+      }
+
+      await trigger.focus();
+      assert.equal(await trigger.getAttribute("aria-expanded"), "true");
+      await list.waitFor({ state: "visible", timeout: 1_000 });
+      await navigationPage.keyboard.press("Escape");
+      assert.equal(await trigger.getAttribute("aria-expanded"), "false");
+      assert.equal(await trigger.evaluate(element => element === document.activeElement), true);
+      await list.waitFor({ state: "hidden", timeout: 1_000 });
+
+      await trigger.click();
+      assert.equal(await trigger.getAttribute("aria-expanded"), "true");
+      await list.waitFor({ state: "visible", timeout: 1_000 });
+      await trigger.click();
+      assert.equal(await trigger.getAttribute("aria-expanded"), "false");
+      await list.waitFor({ state: "hidden", timeout: 1_000 });
+
+      await trigger.click();
+      await navigationPage.locator(".brand").click();
+      assert.equal(await trigger.getAttribute("aria-expanded"), "false");
+      await list.waitFor({ state: "hidden", timeout: 1_000 });
+
+      for (const path of [
+        "/posts/",
+        "/posts/2/",
+        "/tags/",
+        "/tags/data-structures-and-algorithms/",
+        "/archives/",
+      ]) {
+        await navigationPage.goto(`${host}${path}`);
+        const overflow = await navigationPage.evaluate(() => ({
+          scrollWidth: document.documentElement.scrollWidth,
+          elements: [...document.body.querySelectorAll("*")]
+            .filter(element => {
+              const rect = element.getBoundingClientRect();
+              return rect.right > innerWidth + 0.5 || rect.left < -0.5;
+            })
+            .slice(0, 8)
+            .map(element => ({
+              element: `${element.tagName.toLowerCase()}.${element.className}`,
+              left: element.getBoundingClientRect().left,
+              right: element.getBoundingClientRect().right,
+              scrollWidth: element.scrollWidth,
+            })),
+        }));
+        assert.equal(
+          overflow.scrollWidth,
+          width,
+          `${width}px ${path} 不得横向溢出：${JSON.stringify(overflow.elements)}`,
+        );
+      }
+
+      await navigationContext.close();
+    }
   } finally {
     await browser.close();
   }

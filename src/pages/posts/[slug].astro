@@ -4,6 +4,7 @@ import { render } from "astro:content";
 import "katex/dist/katex.min.css";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { formatPostDate, getPublishedPosts } from "../../lib/posts";
+import { getTagSlug } from "../../lib/tags";
 
 interface Props {
   post: CollectionEntry<"posts">;
@@ -46,7 +47,11 @@ const toc = headings.filter(
         }
       </div>
       <ul class="post-tags" aria-label="标签">
-        {post.data.tags.map(tag => <li>{tag}</li>)}
+        {
+          post.data.tags.map(tag => (
+            <li><a href={`/tags/${getTagSlug(tag)}/`}>{tag}</a></li>
+          ))
+        }
       </ul>
     </header>
 

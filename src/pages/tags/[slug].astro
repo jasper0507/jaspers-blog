@@ -1,0 +1,32 @@
+---
+import type { GetStaticPaths } from "astro";
+import PostList from "../../components/PostList.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getPublishedPostTags } from "../../lib/posts";
+
+type PublishedTag = Awaited<ReturnType<typeof getPublishedPostTags>>[number];
+
+interface Props {
+  tag: PublishedTag;
+}
+
+export const getStaticPaths = (async () =>
+  (await getPublishedPostTags()).map(tag => ({
+    params: { slug: tag.slug },
+    props: { tag },
+  }))) satisfies GetStaticPaths;
+
+const { tag } = Astro.props;
+---
+
+<BaseLayout
+  title={`标签：${tag.name}`}
+  description={`浏览标签“${tag.name}”下的技术文章。`}
+  pageClass="page-shell"
+>
+  <section class="page-intro" aria-labelledby="tag-title">
+    <h1 id="tag-title">{tag.name}</h1>
+    <p>{tag.posts.length} 篇技术文章</p>
+  </section>
+  <PostList posts={tag.posts} />
+</BaseLayout>
