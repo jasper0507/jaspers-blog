@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { access, readdir, readFile } from "node:fs/promises";
+import { LEGACY_ASSETS, POST_MIGRATIONS } from "./migrate-hexo.mjs";
 
 const postSlug = "markdown-quick-start";
 const routes = [
   "",
   "posts",
-  `posts/${postSlug}`,
+  ...POST_MIGRATIONS.map(({ slug }) => `posts/${slug}`),
   "shuoshuo",
   "tags",
   "archives",
@@ -29,6 +31,79 @@ const styles = (
   )
 ).join("\n");
 
+const publicPostSlugs = (await readdir("dist/posts", { withFileTypes: true }))
+  .filter(entry => entry.isDirectory())
+  .map(entry => entry.name)
+  .sort();
+assert.equal(POST_MIGRATIONS.length, 15);
+for (const { slug } of POST_MIGRATIONS) {
+  assert.ok(publicPostSlugs.includes(slug), `生产构建应生成 ${slug}`);
+}
+assert.equal(publicPostSlugs.includes("hello-world"), false);
+
+const escapeHtml = value =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+const escapeRegExp = value => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const postMetadata = [];
+for (const { slug } of POST_MIGRATIONS) {
+  const markdown = await readFile(`src/content/posts/${slug}.md`, "utf8");
+  const frontmatter = markdown.match(/^---\n([\s\S]*?)\n---/)?.[1];
+  assert.ok(frontmatter, `${slug} 应有 frontmatter`);
+  const jsonField = name =>
+    JSON.parse(frontmatter.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1]);
+  const dateField = name =>
+    frontmatter.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1];
+  const title = jsonField("title");
+  const description = jsonField("description");
+  const tags = [...frontmatter.matchAll(/^  - (.+)$/gm)].map(([, tag]) =>
+    JSON.parse(tag),
+  );
+  postMetadata.push({ slug, title, publishedAt: dateField("publishedAt") });
+  const page = pages[`posts/${slug}`];
+  const canonical = `https://blog.jasper0507.cc.cd/posts/${slug}/`;
+
+  assert.match(
+    page,
+    new RegExp(`<h1 id="post-title">${escapeRegExp(escapeHtml(title))}</h1>`),
+  );
+  assert.match(page, new RegExp(`<link rel="canonical" href="${canonical}">`));
+  assert.match(page, new RegExp(escapeRegExp(escapeHtml(description))));
+  assert.ok(tags.length > 0, `${slug} 应保留分类与标签`);
+  for (const tag of tags) {
+    assert.match(page, new RegExp(`>${escapeRegExp(escapeHtml(tag))}</li>`));
+  }
+  for (const field of ["publishedAt", "updatedAt"]) {
+    assert.match(page, new RegExp(`datetime="${new Date(dateField(field)).toISOString()}"`));
+  }
+}
+
+const latestPost = postMetadata.toSorted(
+  (left, right) => new Date(right.publishedAt) - new Date(left.publishedAt),
+)[0];
+
+for (const asset of LEGACY_ASSETS) {
+  const relativePath = `images/posts/${asset.post}/${asset.target}`;
+  const data = await readFile(`dist/${relativePath}`);
+  assert.equal(createHash("sha256").update(data).digest("hex"), asset.sha256);
+  assert.match(pages[`posts/${asset.post}`], new RegExp(`/${relativePath}`));
+}
+
+const allPages = Object.values(pages).join("\n");
+assert.doesNotMatch(allPages, /jasper0507\.github\.io\/2026\//);
+assert.match(
+  pages["posts/github-hexo-blog-guide"],
+  /https:\/\/blog\.jasper0507\.cc\.cd\/posts\/hexo-icarus-content-guide\//,
+);
+assert.match(
+  pages["posts/data-structures-and-algorithms"],
+  /<h6 role="heading" aria-level="7" id="data-structures-and-algorithms-depth-7-代码模板">代码模板<\/h6>/,
+);
+
 for (const [route, html] of Object.entries(pages)) {
   assert.equal(
     (html.match(/<h1(?:\s|>)/g) ?? []).length,
@@ -46,8 +121,8 @@ assert.match(pages[""], /见了便做/);
 assert.match(pages[""], /做了便放下/);
 assert.match(pages[""], /了了有何不了/);
 assert.match(pages[""], /最近文章/);
-assert.match(pages[""], /Markdown快速上手语法/);
-assert.match(pages[""], new RegExp(`/posts/${postSlug}/`));
+assert.match(pages[""], new RegExp(escapeRegExp(latestPost.title)));
+assert.match(pages[""], new RegExp(`/posts/${latestPost.slug}/`));
 assert.match(pages[""], /最近说说/);
 assert.match(pages[""], /暂无说说/);
 assert.match(pages.shuoshuo, /暂无说说/);

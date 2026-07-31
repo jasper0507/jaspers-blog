@@ -1,13 +1,13 @@
 ---
-title: Markdown快速上手语法
-description: 这是一篇用于新手快速上手Markdown的文章。
+title: "Markdown快速上手语法"
+description: "这是一篇用于新手快速上手Markdown的文章。"
 publishedAt: 2026-01-23T18:00:46+08:00
 updatedAt: 2026-01-23T18:00:46+08:00
 tags:
-  - 工程实践
-  - 文档写作
-  - 教程
-  - Markdown
+  - "工程实践"
+  - "文档写作"
+  - "教程"
+  - "Markdown"
 draft: false
 ---
 ## 一、基本语法
@@ -255,7 +255,7 @@ int main() {
 ```
 
 
-##### 预览效果
+#### 预览效果
 语法：` ```+编程语言名称 + 回车 + 代码内容 + 回车 + ``` `
 ```c++
 #include <iostream>
@@ -351,3 +351,5 @@ c & d
 $$
 
 ---
+
+

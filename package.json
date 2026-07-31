@@ -12,10 +12,11 @@
     "build": "astro build",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
     "test:dist": "node scripts/check-build.mjs",
+    "test:migration": "node scripts/check-migration.mjs",
     "test:shuoshuo:command": "node scripts/check-new-shuoshuo.mjs",
     "test:shuoshuo": "node scripts/check-shuoshuo.mjs",
     "test:visual": "npm run build && node scripts/check-visual.mjs",
-    "test": "npm run check && npm run test:shuoshuo:command && npm run build && npm run test:dist && npm run test:shuoshuo"
+    "test": "npm run check && npm run test:migration && npm run test:shuoshuo:command && npm run build && npm run test:dist && npm run test:shuoshuo"
   },
   "dependencies": {
     "astro": "7.1.6"
@@ -24,6 +25,7 @@
     "@astrojs/check": "0.9.10",
     "@astrojs/markdown-remark": "7.2.2",
     "@shikijs/transformers": "4.3.1",
+    "github-slugger": "2.0.0",
     "katex": "0.18.1",
     "playwright-core": "1.61.1",
     "rehype-katex": "7.0.1",
