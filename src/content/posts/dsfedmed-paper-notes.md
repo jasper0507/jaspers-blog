@@ -16,7 +16,7 @@ draft: false
 
 [《DSFedMed: Dual-Scale Federated Medical Image Segmentation via Mutual Distillation Between Foundation and Lightweight Models》原文](https://arxiv.org/pdf/2601.16073)
 
-### 一、论文背景与核心贡献
+## 一、论文背景与核心贡献
 
 * **研究场景**：  
   本文研究的是 **联邦医学图像分割**。在医疗场景中，真实患者图像通常分散在不同医院或机构中，受隐私法规和机构边界限制，难以直接集中训练。因此，需要在不共享原始数据的前提下，让多个客户端共同提升分割模型性能。

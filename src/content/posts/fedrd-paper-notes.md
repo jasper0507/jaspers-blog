@@ -14,7 +14,7 @@ draft: false
 - 论文阅读顺序：标题+作者-摘要-结论-导言-相关工作-模型-实验-评论
 - [《A Federated Learning and Knowledge Distillation Approach》原文](https://openreview.net/pdf?id=67edlRGd7U)
 
-### 一、 论文背景与核心贡献
+## 一、 论文背景与核心贡献
 
 **研究场景**：在医疗影像分析中，基础大模型（Foundation Models）展现出了强大的泛化能力。由于医疗数据受到严格的隐私法规（如 GDPR、HIPAA）保护，多中心数据无法集中，因此必须采用联邦学习（Federated Learning, FL）进行分布式协同训练。
 

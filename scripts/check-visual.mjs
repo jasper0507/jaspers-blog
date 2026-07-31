@@ -7,12 +7,14 @@ const host = "http://127.0.0.1:4321";
 const screenshotDir = "artifacts/issue-2";
 const postScreenshotDir = "artifacts/issue-3";
 const postPath = "/posts/markdown-quick-start/";
+const longPostPath = "/posts/dsfedmed-paper-notes/";
 const widths = [1440, 768, 375, 320];
 const themes = ["light", "dark"];
 const smokePaths = [
   "/",
   "/posts/",
   postPath,
+  longPostPath,
   "/shuoshuo/",
   "/tags/",
   "/archives/",
@@ -194,11 +196,35 @@ try {
           const bodyStyle = getComputedStyle(document.body);
           const codeStyle = getComputedStyle(document.querySelector(".post-body .astro-code"));
           const formulaStyle = getComputedStyle(document.querySelector(".post-body .katex"));
-          const alert = document.createElement("aside");
-          alert.className = "markdown-alert";
-          alert.textContent = "提示块可读性验收";
-          card.append(alert);
-          const alertStyle = getComputedStyle(alert);
+          const alertFixture = document.createElement("div");
+          alertFixture.innerHTML = ["note", "tip", "important", "warning", "caution"]
+            .map(
+              type =>
+                `<aside class="markdown-alert markdown-alert-${type}"><p class="markdown-alert-title">${type}</p><p>提示块正文</p></aside>`,
+            )
+            .join("");
+          card.append(alertFixture);
+          const alertSamples = [...alertFixture.querySelectorAll(".markdown-alert")].flatMap(
+            alert => {
+              const background = getComputedStyle(alert).backgroundColor;
+              const type = alert.className;
+              return [
+                [
+                  getComputedStyle(alert.querySelector(".markdown-alert-title")).color,
+                  background,
+                  `${type} 标题`,
+                ],
+                [
+                  getComputedStyle(alert.querySelector("p:last-child")).color,
+                  background,
+                  `${type} 正文`,
+                ],
+              ];
+            },
+          );
+          const tokenSamples = [...document.querySelectorAll(".post-body .astro-code span[style]")]
+            .filter(token => token.style.color)
+            .map(token => [getComputedStyle(token).color, codeStyle.backgroundColor, "代码标记"]);
           const wideContent = [
             ...document.querySelectorAll(
               ".post-body table, .post-body .astro-code, .post-body .katex-display",
@@ -228,8 +254,9 @@ try {
               [bodyStyle.color, bodyStyle.backgroundColor, "页面正文"],
               [cardStyle.color, cardStyle.backgroundColor, "技术文章正文"],
               [codeStyle.color, codeStyle.backgroundColor, "代码块"],
+              ...tokenSamples,
               [formulaStyle.color, cardStyle.backgroundColor, "公式"],
-              [alertStyle.color, alertStyle.backgroundColor, "提示块"],
+              ...alertSamples,
             ],
             wideContentContained: wideContent.every(
               element => element.getBoundingClientRect().width <= card.clientWidth,
@@ -257,7 +284,7 @@ try {
                   : null,
               })),
           };
-          alert.remove();
+          alertFixture.remove();
           return result;
         });
 
@@ -274,12 +301,14 @@ try {
         assert.match(article.titleFontFamily, /^"Source Serif 4", "Noto Serif SC"/);
         assert.equal(article.titleFontWeight, "500");
         assert.equal(article.wideContentContained, true);
-        for (const [foreground, background, label] of article.contrastSamples) {
-          assert.ok(
-            contrastRatio(foreground, background) >= 4.5,
-            `${theme} ${label}颜色对比不足：${foreground} / ${background}`,
-          );
-        }
+        const insufficientContrast = article.contrastSamples.filter(
+          ([foreground, background]) => contrastRatio(foreground, background) < 4.5,
+        );
+        assert.deepEqual(
+          insufficientContrast,
+          [],
+          `${theme} 存在颜色对比不足：[前景色, 背景色, 元素]`,
+        );
 
         if (width === 1440) {
           assertNear(article.mainWidth, 1120);
@@ -324,7 +353,30 @@ try {
     });
     const page = await context.newPage();
     await page.goto(host);
-    await page.locator("#theme-toggle").click();
+    let reachedThemeToggle = false;
+    for (let tabs = 0; tabs < 12; tabs += 1) {
+      await page.keyboard.press("Tab");
+      const focused = await page.evaluate(() => {
+        const element = document.activeElement;
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return {
+          id: element.id,
+          outlineStyle: style.outlineStyle,
+          outlineWidth: style.outlineWidth,
+          visible: rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight,
+        };
+      });
+      assert.notEqual(focused.outlineStyle, "none", "键盘操作控件应有可见焦点");
+      assert.notEqual(focused.outlineWidth, "0px", "键盘操作控件应有可见焦点");
+      assert.equal(focused.visible, true, "键盘焦点应位于视口内");
+      if (focused.id === "theme-toggle") {
+        reachedThemeToggle = true;
+        break;
+      }
+    }
+    assert.equal(reachedThemeToggle, true, "应能仅用 Tab 到达主题按钮");
+    await page.keyboard.press("Enter");
     await page.reload();
     assert.equal(
       await page.evaluate(() => document.documentElement.dataset.theme),
@@ -394,9 +446,25 @@ try {
 
           assert.equal(smoke.h1Count, 1, `${path} 应有且仅有一个主标题`);
           assert.equal(smoke.headingLevels[0], 1, `${path} 应从主标题开始`);
+          assert.equal(
+            smoke.headingLevels.every(
+              (level, index, levels) => index === 0 || level <= levels[index - 1] + 1,
+            ),
+            true,
+            `${path} 标题层级不得跳级：${smoke.headingLevels.join(" → ")}`,
+          );
           assert.equal(smoke.emptyHeadings, 0, `${path} 标题必须具有名称`);
           assert.deepEqual(smoke.unnamedActions, [], `${path} 存在无名称操作控件`);
           assert.equal(smoke.scrollWidth, width, `${width}px ${path} 不得横向溢出`);
+          if (path === longPostPath) {
+            assert.equal(
+              await smokePage
+                .locator(".post-header h1")
+                .evaluate(title => title.getBoundingClientRect().right <= innerWidth),
+              true,
+              `${width}px 长文章标题不得溢出`,
+            );
+          }
           assert.equal(smoke.forbiddenUi, 0, `${path} 不得出现规格外模块`);
           assert.ok(
             fontRequests.every(url => new URL(url).origin === host),
@@ -422,12 +490,29 @@ try {
           assert.notEqual(skipFocus.outlineWidth, "0px");
           assert.ok(skipFocus.top >= 0, `${path} 跳转导航聚焦时应可见`);
           await smokePage.keyboard.press("Enter");
-          assert.match(smokePage.url(), /#main-content$/);
+          await smokePage.waitForURL(/#main-content$/);
 
           if (path === "/search/") {
             const searchInput = smokePage.locator("pagefind-searchbox input");
-            await searchInput.focus();
-            await searchInput.fill("Markdown快速上手语法");
+            let reachedSearchInput = false;
+            for (let tabs = 0; tabs < 20; tabs += 1) {
+              await smokePage.keyboard.press("Tab");
+              reachedSearchInput = await searchInput.evaluate(
+                element => element === element.getRootNode().activeElement,
+              );
+              if (reachedSearchInput) break;
+            }
+            assert.equal(reachedSearchInput, true, "应能仅用 Tab 到达搜索输入框");
+            const searchFocus = await searchInput.evaluate(element => {
+              const style = getComputedStyle(element);
+              return [style.outlineStyle, style.outlineWidth, style.boxShadow];
+            });
+            assert.equal(
+              (searchFocus[0] !== "none" && searchFocus[1] !== "0px") || searchFocus[2] !== "none",
+              true,
+              "搜索框应有可见焦点",
+            );
+            await smokePage.keyboard.type("Markdown快速上手语法");
             const result = smokePage.getByRole("option", { name: /Markdown快速上手语法/ }).first();
             try {
               await result.waitFor({ state: "visible", timeout: 5_000 });
@@ -445,7 +530,7 @@ try {
               );
             }
             assert.equal(new URL(await result.getAttribute("href"), host).pathname, postPath);
-            await searchInput.press("Enter");
+            await smokePage.keyboard.press("Enter");
             await smokePage.waitForURL(`${host}${postPath}`);
           }
 

@@ -21,6 +21,12 @@ comments: true
 ---
 # 示例文章
 # 正文标题
+#### 跳级标题
+### 三级标题
+#### 四级标题
+##### 五级标题
+普通文本
+---
 \`\`\`sh
 # 代码注释
 \`\`\`
@@ -43,6 +49,8 @@ assert.match(migrated, /publishedAt: 2026-01-02T03:04:05\+08:00/);
 assert.doesNotMatch(migrated, /categories:|toc:|comments:/);
 assert.doesNotMatch(migrated, /^# 示例文章$/m);
 assert.match(migrated, /^## 正文标题$/m);
+assert.match(migrated, /^### 跳级标题$/m);
+assert.match(migrated, /^普通文本\n\n---$/m);
 assert.match(migrated, /^# 代码注释$/m);
 assert.match(
   migrated,

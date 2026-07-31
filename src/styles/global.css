@@ -740,8 +740,12 @@ pagefind-searchbox {
   border-left-color: var(--alert-color);
 }
 
+.post-body .markdown-alert-note {
+  --alert-color: light-dark(#a05036, #e68f70);
+}
+
 .post-body .markdown-alert-tip {
-  --alert-color: light-dark(#5f7b58, #9fbd94);
+  --alert-color: light-dark(#55714e, #9fbd94);
 }
 
 .post-body .markdown-alert-important {
@@ -749,7 +753,7 @@ pagefind-searchbox {
 }
 
 .post-body .markdown-alert-warning {
-  --alert-color: light-dark(#9a6a20, #d8b060);
+  --alert-color: light-dark(#895e1b, #d8b060);
 }
 
 .post-body .markdown-alert-caution {

@@ -222,8 +222,9 @@ function escapeHtml(value) {
 export function transformLegacyBody(body, title, migration) {
   let fence;
   let firstHeadingSeen = false;
+  let previousHeadingLevel = 1;
   const depthSevenSlugger = new GithubSlugger();
-  const lines = body.split("\n").flatMap(line => {
+  const lines = body.split("\n").flatMap((line, index, sourceLines) => {
     const marker = line.match(/^ {0,3}(`{3,}|~{3,})/);
     if (marker) {
       const [sequence] = marker.slice(1);
@@ -238,20 +239,29 @@ export function transformLegacyBody(body, title, migration) {
       return [line];
     }
     if (fence) return [line];
+    if (
+      /^ {0,3}-{3,}[ \t]*$/.test(line) &&
+      sourceLines[index - 1]?.trim() &&
+      !/^ {0,3}(`{3,}|~{3,})/.test(sourceLines[index - 1])
+    ) {
+      return ["", line];
+    }
 
     const heading = line.match(/^( {0,3})(#{1,6})([ \t]+)(.*)$/);
     if (!heading) return [line];
     const isDuplicateTitle = !firstHeadingSeen && headingText(heading[4]) === title;
     firstHeadingSeen = true;
     if (isDuplicateTitle) return [];
-    if (heading[2].length === 6) {
+    const level = Math.min(heading[2].length + 1, previousHeadingLevel + 1);
+    previousHeadingLevel = level;
+    if (level > 6) {
       // ponytail: HTML stops at H6; ARIA preserves the rare legacy H7 without a plugin.
       const slug = depthSevenSlugger.slug(headingText(heading[4]));
       return [
         `<h6 role="heading" aria-level="7" id="${migration.slug}-depth-7-${escapeHtml(slug)}">${escapeHtml(headingText(heading[4]))}</h6>`,
       ];
     }
-    return [`${heading[1]}${"#".repeat(heading[2].length + 1)}${heading[3]}${heading[4]}`];
+    return [`${heading[1]}${"#".repeat(level)}${heading[3]}${heading[4]}`];
   });
 
   let transformed = lines.join("\n");
