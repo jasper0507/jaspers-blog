@@ -2,6 +2,8 @@ import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
 
+declare const process: { env: Record<string, string | undefined> };
+
 const posts = defineCollection({
   loader: glob({ base: "./src/content/posts", pattern: "**/*.md" }),
   schema: z.object({
@@ -17,4 +19,16 @@ const posts = defineCollection({
   }),
 });
 
-export const collections = { posts };
+const shuoshuo = defineCollection({
+  loader: glob({
+    base:
+      process.env.SHUOSHUO_CONTENT_DIR ?? "./src/content/shuoshuo",
+    pattern: "**/*.md",
+  }),
+  schema: z.object({
+    publishedAt: z.coerce.date(),
+    draft: z.boolean(),
+  }),
+});
+
+export const collections = { posts, shuoshuo };

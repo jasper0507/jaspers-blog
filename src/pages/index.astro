@@ -1,8 +1,17 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { render } from "astro:content";
 import { formatPostDate, getPublishedPosts } from "../lib/posts";
+import {
+  getPublishedShuoshuo,
+  getShuoshuoLabel,
+} from "../lib/shuoshuo";
 
 const [latestPost] = await getPublishedPosts();
+const [latestShuoshuo] = await getPublishedShuoshuo();
+const LatestShuoshuoContent = latestShuoshuo
+  ? (await render(latestShuoshuo)).Content
+  : undefined;
 ---
 
 <BaseLayout pageClass="home">
@@ -44,8 +53,41 @@ const [latestPost] = await getPublishedPosts();
           <h2 id="recent-shuoshuo">最近说说</h2>
           <a href="/shuoshuo/">查看全部</a>
         </div>
-        <p class="empty-state">暂无说说</p>
+        {
+          latestShuoshuo && LatestShuoshuoContent ? (
+            <article
+              class="shuoshuo-preview"
+              aria-label={getShuoshuoLabel(latestShuoshuo.data.publishedAt)}
+            >
+              <div
+                class="post-body shuoshuo-body shuoshuo-summary"
+              >
+                <LatestShuoshuoContent />
+              </div>
+              <a href={`/shuoshuo/#${latestShuoshuo.id}`}>
+                <time datetime={latestShuoshuo.data.publishedAt.toISOString()}>
+                  {getShuoshuoLabel(latestShuoshuo.data.publishedAt)}
+                </time>
+              </a>
+            </article>
+          ) : (
+            <p class="empty-state">暂无说说</p>
+          )
+        }
       </section>
     </div>
   </div>
 </BaseLayout>
+
+<script is:inline>
+  const summary = document.querySelector(".shuoshuo-summary");
+  if (summary instanceof HTMLDivElement) {
+    const accessibleSummary = document.createElement("p");
+    accessibleSummary.className = "sr-only";
+    accessibleSummary.textContent = summary.textContent.trim();
+    summary.before(accessibleSummary);
+    summary.toggleAttribute("data-collapsed", true);
+    summary.inert = true;
+    summary.setAttribute("aria-hidden", "true");
+  }
+</script>

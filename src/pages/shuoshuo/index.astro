@@ -1,5 +1,18 @@
 ---
+import { render } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import {
+  formatShuoshuoDate,
+  getPublishedShuoshuo,
+  getShuoshuoLabel,
+} from "../../lib/shuoshuo";
+
+const shuoshuo = await Promise.all(
+  (await getPublishedShuoshuo()).map(async entry => ({
+    entry,
+    Content: (await render(entry)).Content,
+  })),
+);
 ---
 
 <BaseLayout
@@ -7,8 +20,70 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
   description="Jasper 发布的轻量文字与照片内容。"
   pageClass="page-shell"
 >
-  <section class="page-intro">
-    <h1>说说</h1>
-    <p>暂无说说</p>
+  <section class="page-intro" aria-labelledby="shuoshuo-title">
+    <h1 id="shuoshuo-title">说说</h1>
+    <p>{shuoshuo.length ? "轻量文字与照片。" : "暂无说说"}</p>
   </section>
+  {
+    shuoshuo.length > 0 && (
+      <ol class="shuoshuo-list">
+        {shuoshuo.map(({ entry, Content }) => {
+          const bodyId = `shuoshuo-body-${entry.id}`;
+          const label = getShuoshuoLabel(entry.data.publishedAt);
+
+          return (
+            <li id={entry.id}>
+              <article aria-label={label}>
+                <a
+                  class="shuoshuo-anchor"
+                  href={`#${entry.id}`}
+                  aria-label={`${label}的永久链接`}
+                >
+                  <time datetime={entry.data.publishedAt.toISOString()}>
+                    {formatShuoshuoDate(entry.data.publishedAt)}
+                  </time>
+                </a>
+                <div class="post-body shuoshuo-body" id={bodyId}>
+                  <Content />
+                </div>
+                <button
+                  class="shuoshuo-toggle"
+                  type="button"
+                  aria-expanded="false"
+                  aria-controls={bodyId}
+                  data-shuoshuo-toggle={entry.id}
+                  hidden
+                >
+                  展开
+                </button>
+              </article>
+            </li>
+          );
+        })}
+      </ol>
+    )
+  }
 </BaseLayout>
+
+<script is:inline>
+  document.querySelectorAll("[data-shuoshuo-toggle]").forEach(button => {
+    if (!(button instanceof HTMLButtonElement)) return;
+    const id = button.dataset.shuoshuoToggle;
+    const body = id && document.querySelector(`#shuoshuo-body-${id}`);
+    if (!(body instanceof HTMLDivElement)) return;
+
+    body.toggleAttribute("data-collapsed", true);
+    if (body.scrollHeight <= body.clientHeight) {
+      body.removeAttribute("data-collapsed");
+      return;
+    }
+    body.inert = true;
+    button.hidden = false;
+    button.addEventListener("click", () => {
+      const expanded = !body.toggleAttribute("data-collapsed");
+      body.inert = !expanded;
+      button.setAttribute("aria-expanded", String(expanded));
+      button.textContent = expanded ? "收起" : "展开";
+    });
+  });
+</script>

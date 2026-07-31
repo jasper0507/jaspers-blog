@@ -10,9 +10,12 @@
     "dev": "astro dev",
     "check": "astro check",
     "build": "astro build",
+    "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
     "test:dist": "node scripts/check-build.mjs",
+    "test:shuoshuo:command": "node scripts/check-new-shuoshuo.mjs",
+    "test:shuoshuo": "node scripts/check-shuoshuo.mjs",
     "test:visual": "npm run build && node scripts/check-visual.mjs",
-    "test": "npm run build && npm run test:dist"
+    "test": "npm run check && npm run test:shuoshuo:command && npm run build && npm run test:dist && npm run test:shuoshuo"
   },
   "dependencies": {
     "astro": "7.1.6"

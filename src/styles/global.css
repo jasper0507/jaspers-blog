@@ -397,10 +397,74 @@ main {
 
 .post-preview time,
 .post-meta,
-.post-tags {
+.post-tags,
+.shuoshuo-preview time,
+.shuoshuo-anchor {
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: 0.78rem;
+}
+
+.shuoshuo-preview > a {
+  display: inline-block;
+  margin-top: 0.7rem;
+}
+
+.post-body.shuoshuo-body {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 1rem;
+  overflow: hidden;
+}
+
+.shuoshuo-body.shuoshuo-summary[data-collapsed] {
+  max-height: 5.2rem;
+  mask-image: linear-gradient(to bottom, #000 65%, transparent);
+}
+
+.shuoshuo-list {
+  margin: 3rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shuoshuo-list > li {
+  padding-block: 2rem;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 1.5rem;
+}
+
+.shuoshuo-list > li:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.shuoshuo-list > li:target {
+  border-top-color: var(--accent);
+}
+
+.shuoshuo-anchor {
+  display: inline-block;
+  margin-bottom: 0.8rem;
+}
+
+.shuoshuo-body[data-collapsed] {
+  max-height: 12rem;
+  mask-image: linear-gradient(to bottom, #000 75%, transparent);
+}
+
+.shuoshuo-toggle {
+  margin-top: 0.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.22em;
 }
 
 .post-list {

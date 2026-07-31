@@ -50,6 +50,16 @@ assert.match(pages[""], /Markdown快速上手语法/);
 assert.match(pages[""], new RegExp(`/posts/${postSlug}/`));
 assert.match(pages[""], /最近说说/);
 assert.match(pages[""], /暂无说说/);
+assert.match(pages.shuoshuo, /暂无说说/);
+for (const fixtureText of [
+  "这是发布时间最新的公开说说",
+  "这是一条不应公开的草稿",
+  "20250101-000001",
+]) {
+  assert.doesNotMatch(pages[""], new RegExp(fixtureText));
+  assert.doesNotMatch(pages.shuoshuo, new RegExp(fixtureText));
+  assert.doesNotMatch(sitemap, new RegExp(fixtureText));
+}
 for (const segment of ["115", "117", "118", "119"]) {
   assert.match(
     pages[""],
