@@ -1,5 +1,8 @@
 import { getCollection } from "astro:content";
+import { isPublished } from "./content";
 import { tags } from "./tags";
+
+export const POSTS_PER_PAGE = 10;
 
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "long",
@@ -18,7 +21,7 @@ export async function getPublishedPosts() {
   }
 
   return posts
-    .filter(post => !post.data.draft)
+    .filter(isPublished)
     .sort(
       (left, right) =>
         right.data.publishedAt.getTime() - left.data.publishedAt.getTime() ||

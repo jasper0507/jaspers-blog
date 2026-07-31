@@ -33,6 +33,10 @@ const pages = Object.fromEntries(
   ),
 );
 const sitemap = await readFile("dist/sitemap.xml", "utf8");
+const rss = await readFile("dist/rss.xml", "utf8");
+const searchIndex = JSON.parse(
+  await readFile("dist/pagefind/pagefind-entry.json", "utf8"),
+);
 const styles = (
   await Promise.all(
     (await readdir("dist/_astro"))
@@ -276,6 +280,41 @@ assert.match(pages.about, /Jasper/);
 assert.match(pages.about, /github\.com\/jasper0507/);
 assert.match(pages.about, /jasper0507\.self@gmail\.com/);
 assert.match(sitemap, /https:\/\/blog\.jasper0507\.cc\.cd\/about\//);
+
+await access("dist/pagefind/pagefind.js");
+await access("dist/pagefind/pagefind-component-ui.js");
+await access("dist/pagefind/pagefind-component-ui.css");
+assert.equal(searchIndex.languages["zh-cn"].page_count, POST_MIGRATIONS.length);
+assert.match(pages.search, /<pagefind-searchbox[^>]*show-sub-results/);
+assert.match(pages.search, /\/pagefind\/pagefind-component-ui\.js/);
+assert.match(pages[""], /href="\/rss\.xml"[^>]*>RSS<\/a>/);
+
+for (const { slug, title } of postMetadata) {
+  assert.match(sitemap, new RegExp(`/posts/${slug}/`));
+  assert.match(rss, new RegExp(escapeRegExp(escapeHtml(title))));
+  assert.match(rss, new RegExp(`/posts/${slug}/`));
+}
+for (const slug of tagSlugs.values()) {
+  assert.match(sitemap, new RegExp(`/tags/${slug}/`));
+}
+assert.match(sitemap, /\/posts\/2\//);
+assert.doesNotMatch(sitemap, /\/shuoshuo\/#/);
+assert.match(rss, /<rss version="2\.0"/);
+assert.equal((rss.match(/<item>/g) ?? []).length, POST_MIGRATIONS.length);
+assert.doesNotMatch(rss, /不可公开的草稿|draft-markdown-capabilities/);
+
+for (const [route, html] of Object.entries(pages)) {
+  const canonicalUrl = `https://blog.jasper0507.cc.cd/${route ? `${route}/` : ""}`;
+  assert.match(html, new RegExp(`<link rel="canonical" href="${canonicalUrl}"`));
+  assert.match(html, /<meta property="og:title" content="[^"]+">/);
+  assert.match(html, /<meta property="og:description" content="[^"]+">/);
+  assert.match(
+    html,
+    new RegExp(`<meta property="og:url" content="${canonicalUrl}"`),
+  );
+}
+assert.match(post, /<meta property="og:type" content="article">/);
+assert.match(post, /"@type":"BlogPosting"/);
 
 const invalidTagOutDir = await mkdtemp(join(tmpdir(), "newblog-invalid-tag-"));
 try {

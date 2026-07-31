@@ -6,6 +6,8 @@ interface PageData {
   title?: string;
   description?: string;
   pageClass?: string;
+  ogType?: "website" | "article";
+  structuredData?: Record<string, unknown>;
 }
 
 interface Props extends PageData {
@@ -23,13 +25,25 @@ const inArticles = ["/posts/", "/tags/", "/archives/"].some(prefix =>
   path.startsWith(prefix),
 );
 const year = new Date().getFullYear();
-const structuredData = JSON.stringify({
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  name: siteTitle,
-  url: Astro.site,
-  inLanguage: "zh-CN",
-}).replaceAll("<", "\\u003c");
+const structuredData = JSON.stringify(
+  pageData.structuredData ??
+    (path === "/"
+      ? {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: siteTitle,
+          url: canonical.href,
+          inLanguage: "zh-CN",
+        }
+      : {
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          name: pageData.title ?? siteTitle,
+          description,
+          url: canonical.href,
+          inLanguage: "zh-CN",
+        }),
+).replaceAll("<", "\\u003c");
 ---
 
 <!doctype html>
@@ -52,12 +66,13 @@ const structuredData = JSON.stringify({
         ))
     }
     <link rel="canonical" href={canonical} />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={pageData.ogType ?? "website"} />
     <meta property="og:locale" content="zh_CN" />
     <meta property="og:site_name" content={siteTitle} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
+    <slot name="head" />
     <title>{title}</title>
     <script type="application/ld+json" set:html={structuredData} is:inline />
     <script is:inline>
@@ -266,6 +281,7 @@ const structuredData = JSON.stringify({
       <div class="footer-inner">
         <p>© {year} Jasper. 保留所有权利。</p>
         <ul aria-label="联系方式">
+          <li><a href="/rss.xml">RSS</a></li>
           <li><a href="https://github.com/jasper0507">GitHub</a></li>
           <li>
             <a href="mailto:jasper0507.self@gmail.com">邮箱</a>

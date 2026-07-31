@@ -442,8 +442,12 @@ main {
   border-bottom: 1px solid var(--line);
 }
 
-.shuoshuo-list > li:target {
+.shuoshuo-list > li:has(h2:target) {
   border-top-color: var(--accent);
+}
+
+.shuoshuo-list h2 {
+  scroll-margin-top: 1.5rem;
 }
 
 .shuoshuo-anchor {
@@ -590,6 +594,11 @@ main {
 .page-intro p {
   max-width: 38rem;
   margin: 0;
+}
+
+pagefind-searchbox {
+  margin-top: 3rem;
+  display: block;
 }
 
 .prose p,

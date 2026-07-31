@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { promisify } from "node:util";
@@ -9,24 +9,45 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
 const astro = join(root, "node_modules/astro/bin/astro.mjs");
+const pagefind = join(root, "node_modules/.bin/pagefind");
 const temporaryDirectory = await mkdtemp(join(root, ".shuoshuo-fixture-"));
 const outDir = join(temporaryDirectory, "dist");
+const emptyPostsDirectory = join(temporaryDirectory, "empty-posts");
+const emptyShuoshuoDirectory = join(temporaryDirectory, "empty-shuoshuo");
 const fixtureEnvironment = {
   ...process.env,
   SHUOSHUO_CONTENT_DIR: "./tests/fixtures/shuoshuo",
 };
-
-try {
+const buildSearchFixture = async (directory, environment) => {
   await execFileAsync(
     process.execPath,
-    [astro, "build", "--force", "--outDir", outDir],
-    { cwd: root, env: fixtureEnvironment },
+    [astro, "build", "--force", "--outDir", directory],
+    { cwd: root, env: environment },
   );
+  await execFileAsync(pagefind, ["--site", directory], { cwd: root });
+};
+const getIndexedPageCount = async directory =>
+  Object.values(
+    JSON.parse(
+      await readFile(join(directory, "pagefind/pagefind-entry.json"), "utf8"),
+    ).languages,
+  ).reduce((sum, language) => sum + language.page_count, 0);
+
+try {
+  await Promise.all([
+    mkdir(emptyPostsDirectory),
+    mkdir(emptyShuoshuoDirectory),
+  ]);
+  await buildSearchFixture(outDir, fixtureEnvironment);
 
   const home = await readFile(join(outDir, "index.html"), "utf8");
   const timeline = await readFile(
     join(outDir, "shuoshuo/index.html"),
     "utf8",
+  );
+  const rss = await readFile(join(outDir, "rss.xml"), "utf8");
+  const searchIndex = JSON.parse(
+    await readFile(join(outDir, "pagefind/pagefind-entry.json"), "utf8"),
   );
   const stableId = "20250101-000001";
   const olderId = "20260102-080000";
@@ -46,6 +67,11 @@ try {
   );
   assert.match(timeline, new RegExp(`id="${stableId}"`));
   assert.match(timeline, /说说 · 2026年2月3日 09:30/);
+  assert.match(
+    timeline,
+    new RegExp(`<h2 class="sr-only" id="${stableId}">说说 · 2026年2月3日 09:30</h2>`),
+  );
+  assert.match(timeline, /data-pagefind-body/);
   assert.match(timeline, /data-shuoshuo-toggle/);
   assert.doesNotMatch(
     timeline,
@@ -55,6 +81,39 @@ try {
   assert.match(timeline, /https:\/\/example\.com\/fixture-photo\.jpg/);
   assert.doesNotMatch(timeline, new RegExp(draftId));
   assert.doesNotMatch(timeline, /这是一条不应公开的草稿/);
+  assert.equal(searchIndex.languages["zh-cn"].page_count, 16);
+  assert.equal((rss.match(/<item>/g) ?? []).length, 17);
+  assert.match(rss, /说说 · 2026年2月3日 09:30/);
+  assert.match(rss, new RegExp(`/shuoshuo/#${stableId}`));
+  assert.doesNotMatch(rss, /这是一条不应公开的草稿/);
+
+  const shuoshuoOnlyOutDir = join(temporaryDirectory, "shuoshuo-only-dist");
+  await buildSearchFixture(
+    shuoshuoOnlyOutDir,
+    { ...fixtureEnvironment, POST_CONTENT_DIR: emptyPostsDirectory },
+  );
+  const shuoshuoOnlyRss = await readFile(
+    join(shuoshuoOnlyOutDir, "rss.xml"),
+    "utf8",
+  );
+  assert.equal((shuoshuoOnlyRss.match(/<item>/g) ?? []).length, 2);
+  assert.doesNotMatch(shuoshuoOnlyRss, /Markdown快速上手语法/);
+  assert.equal(await getIndexedPageCount(shuoshuoOnlyOutDir), 1);
+
+  const emptyOutDir = join(temporaryDirectory, "empty-dist");
+  await buildSearchFixture(
+    emptyOutDir,
+    {
+      ...process.env,
+      POST_CONTENT_DIR: emptyPostsDirectory,
+      SHUOSHUO_CONTENT_DIR: emptyShuoshuoDirectory,
+    },
+  );
+  assert.doesNotMatch(
+    await readFile(join(emptyOutDir, "rss.xml"), "utf8"),
+    /<item>/,
+  );
+  assert.equal(await getIndexedPageCount(emptyOutDir), 1);
 
   const styles = (
     await Promise.all(
@@ -66,6 +125,49 @@ try {
 
   const browser = await chromium.launch({ headless: true });
   try {
+    const searchPage = await browser.newPage();
+    await searchPage.route("http://pagefind.test/**", async route => {
+      const pathname = new URL(route.request().url()).pathname;
+      const target = resolve(
+        outDir,
+        `.${pathname === "/" ? "/index.html" : pathname}`,
+      );
+      assert.ok(target.startsWith(`${outDir}/`));
+      await route.fulfill({ path: target });
+    });
+    await searchPage.goto("http://pagefind.test/");
+    const searchResults = await searchPage.evaluate(async () => {
+      const pagefind = await import("/pagefind/pagefind.js");
+      await pagefind.options({ noWorker: true });
+      const search = async term =>
+        Promise.all(
+          (await pagefind.search(term)).results.map(result => result.data()),
+        );
+      return {
+        post: await search("Markdown快速上手语法"),
+        shuoshuo: await search("这是发布时间最新的公开说说"),
+        draft: await search("这是一条不应公开的草稿"),
+      };
+    });
+    assert.ok(
+      searchResults.post.some(
+        result => result.url === "/posts/markdown-quick-start/",
+      ),
+      "搜索应链接到技术文章永久链接",
+    );
+    assert.ok(
+      searchResults.shuoshuo
+        .flatMap(result => result.sub_results)
+        .some(
+          result =>
+            result.title === "说说 · 2026年2月3日 09:30" &&
+            result.url === `/shuoshuo/#${stableId}`,
+        ),
+      "搜索应使用机器标签并链接到说说稳定锚点",
+    );
+    assert.equal(searchResults.draft.length, 0, "搜索不得收录说说草稿");
+    await searchPage.close();
+
     const homeScript = [...home.matchAll(/<script>([\s\S]*?)<\/script>/g)]
       .find(([, source]) => source.includes("shuoshuo-summary"));
     assert.ok(homeScript, "首页摘要增强脚本应内联");
@@ -111,7 +213,9 @@ try {
         stableId,
       );
       const toggle = page.locator(`[data-shuoshuo-toggle="${stableId}"]`);
-      const body = page.locator(`[id="${stableId}"] .shuoshuo-body`);
+      const body = page.locator(
+        `article:has([id="${stableId}"]) .shuoshuo-body`,
+      );
       const hiddenLink = body.locator("a");
 
       assert.equal(

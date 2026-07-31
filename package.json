@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "astro dev",
     "check": "astro check",
-    "build": "astro build",
+    "build": "astro build && pagefind --site dist",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
     "test:dist": "node scripts/check-build.mjs",
     "test:migration": "node scripts/check-migration.mjs",
@@ -27,6 +27,7 @@
     "@shikijs/transformers": "4.3.1",
     "github-slugger": "2.0.0",
     "katex": "0.18.1",
+    "pagefind": "1.5.2",
     "playwright-core": "1.61.1",
     "rehype-katex": "7.0.1",
     "remark-github-blockquote-alert": "2.1.0",

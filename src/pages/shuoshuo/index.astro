@@ -32,8 +32,9 @@ const shuoshuo = await Promise.all(
           const label = getShuoshuoLabel(entry.data.publishedAt);
 
           return (
-            <li id={entry.id}>
-              <article aria-label={label}>
+            <li>
+              <article aria-label={label} data-pagefind-body>
+                <h2 class="sr-only" id={entry.id}>{label}</h2>
                 <a
                   class="shuoshuo-anchor"
                   href={`#${entry.id}`}

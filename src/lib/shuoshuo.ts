@@ -1,4 +1,5 @@
 import { getCollection } from "astro:content";
+import { isPublished } from "./content";
 
 const stableIdPattern = /^\d{8}-\d{6}$/;
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
@@ -19,7 +20,7 @@ export async function getPublishedShuoshuo() {
   }
 
   return entries
-    .filter(entry => !entry.data.draft)
+    .filter(isPublished)
     .sort(
       (left, right) =>
         right.data.publishedAt.getTime() - left.data.publishedAt.getTime(),
