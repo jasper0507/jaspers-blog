@@ -5,6 +5,8 @@ import { chromium } from "playwright-core";
 
 const host = "http://127.0.0.1:4321";
 const screenshotDir = "artifacts/issue-2";
+const postScreenshotDir = "artifacts/issue-3";
+const postPath = "/posts/markdown-quick-start/";
 const widths = [1440, 768, 375, 320];
 const themes = ["light", "dark"];
 const expectedColors = {
@@ -61,6 +63,7 @@ function assertNear(actual, expected, tolerance = 1) {
 try {
   await waitForServer();
   await mkdir(screenshotDir, { recursive: true });
+  await mkdir(postScreenshotDir, { recursive: true });
   const browser = await chromium.launch({ headless: true });
 
   try {
@@ -166,10 +169,127 @@ try {
           path: `${screenshotDir}/home-${width}-${theme}.png`,
           fullPage: true,
         });
+
+        await page.goto(`${host}${postPath}`, { waitUntil: "networkidle" });
+        await page.evaluate(() => document.fonts.ready);
+
+        const article = await page.evaluate(() => {
+          const main = document.querySelector("main");
+          const card = document.querySelector(".post-body");
+          const title = document.querySelector(".post-header h1");
+          const toc = document.querySelector(".post-toc");
+          const cardStyle = getComputedStyle(card);
+          const titleStyle = getComputedStyle(title);
+          const tocStyle = getComputedStyle(toc);
+          const bodyStyle = getComputedStyle(document.body);
+          const wideContent = [
+            ...document.querySelectorAll(
+              ".post-body table, .post-body .astro-code, .post-body .katex-display",
+            ),
+          ];
+
+          return {
+            scrollWidth: document.documentElement.scrollWidth,
+            bodyScrollWidth: document.body.scrollWidth,
+            mainWidth: main.getBoundingClientRect().width,
+            mainScrollWidth: main.scrollWidth,
+            cardWidth: card.getBoundingClientRect().width,
+            cardScrollWidth: card.scrollWidth,
+            contentWidth:
+              card.clientWidth -
+              Number.parseFloat(cardStyle.paddingLeft) -
+              Number.parseFloat(cardStyle.paddingRight),
+            cardPaddingLeft: Number.parseFloat(cardStyle.paddingLeft),
+            cardBackground: cardStyle.backgroundColor,
+            titleFontFamily: titleStyle.fontFamily,
+            titleFontSize: Number.parseFloat(titleStyle.fontSize),
+            titleFontWeight: titleStyle.fontWeight,
+            tocDisplay: tocStyle.display,
+            tocWidth: toc.getBoundingClientRect().width,
+            background: bodyStyle.backgroundColor,
+            wideContentContained: wideContent.every(
+              element => element.getBoundingClientRect().width <= card.clientWidth,
+            ),
+            overflowing: [...document.body.querySelectorAll("*")]
+              .filter(element => {
+                const rect = element.getBoundingClientRect();
+                return rect.right > innerWidth + 0.5 || rect.left < -0.5;
+              })
+              .slice(0, 8)
+              .map(element => ({
+                element: `${element.tagName.toLowerCase()}.${element.className}`,
+                parent: `${element.parentElement?.tagName.toLowerCase()}.${element.parentElement?.className}`,
+                left: element.getBoundingClientRect().left,
+                right: element.getBoundingClientRect().right,
+                scrollWidth: element.scrollWidth,
+                closestPre: element.closest("pre")
+                  ? {
+                      left: element.closest("pre").getBoundingClientRect().left,
+                      right: element.closest("pre").getBoundingClientRect().right,
+                      clientWidth: element.closest("pre").clientWidth,
+                      scrollWidth: element.closest("pre").scrollWidth,
+                      overflowX: getComputedStyle(element.closest("pre")).overflowX,
+                    }
+                  : null,
+              })),
+          };
+        });
+
+        assert.equal(
+          article.scrollWidth,
+          width,
+          `${width}px 文章页不得横向溢出：${JSON.stringify(article)}`,
+        );
+        assert.equal(article.background, expectedColors[theme].background);
+        assert.equal(
+          article.cardBackground,
+          theme === "light" ? "rgb(250, 249, 245)" : "rgb(47, 46, 42)",
+        );
+        assert.match(
+          article.titleFontFamily,
+          /^"Source Serif 4", "Noto Serif SC"/,
+        );
+        assert.equal(article.titleFontWeight, "500");
+        assert.equal(article.wideContentContained, true);
+
+        if (width === 1440) {
+          assertNear(article.mainWidth, 1120);
+          assertNear(article.cardWidth, 768);
+          assertNear(article.contentWidth, 704);
+          assertNear(article.cardPaddingLeft, 32);
+          assertNear(article.titleFontSize, 36);
+          assert.equal(article.tocDisplay, "block");
+          assertNear(article.tocWidth, 176);
+        } else {
+          assertNear(article.cardWidth, width - 32);
+          assertNear(article.cardPaddingLeft, 20);
+          assertNear(article.titleFontSize, 30);
+          assert.equal(article.tocDisplay, "none");
+        }
+
+        await page.screenshot({
+          path: `${postScreenshotDir}/post-${width}-${theme}.png`,
+          fullPage: true,
+        });
         assert.deepEqual(pageErrors, []);
         await context.close();
       }
     }
+
+    const intermediateContext = await browser.newContext({
+      viewport: { width: 1024, height: 960 },
+      colorScheme: "light",
+    });
+    const intermediatePage = await intermediateContext.newPage();
+    await intermediatePage.goto(`${host}${postPath}`);
+    assert.equal(
+      await intermediatePage.evaluate(
+        () => document.documentElement.scrollWidth,
+      ),
+      1024,
+      "1024px 文章页不得横向溢出",
+    );
+    await intermediateContext.close();
 
     const context = await browser.newContext({
       viewport: { width: 375, height: 960 },

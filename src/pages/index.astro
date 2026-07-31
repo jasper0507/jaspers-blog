@@ -1,5 +1,8 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { formatPostDate, getPublishedPosts } from "../lib/posts";
+
+const [latestPost] = await getPublishedPosts();
 ---
 
 <BaseLayout pageClass="home">
@@ -19,7 +22,21 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           <h2 id="recent-posts">最近文章</h2>
           <a href="/posts/">查看全部</a>
         </div>
-        <p class="empty-state">技术文章尚未发布。</p>
+        {
+          latestPost ? (
+            <article class="post-preview">
+              <h3>
+                <a href={`/posts/${latestPost.id}/`}>{latestPost.data.title}</a>
+              </h3>
+              <p>{latestPost.data.description}</p>
+              <time datetime={latestPost.data.publishedAt.toISOString()}>
+                {formatPostDate(latestPost.data.publishedAt)}
+              </time>
+            </article>
+          ) : (
+            <p class="empty-state">技术文章尚未发布。</p>
+          )
+        }
       </section>
 
       <section class="feed-section" aria-labelledby="recent-shuoshuo">
