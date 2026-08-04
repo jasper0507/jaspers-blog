@@ -103,11 +103,33 @@ try {
           const main = document.querySelector("main");
           const grid = document.querySelector(".home-grid");
           const hero = document.querySelector(".hero");
-          const title = document.querySelector(".hero h1");
-          const lines = [...document.querySelectorAll(".hero h1 span")];
+          const lightImage = document.querySelector(".hero-image-light");
+          const darkImage = document.querySelector(".hero-image-dark");
           const bodyStyle = getComputedStyle(document.body);
           const heroStyle = getComputedStyle(hero);
-          const titleStyle = getComputedStyle(title);
+          const lightStyle = getComputedStyle(lightImage);
+          const darkStyle = getComputedStyle(darkImage);
+          const visibleImage =
+            lightStyle.display !== "none" && lightStyle.visibility !== "hidden"
+              ? lightImage
+              : darkImage;
+          const visibleStyle = getComputedStyle(visibleImage);
+          const sectionRules = [...document.querySelectorAll(".feed-section")].map(section => {
+            const style = getComputedStyle(section, "::before");
+            const rect = section.getBoundingClientRect();
+            return {
+              width: Number.parseFloat(style.width),
+              sectionWidth: rect.width,
+              borderColor: style.backgroundColor || style.borderTopColor,
+            };
+          });
+          const postPreview = document.querySelector(".post-preview");
+          const description = document.querySelector(".post-preview-description");
+          const descriptionStyle = description ? getComputedStyle(description) : null;
+          const viewAll = [...document.querySelectorAll(".section-heading a")].map(link => ({
+            href: link.getAttribute("href"),
+            text: link.textContent.trim(),
+          }));
 
           return {
             scrollWidth: document.documentElement.scrollWidth,
@@ -117,27 +139,28 @@ try {
               .map(Number.parseFloat),
             heroWidth: hero.getBoundingClientRect().width,
             heroPaddingLeft: Number.parseFloat(heroStyle.paddingLeft),
-            fontFamily: titleStyle.fontFamily,
-            fontSize: Number.parseFloat(titleStyle.fontSize),
-            fontWeight: titleStyle.fontWeight,
-            letterSpacing: Number.parseFloat(titleStyle.letterSpacing),
-            lineHeight: Number.parseFloat(titleStyle.lineHeight),
-            lineOffsets: lines.map(
-              line => line.getBoundingClientRect().left - lines[0].getBoundingClientRect().left,
-            ),
-            lineRight: Math.max(...lines.map(line => line.getBoundingClientRect().right)),
-            lineCount: lines.length,
+            lightDisplay: lightStyle.display,
+            darkDisplay: darkStyle.display,
+            lightSrc: lightImage?.getAttribute("src") ?? "",
+            darkSrc: darkImage?.getAttribute("src") ?? "",
+            lightAlt: lightImage?.getAttribute("alt") ?? "",
+            darkAlt: darkImage?.getAttribute("alt") ?? "",
+            lightNaturalWidth: lightImage?.naturalWidth ?? 0,
+            darkNaturalWidth: darkImage?.naturalWidth ?? 0,
+            imageWidth: visibleImage?.getBoundingClientRect().width ?? 0,
+            visibleDisplay: visibleStyle.display,
+            zenText: document.body.textContent.includes("见了便做"),
+            sectionRules,
+            postPreviewOrder: postPreview
+              ? [...postPreview.children].map(child => child.tagName.toLowerCase())
+              : [],
+            descriptionWhiteSpace: descriptionStyle?.whiteSpace ?? "",
+            descriptionOverflow: descriptionStyle?.overflow ?? "",
+            descriptionTextOverflow: descriptionStyle?.textOverflow ?? "",
+            viewAll,
             background: bodyStyle.backgroundColor,
             text: bodyStyle.color,
-            accent: getComputedStyle(document.querySelector(".hero-kicker")).color,
-            notoReady: document.fonts.check(
-              '400 66px "Noto Serif SC"',
-              "见了便做，做了便放下，了了有何不了。",
-            ),
-            fontResources: performance
-              .getEntriesByType("resource")
-              .map(entry => entry.name)
-              .filter(url => url.endsWith(".woff2")),
+            h1Count: document.querySelectorAll("h1").length,
           };
         });
 
@@ -145,35 +168,56 @@ try {
         assert.equal(actual.background, expectedColors[theme].background);
         if (theme === "dark") {
           assert.equal(actual.text, expectedColors.dark.text);
-          assert.equal(actual.accent, expectedColors.dark.accent);
         }
-        assert.match(actual.fontFamily, /^"Source Serif 4", "Noto Serif SC"/);
-        assert.equal(actual.fontWeight, "400");
-        assert.equal(actual.notoReady, true);
-        assert.equal(actual.lineCount, 3, "禅语必须保持三行");
-        assertNear(actual.letterSpacing, actual.fontSize * -0.04, 0.1);
-        assertNear(actual.lineHeight, actual.fontSize * 1.12, 0.1);
-        assertNear(actual.lineOffsets[1] / actual.fontSize, 0.65, 0.03);
-        assertNear(actual.lineOffsets[2] / actual.fontSize, 1.3, 0.03);
-        assert.ok(actual.lineRight <= width, `${width}px 禅语不得溢出视口`);
+        assert.equal(actual.zenText, false, "首页不得再展示禅语三行文字");
+        assert.equal(actual.h1Count, 1, "首页应保留唯一主标题");
+        assert.ok(actual.lightSrc, "亮色主视觉应有 src");
+        assert.ok(actual.darkSrc, "暗色主视觉应有 src");
+        assert.notEqual(actual.lightSrc, actual.darkSrc);
+        assert.ok(actual.lightAlt.trim(), "主视觉应有 alt");
+        assert.equal(actual.lightAlt, actual.darkAlt, "亮暗主视觉共用 alt");
+        assert.ok(actual.lightNaturalWidth > 0, "亮色主视觉资源应成功加载");
+        assert.ok(actual.darkNaturalWidth > 0, "暗色主视觉资源应成功加载");
+        if (theme === "dark") {
+          assert.notEqual(actual.darkDisplay, "none", "暗色主题应显示暗色主视觉");
+          assert.equal(actual.lightDisplay, "none", "暗色主题应隐藏亮色主视觉");
+        } else {
+          assert.notEqual(actual.lightDisplay, "none", "亮色主题应显示亮色主视觉");
+          assert.equal(actual.darkDisplay, "none", "亮色主题应隐藏暗色主视觉");
+        }
+        assert.ok(actual.imageWidth > 0, "主视觉应占据可见宽度");
+        assert.ok(actual.imageWidth <= actual.heroWidth + 1, "主视觉不得溢出 hero 栏");
+        assert.notEqual(actual.visibleDisplay, "none");
+        assert.deepEqual(actual.postPreviewOrder.slice(0, 3), ["time", "h3", "p"]);
+        assert.equal(actual.descriptionWhiteSpace, "nowrap");
+        assert.equal(actual.descriptionOverflow, "hidden");
+        assert.equal(actual.descriptionTextOverflow, "ellipsis");
         assert.ok(
-          actual.fontResources.some(url => url.includes("/fonts/noto-serif-sc-")),
-          "禅语应加载自托管 Noto Serif SC 分段字体",
+          actual.viewAll.some(
+            item => item.href === "/archives/" && /^查看全部 \(\d+\)$/.test(item.text),
+          ),
+          "文章「查看全部 (N)」文案与链接",
         );
+        assert.ok(
+          actual.viewAll.some(
+            item => item.href === "/shuoshuo/" && /^查看全部 \(\d+\)$/.test(item.text),
+          ),
+          "说说「查看全部 (N)」文案与链接",
+        );
+        for (const rule of actual.sectionRules) {
+          assert.ok(rule.width > 0, "分区线应有可见长度");
+          assert.ok(rule.width < rule.sectionWidth * 0.5, "分区线应短于区块半宽以协调版式");
+        }
 
         if (width === 1440) {
           assertNear(actual.mainWidth, 1120);
           assert.equal(actual.gridColumns.length, 2);
           assertNear(actual.gridColumns[0], 658);
           assertNear(actual.heroWidth, 658);
-          assertNear(actual.heroPaddingLeft / actual.heroWidth, 0.11, 0.005);
-          assertNear(actual.fontSize, 66);
         } else {
           assertNear(actual.mainWidth, width);
           assert.equal(actual.gridColumns.length, 1);
           assertNear(actual.heroPaddingLeft, 0);
-          if (width === 375) assertNear(actual.fontSize, 42);
-          if (width === 320) assertNear(actual.fontSize, 35);
         }
 
         await page.screenshot({

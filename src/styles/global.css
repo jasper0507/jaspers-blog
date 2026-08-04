@@ -299,38 +299,50 @@ main {
 }
 
 .hero {
-  padding-inline: 11%;
+  position: relative;
+  min-width: 0;
 }
 
-.hero-kicker {
-  margin: 0 0 1.125rem;
+.hero-title {
+  margin: 0 0 1.25rem;
   color: var(--accent);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 400;
   letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
-.hero h1 {
-  margin: 0;
-  font-family: var(--font-serif);
-  font-size: 4.125rem;
-  font-weight: 400;
-  letter-spacing: -0.04em;
-  line-height: 1.12;
-}
-
-.hero h1 span {
+.hero-image {
   display: block;
-  white-space: nowrap;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  object-fit: cover;
+  border-radius: 0.15rem;
 }
 
-.hero h1 span:nth-child(2) {
-  margin-left: 0.65em;
+/* 亮/暗双图：跟随 data-theme 与系统偏好 */
+.hero-image-dark {
+  display: none;
 }
 
-.hero h1 span:nth-child(3) {
-  margin-left: 1.3em;
+html[data-theme="dark"] .hero-image-light {
+  display: none;
+}
+
+html[data-theme="dark"] .hero-image-dark {
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .hero-image-light {
+    display: none;
+  }
+
+  html:not([data-theme="light"]) .hero-image-dark {
+    display: block;
+  }
 }
 
 .home-feed {
@@ -339,8 +351,18 @@ main {
 }
 
 .feed-section {
+  position: relative;
   padding-top: 1rem;
-  border-top: 1px solid var(--text);
+}
+
+/* 分区装饰线：只调长短，颜色仍用 --text */
+.feed-section::before {
+  content: "";
+  display: block;
+  width: 2.75rem;
+  height: 1px;
+  margin-bottom: 1rem;
+  background: var(--text);
 }
 
 .section-heading {
@@ -371,6 +393,12 @@ main {
   color: var(--muted);
 }
 
+.post-preview {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
 .post-preview h2,
 .post-preview h3 {
   margin: 0;
@@ -378,6 +406,7 @@ main {
   font-size: 1.25rem;
   font-weight: 500;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .post-preview h2 a,
@@ -390,6 +419,16 @@ main {
   color: var(--muted);
   line-height: 1.55;
   overflow-wrap: anywhere;
+}
+
+/* 首页最近文章：单行截断，覆盖通用段落样式 */
+.post-preview-description {
+  margin: 0;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
 }
 
 .post-preview time,
@@ -1003,11 +1042,8 @@ pagefind-searchbox {
   }
 
   .hero {
-    padding-inline: 0;
-  }
-
-  .hero h1 {
-    font-size: clamp(2.1875rem, calc(12.727vw - 0.358rem), 2.625rem);
+    max-width: 22rem;
+    margin-inline: auto;
   }
 
   .post-header {

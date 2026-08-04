@@ -3,39 +3,57 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { render } from "astro:content";
 import { formatPostDate, getPublishedPosts } from "../lib/posts";
 import { getPublishedShuoshuo, getShuoshuoLabel } from "../lib/shuoshuo";
+import { siteConfig } from "../lib/site";
 
-const [latestPost] = await getPublishedPosts();
-const [latestShuoshuo] = await getPublishedShuoshuo();
+const publishedPosts = await getPublishedPosts();
+const publishedShuoshuo = await getPublishedShuoshuo();
+const [latestPost] = publishedPosts;
+const [latestShuoshuo] = publishedShuoshuo;
 const LatestShuoshuoContent = latestShuoshuo ? (await render(latestShuoshuo)).Content : undefined;
+const { hero } = siteConfig;
+const postCount = publishedPosts.length;
+const shuoshuoCount = publishedShuoshuo.length;
 ---
 
 <BaseLayout pageClass="home">
   <div class="home-grid">
     <section class="hero" aria-labelledby="home-title">
-      <p class="hero-kicker">JASPER'S BLOG</p>
-      <h1 id="home-title">
-        <span>见了便做，</span>
-        <span>做了便放下，</span>
-        <span>了了有何不了。</span>
-      </h1>
+      <h1 id="home-title" class="hero-title">{siteConfig.title}</h1>
+      <img
+        class="hero-image hero-image-light"
+        src={hero.src}
+        width={hero.width}
+        height={hero.height}
+        alt={hero.alt}
+        decoding="async"
+        fetchpriority="high"
+      />
+      <img
+        class="hero-image hero-image-dark"
+        src={hero.srcDark}
+        width={hero.width}
+        height={hero.height}
+        alt={hero.alt}
+        decoding="async"
+      />
     </section>
 
     <div class="home-feed">
       <section class="feed-section" aria-labelledby="recent-posts">
         <div class="section-heading">
           <h2 id="recent-posts">最近文章</h2>
-          <a href="/archives/">查看全部</a>
+          <a href="/archives/">查看全部 ({postCount})</a>
         </div>
         {
           latestPost ? (
             <article class="post-preview">
-              <h3>
-                <a href={`/posts/${latestPost.id}/`}>{latestPost.data.title}</a>
-              </h3>
-              <p>{latestPost.data.description}</p>
               <time datetime={latestPost.data.publishedAt.toISOString()}>
                 {formatPostDate(latestPost.data.publishedAt)}
               </time>
+              <h3>
+                <a href={`/posts/${latestPost.id}/`}>{latestPost.data.title}</a>
+              </h3>
+              <p class="post-preview-description">{latestPost.data.description}</p>
             </article>
           ) : (
             <p class="empty-state">技术文章尚未发布。</p>
@@ -46,7 +64,7 @@ const LatestShuoshuoContent = latestShuoshuo ? (await render(latestShuoshuo)).Co
       <section class="feed-section" aria-labelledby="recent-shuoshuo">
         <div class="section-heading">
           <h2 id="recent-shuoshuo">最近说说</h2>
-          <a href="/shuoshuo/">查看全部</a>
+          <a href="/shuoshuo/">查看全部 ({shuoshuoCount})</a>
         </div>
         {
           latestShuoshuo && LatestShuoshuoContent ? (

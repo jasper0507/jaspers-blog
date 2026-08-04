@@ -198,12 +198,44 @@ for (const [route, html] of Object.entries(pages)) {
 
 assert.match(pages[""], /<title>Jasper(?:'|&#39;)s Blog<\/title>/);
 assert.match(pages[""], /<link rel="canonical" href="https:\/\/blog\.jasper0507\.cc\.cd\/">/);
-assert.match(pages[""], /见了便做/);
-assert.match(pages[""], /做了便放下/);
-assert.match(pages[""], /了了有何不了/);
+assert.doesNotMatch(pages[""], /见了便做|做了便放下|了了有何不了/, "首页不得再展示禅语三行主视觉");
+const heroImages = [...pages[""].matchAll(/<img\b[^>]*class="[^"]*hero-image[^"]*"[^>]*>/g)];
+assert.equal(heroImages.length, 2, "首页主视觉应为亮色/暗色两张图");
+assert.ok(
+  heroImages.some(match => /class="[^"]*hero-image-light[^"]*"/.test(match[0])),
+  "应包含亮色主视觉图",
+);
+assert.ok(
+  heroImages.some(match => /class="[^"]*hero-image-dark[^"]*"/.test(match[0])),
+  "应包含暗色主视觉图",
+);
+for (const match of heroImages) {
+  assert.match(match[0], /\bsrc="\/images\/hero-(?:light|dark)\.[^"]+"/);
+  assert.match(match[0], /\bwidth="\d+"/);
+  assert.match(match[0], /\bheight="\d+"/);
+  assert.match(match[0], /\balt="[^"]+"/);
+}
+const lightHeroSrc = heroImages
+  .find(match => /hero-image-light/.test(match[0]))?.[0]
+  .match(/\bsrc="([^"]+)"/)?.[1];
+const darkHeroSrc = heroImages
+  .find(match => /hero-image-dark/.test(match[0]))?.[0]
+  .match(/\bsrc="([^"]+)"/)?.[1];
+assert.ok(lightHeroSrc && darkHeroSrc, "亮/暗主视觉应能解析 src");
+assert.notEqual(lightHeroSrc, darkHeroSrc, "亮色与暗色主视觉资源应不同");
+await access(`dist${lightHeroSrc}`);
+await access(`dist${darkHeroSrc}`);
 assert.match(pages[""], /最近文章/);
 assert.match(pages[""], new RegExp(escapeRegExp(latestPost.title)));
 assert.match(pages[""], new RegExp(`/posts/${latestPost.slug}/`));
+assert.match(
+  pages[""],
+  new RegExp(
+    `<time datetime="${new Date(latestPost.publishedAt).toISOString()}">[^<]*</time>[\\s\\S]*?${escapeRegExp(escapeHtml(latestPost.title))}[\\s\\S]*?class="post-preview-description"[\\s\\S]*?${escapeRegExp(escapeHtml(latestPost.description))}`,
+  ),
+  "最近文章应为日期 + 标题 + 单行描述结构",
+);
+assert.equal(listedPostSlugs(pages[""]).length, 1, "首页最近文章仅展示 1 条");
 assert.match(pages[""], /最近说说/);
 assert.match(pages[""], /暂无说说/);
 const articleMenu = pages[""].match(/<ul class="article-menu-list"[^>]*>([\s\S]*?)<\/ul>/)?.[1];
@@ -213,8 +245,18 @@ assert.deepEqual(
   ["/archives/", "/tags/"],
 );
 assert.doesNotMatch(articleMenu, /全部文章|分类/);
-assert.match(pages[""], /href="\/archives\/"[^>]*>查看全部<\/a>/);
-assert.doesNotMatch(pages[""], /href="\/posts\/"[^>]*>查看全部<\/a>/);
+assert.match(
+  pages[""],
+  new RegExp(`href="/archives/"[^>]*>查看全部 \\(${POST_MIGRATIONS.length}\\)</a>`),
+  "文章「查看全部 (N)」应使用半角括号与已发布总数",
+);
+assert.match(
+  pages[""],
+  /href="\/shuoshuo\/"[^>]*>查看全部 \(0\)<\/a>/,
+  "说说「查看全部 (0)」在无已发布说说时仍应显示",
+);
+assert.doesNotMatch(pages[""], /href="\/posts\/"[^>]*>查看全部/);
+assert.doesNotMatch(pages[""], /查看全部（\d+）/, "不得使用全角括号");
 await assert.rejects(access("dist/categories/index.html"), "不得生成分类索引页");
 assert.match(pages.shuoshuo, /暂无说说/);
 for (const fixtureText of [
@@ -226,15 +268,19 @@ for (const fixtureText of [
   assert.doesNotMatch(pages.shuoshuo, new RegExp(fixtureText));
   assert.doesNotMatch(sitemap, new RegExp(fixtureText));
 }
-for (const segment of ["115", "117", "118", "119"]) {
-  assert.match(
-    pages[""],
-    new RegExp(`/fonts/noto-serif-sc-${segment}\\.woff2`),
-    `首页应预加载禅语使用的 Noto Serif SC ${segment} 分段`,
-  );
-  await access(`dist/fonts/noto-serif-sc-${segment}.woff2`);
-}
+assert.doesNotMatch(
+  pages[""],
+  /rel="preload"[^>]*noto-serif-sc-(?:115|117|118|119)/,
+  "首页不再为禅语预加载专用字重分段",
+);
+await access("dist/fonts/noto-serif-sc-4.woff2");
 assert.doesNotMatch(styles, /fonts\.(?:googleapis|gstatic)\.com/, "构建产物不得请求第三方字体服务");
+assert.match(styles, /\.post-preview-description/, "最近文章描述应有单行截断样式钩子");
+assert.match(
+  styles,
+  /\.feed-section(?::before|:after)?[\s\S]{0,200}width:/,
+  "分区线应有长度约束以协调版式",
+);
 assert.match(pages[""], /<script type="application\/ld\+json">/);
 assert.match(pages[""], /"@type":"WebSite"/);
 assert.match(pages.archives, /Markdown快速上手语法/);

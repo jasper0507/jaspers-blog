@@ -1,6 +1,7 @@
 ---
 import "../styles/fonts.css";
 import "../styles/global.css";
+import { siteConfig } from "../lib/site";
 
 interface PageData {
   title?: string;
@@ -14,7 +15,7 @@ interface Props extends PageData {
   frontmatter?: PageData;
 }
 
-const siteTitle = "Jasper's Blog";
+const siteTitle = siteConfig.title;
 const pageData = Astro.props.frontmatter ?? Astro.props;
 const title = pageData.title ? `${pageData.title} | ${siteTitle}` : siteTitle;
 const description = pageData.description ?? "Jasper 的个人技术博客，记录技术文章与说说。";
@@ -50,18 +51,6 @@ const structuredData = JSON.stringify(
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
-    {
-      path === "/" &&
-        ["115", "117", "118", "119"].map(segment => (
-          <link
-            rel="preload"
-            href={`/fonts/noto-serif-sc-${segment}.woff2`}
-            as="font"
-            type="font/woff2"
-            crossorigin
-          />
-        ))
-    }
     <link rel="canonical" href={canonical} />
     <meta property="og:type" content={pageData.ogType ?? "website"} />
     <meta property="og:locale" content="zh_CN" />
