@@ -335,15 +335,23 @@ try {
 
         const article = await page.evaluate(() => {
           const main = document.querySelector("main");
-          const card = document.querySelector(".post-body");
+          const reading = document.querySelector(".post-article");
+          const body = document.querySelector(".post-body");
+          const header = document.querySelector(".post-header");
           const title = document.querySelector(".post-header h1");
+          const meta = document.querySelector(".post-meta");
           const toc = document.querySelector(".post-toc");
-          const cardStyle = getComputedStyle(card);
+          const bodyStyle = getComputedStyle(body);
+          const headerStyle = getComputedStyle(header);
           const titleStyle = getComputedStyle(title);
-          const tocStyle = getComputedStyle(toc);
-          const bodyStyle = getComputedStyle(document.body);
+          const tocStyle = toc ? getComputedStyle(toc) : null;
+          const pageBodyStyle = getComputedStyle(document.body);
           const codeStyle = getComputedStyle(document.querySelector(".post-body .astro-code"));
           const formulaStyle = getComputedStyle(document.querySelector(".post-body .katex"));
+          const readingSurface =
+            bodyStyle.backgroundColor === "rgba(0, 0, 0, 0)"
+              ? pageBodyStyle.backgroundColor
+              : bodyStyle.backgroundColor;
           const alertFixture = document.createElement("div");
           alertFixture.innerHTML = ["note", "tip", "important", "warning", "caution"]
             .map(
@@ -351,7 +359,7 @@ try {
                 `<aside class="markdown-alert markdown-alert-${type}"><p class="markdown-alert-title">${type}</p><p>提示块正文</p></aside>`,
             )
             .join("");
-          card.append(alertFixture);
+          body.append(alertFixture);
           const alertSamples = [...alertFixture.querySelectorAll(".markdown-alert")].flatMap(
             alert => {
               const background = getComputedStyle(alert).backgroundColor;
@@ -378,36 +386,44 @@ try {
               ".post-body table, .post-body .astro-code, .post-body .katex-display",
             ),
           ];
+          const metaText = meta?.textContent?.replace(/\s+/g, " ").trim() ?? "";
 
           const result = {
             scrollWidth: document.documentElement.scrollWidth,
             bodyScrollWidth: document.body.scrollWidth,
             mainWidth: main.getBoundingClientRect().width,
             mainScrollWidth: main.scrollWidth,
-            cardWidth: card.getBoundingClientRect().width,
-            cardScrollWidth: card.scrollWidth,
+            readingWidth: reading.getBoundingClientRect().width,
+            readingScrollWidth: reading.scrollWidth,
             contentWidth:
-              card.clientWidth -
-              Number.parseFloat(cardStyle.paddingLeft) -
-              Number.parseFloat(cardStyle.paddingRight),
-            cardPaddingLeft: Number.parseFloat(cardStyle.paddingLeft),
-            cardBackground: cardStyle.backgroundColor,
+              body.clientWidth -
+              Number.parseFloat(bodyStyle.paddingLeft) -
+              Number.parseFloat(bodyStyle.paddingRight),
+            bodyPaddingLeft: Number.parseFloat(bodyStyle.paddingLeft),
+            bodyBackground: bodyStyle.backgroundColor,
+            bodyBoxShadow: bodyStyle.boxShadow,
+            headerBorderBottom: Number.parseFloat(headerStyle.borderBottomWidth),
             titleFontFamily: titleStyle.fontFamily,
             titleFontSize: Number.parseFloat(titleStyle.fontSize),
             titleFontWeight: titleStyle.fontWeight,
-            tocDisplay: tocStyle.display,
-            tocWidth: toc.getBoundingClientRect().width,
-            background: bodyStyle.backgroundColor,
+            metaText,
+            hasPublishedPrefix: /发布于|更新于/.test(metaText),
+            tocExists: Boolean(toc),
+            tocDisplay: tocStyle?.display ?? "none",
+            tocPosition: tocStyle?.position ?? "",
+            tocWidth: toc ? toc.getBoundingClientRect().width : 0,
+            background: pageBodyStyle.backgroundColor,
+            readingSurface,
             contrastSamples: [
-              [bodyStyle.color, bodyStyle.backgroundColor, "页面正文"],
-              [cardStyle.color, cardStyle.backgroundColor, "技术文章正文"],
+              [pageBodyStyle.color, pageBodyStyle.backgroundColor, "页面正文"],
+              [bodyStyle.color, readingSurface, "技术文章正文"],
               [codeStyle.color, codeStyle.backgroundColor, "代码块"],
               ...tokenSamples,
-              [formulaStyle.color, cardStyle.backgroundColor, "公式"],
+              [formulaStyle.color, readingSurface, "公式"],
               ...alertSamples,
             ],
             wideContentContained: wideContent.every(
-              element => element.getBoundingClientRect().width <= card.clientWidth,
+              element => element.getBoundingClientRect().width <= body.clientWidth,
             ),
             overflowing: [...document.body.querySelectorAll("*")]
               .filter(element => {
@@ -442,10 +458,24 @@ try {
           `${width}px 文章页不得横向溢出：${JSON.stringify(article)}`,
         );
         assert.equal(article.background, expectedColors[theme].background);
-        assert.equal(
-          article.cardBackground,
-          theme === "light" ? "rgb(250, 249, 245)" : "rgb(47, 46, 42)",
+        // 去卡片：正文不再铺独立纸面底，整页落在壳背景上
+        assert.ok(
+          article.bodyBackground === "rgba(0, 0, 0, 0)" ||
+            article.bodyBackground === article.background,
+          `${theme} 正文去卡片后应透明或等同壳背景，实际 ${article.bodyBackground}`,
         );
+        assert.equal(
+          article.bodyBoxShadow === "none" || article.bodyBoxShadow === "",
+          true,
+          "正文不得再有卡片阴影/inset 边框",
+        );
+        assert.ok(article.headerBorderBottom >= 1, "标题区与正文之间应有细分隔线");
+        assert.match(
+          article.metaText,
+          /^\d{4}\.\d{2}\.\d{2}/,
+          "元信息应以 YYYY.MM.DD 发布时间开头",
+        );
+        assert.equal(article.hasPublishedPrefix, false, "不得展示「发布于/更新于」");
         assert.match(article.titleFontFamily, /^"Source Serif 4", "Noto Serif SC"/);
         assert.equal(article.titleFontWeight, "600");
         assert.equal(article.wideContentContained, true);
@@ -460,17 +490,19 @@ try {
 
         if (width === 1440) {
           assertNear(article.mainWidth, 1120);
-          assertNear(article.cardWidth, 768);
-          assertNear(article.contentWidth, 704);
-          assertNear(article.cardPaddingLeft, 32);
+          assertNear(article.readingWidth, 760);
+          assertNear(article.contentWidth, 760);
+          assertNear(article.bodyPaddingLeft, 0);
           assertNear(article.titleFontSize, 36);
-          assert.equal(article.tocDisplay, "block");
-          assertNear(article.tocWidth, 176);
+          assert.equal(article.tocExists, true);
+          assert.notEqual(article.tocDisplay, "none", "≥1280px 应显示目录");
+          assert.equal(article.tocPosition, "fixed");
+          assertNear(article.tocWidth, 180, 4);
         } else {
-          assertNear(article.cardWidth, width - 32);
-          assertNear(article.cardPaddingLeft, 20);
+          assertNear(article.readingWidth, width - 32);
+          assertNear(article.bodyPaddingLeft, 0);
           assertNear(article.titleFontSize, 30);
-          assert.equal(article.tocDisplay, "none");
+          assert.equal(article.tocDisplay, "none", `${width}px <1280 应隐藏目录`);
         }
 
         await page.screenshot({
@@ -895,7 +927,60 @@ try {
       1024,
       "1024px 文章页不得横向溢出",
     );
+    assert.equal(
+      await intermediatePage.evaluate(() => {
+        const toc = document.querySelector(".post-toc");
+        return toc ? getComputedStyle(toc).display : "none";
+      }),
+      "none",
+      "1024px <1280 应隐藏 fixed 目录",
+    );
     await intermediateContext.close();
+
+    // 宽屏滚动：目录当前项应随滚动激活（aria-current）
+    {
+      const tocContext = await browser.newContext({
+        viewport: { width: 1440, height: 960 },
+        colorScheme: "light",
+      });
+      const tocPage = await tocContext.newPage();
+      await tocPage.goto(`${host}${longPostPath}`, { waitUntil: "networkidle" });
+      await tocPage.evaluate(() => document.fonts.ready);
+
+      const tocInitial = await tocPage.evaluate(() => {
+        const toc = document.querySelector(".post-toc");
+        const links = toc ? [...toc.querySelectorAll('a[href^="#"]')] : [];
+        return {
+          tocDisplay: toc ? getComputedStyle(toc).display : "none",
+          linkCount: links.length,
+          hasCurrent: links.some(link => link.getAttribute("aria-current") === "true"),
+        };
+      });
+      assert.notEqual(tocInitial.tocDisplay, "none", "长文宽屏应显示目录");
+      assert.ok(tocInitial.linkCount >= 2, "长文目录应有多个条目以便验收滚动高亮");
+
+      // 滚到第二个 h2，等待 IntersectionObserver 更新
+      const secondHeadingId = await tocPage.evaluate(() => {
+        const headings = [...document.querySelectorAll(".post-body h2[id]")];
+        return headings[1]?.id ?? headings[0]?.id ?? "";
+      });
+      assert.ok(secondHeadingId, "长文应有可滚动的 h2");
+      await tocPage.evaluate(id => {
+        document.getElementById(id)?.scrollIntoView({ block: "start", behavior: "instant" });
+      }, secondHeadingId);
+      await tocPage.waitForTimeout(400);
+
+      const activeHref = await tocPage.evaluate(() => {
+        const current = document.querySelector('.post-toc a[aria-current="true"]');
+        return current?.getAttribute("href") ?? "";
+      });
+      assert.equal(
+        activeHref,
+        `#${secondHeadingId}`,
+        `滚动后目录应高亮当前节，期望 #${secondHeadingId}，实际 ${activeHref}`,
+      );
+      await tocContext.close();
+    }
 
     const context = await browser.newContext({
       viewport: { width: 375, height: 960 },

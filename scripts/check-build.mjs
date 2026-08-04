@@ -139,9 +139,9 @@ for (const { slug, title, description, tags } of postMetadata) {
       );
     }
   }
-  for (const field of ["publishedAt", "updatedAt"]) {
-    assert.match(page, new RegExp(`datetime="${new Date(dateField(field)).toISOString()}"`));
-  }
+  // 页面元信息仅展示发布时间；updatedAt 可保留在数据/JSON-LD，但不进可见 <time>
+  assert.match(page, new RegExp(`datetime="${new Date(dateField("publishedAt")).toISOString()}"`));
+  assert.doesNotMatch(page, /发布于|更新于/, `${slug} 不得展示「发布于/更新于」前缀`);
 }
 
 const orderedPosts = postMetadata.toSorted(
@@ -493,6 +493,34 @@ assert.match(
 );
 assert.match(
   styles,
+  /--reading-width:\s*47\.5rem|--reading-width:\s*760px/,
+  "阅读栏宽度 token 应为约 760px（47.5rem）",
+);
+assert.match(
+  styles,
+  /\.post-article\{[^}]*max-width:var\(--reading-width\)/,
+  "单篇正文应使用阅读栏 max-width，而非旧 768 卡片网格",
+);
+assert.match(
+  styles,
+  /\.post-body\{[^}]*background:(?:transparent|none|0 0|0)/,
+  "正文去卡片：.post-body 不得再铺纸面底",
+);
+assert.doesNotMatch(
+  styles,
+  /\.post-body\{[^}]*box-shadow:\s*inset/,
+  "正文去卡片：.post-body 不得再有 inset 纸面边框",
+);
+assert.match(styles, /\.post-header\{[^}]*border-bottom:/, "标题区与正文之间应有细分隔线");
+assert.match(styles, /\.post-toc\{[^}]*position:\s*fixed/, "宽屏目录应为 position:fixed");
+// Lightning CSS 可能把 min-width:80rem 写成 width>=80rem
+assert.match(
+  styles,
+  /@media\s*\((?:min-width:\s*80rem|width\s*>=\s*80rem|min-width:\s*1280px|width\s*>=\s*1280px)\)/,
+  "目录仅在视口 ≥1280px 显示",
+);
+assert.match(
+  styles,
   /\.post-body (?:strong|b),\.post-body (?:b|strong)\{[^}]*font-weight:700|\.post-body strong,\s*\.post-body b\{[^}]*font-weight:700/,
   "正文粗体应为 Noto Serif SC 700 真字重而非仅依赖伪粗",
 );
@@ -534,9 +562,8 @@ await assert.rejects(
 const post = pages[`posts/${postSlug}`];
 assert.match(post, /<title>Markdown快速上手语法 \| Jasper/);
 assert.match(post, /这是一篇用于新手快速上手Markdown的文章/);
-assert.match(post, /2026年1月23日/);
-assert.match(post, /发布于/);
-assert.match(post, /更新于/);
+assert.match(post, /2026\.01\.23/);
+assert.doesNotMatch(post, /2026年1月23日|发布于|更新于/);
 assert.match(post, /工程实践/);
 assert.match(post, /文档写作/);
 assert.match(post, /教程/);

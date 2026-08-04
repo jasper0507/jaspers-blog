@@ -16,6 +16,9 @@
   --code-function: light-dark(#476f68, #92c3b8);
   --code-parameter: light-dark(#886c32, #d3b46f);
   --shell-width: 70rem;
+  /* 编辑长文阅读栏（JacksBlog --reading ≈ 760px）与宽屏目录 */
+  --reading-width: 47.5rem;
+  --toc-width: 11.25rem;
   --gutter: 2rem;
   --font-serif:
     "Source Serif 4", "Noto Serif SC", Georgia, "Songti SC", "Source Han Serif SC", serif;
@@ -874,14 +877,17 @@ html[data-theme="dark"] .hero-image-dark {
   padding: clamp(4rem, 8vw, 6.5rem) 0 clamp(5rem, 9vw, 7.5rem);
 }
 
+/* 编辑长文壳：居中阅读栏，无纸面卡片 */
 .post-article {
-  display: grid;
-  grid-template-columns: 11rem 48rem 11rem;
+  max-width: var(--reading-width);
+  margin-inline: auto;
+  min-width: 0;
 }
 
 .post-header {
-  grid-column: 2;
-  margin-bottom: 2.75rem;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--line);
 }
 
 .post-header h1 {
@@ -895,25 +901,26 @@ html[data-theme="dark"] .hero-image-dark {
 
 .post-description {
   max-width: 42rem;
-  margin: 1.2rem 0;
+  margin: 1.2rem 0 0;
   color: var(--muted);
   font-family: var(--font-sans);
   font-size: 1.05rem;
+  line-height: 1.65;
 }
 
 .post-meta {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.4rem 1.25rem;
+  margin-top: 1.75rem;
 }
 
 .post-body {
   min-width: 0;
-  grid-column: 2;
-  grid-row: 2;
-  padding: 2rem;
-  background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--line);
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
   font-family: var(--font-serif);
   font-size: 1.1rem;
   line-height: 1.85;
@@ -1142,22 +1149,29 @@ html[data-theme="dark"] .hero-image-dark {
   overflow-y: hidden;
 }
 
+/* 宽屏 fixed 目录：落在阅读栏右侧外侧；默认隐藏，≥1280px 显示 */
 .post-toc {
-  grid-column: 3;
-  grid-row: 2;
-  max-height: calc(100vh - 3rem);
-  padding-left: 1.5rem;
-  position: sticky;
-  top: 1.5rem;
-  align-self: start;
+  display: none;
+  width: var(--toc-width);
+  max-height: 60vh;
+  padding-left: 1.125rem;
+  position: fixed;
+  z-index: 5;
+  top: 50%;
+  left: calc(50% + var(--reading-width) / 2 + 2.5rem);
+  overflow-x: hidden;
   overflow-y: auto;
+  border-left: 1px solid var(--line);
+  transform: translateY(-50%);
 }
 
 .post-toc > p {
   margin: 0 0 0.65rem;
-  color: var(--text);
-  font-size: 0.82rem;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
   font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .post-toc ol {
@@ -1167,22 +1181,48 @@ html[data-theme="dark"] .hero-image-dark {
 }
 
 .post-toc li {
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.15rem;
   line-height: 1.35;
 }
 
 .post-toc .toc-depth-3 {
-  padding-left: 0.75rem;
+  padding-left: 0.65rem;
 }
 
 .post-toc a {
+  display: block;
+  margin-left: -0.65rem;
+  padding: 0.28rem 0.35rem 0.28rem 0.55rem;
+  border-left: 2px solid transparent;
   color: var(--muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
   text-decoration: none;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease;
 }
 
 .post-toc a:hover {
   color: var(--accent);
+}
+
+.post-toc a[aria-current="true"] {
+  border-left-color: var(--accent);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+@media (min-width: 80rem) {
+  .post-toc {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-toc a {
+    transition: none;
+  }
 }
 
 .site-footer {
@@ -1216,20 +1256,6 @@ html[data-theme="dark"] .hero-image-dark {
 @media (max-width: 70rem) {
   .post-page {
     padding-inline: var(--gutter);
-  }
-
-  .post-article {
-    display: block;
-  }
-
-  .post-header,
-  .post-body {
-    width: min(100%, 48rem);
-    margin-inline: auto;
-  }
-
-  .post-toc {
-    display: none;
   }
 }
 
@@ -1277,14 +1303,15 @@ html[data-theme="dark"] .hero-image-dark {
 
   .post-header {
     margin-bottom: 2rem;
+    padding-bottom: 1.25rem;
   }
 
   .post-header h1 {
     font-size: 1.875rem;
   }
 
-  .post-body {
-    padding: 1.25rem;
+  .post-meta {
+    margin-top: 1.35rem;
   }
 }
 
