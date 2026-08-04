@@ -115,21 +115,29 @@ try {
               : darkImage;
           const visibleStyle = getComputedStyle(visibleImage);
           const sectionRules = [...document.querySelectorAll(".feed-section")].map(section => {
-            const style = getComputedStyle(section, "::before");
+            const style = getComputedStyle(section);
             const rect = section.getBoundingClientRect();
             return {
-              width: Number.parseFloat(style.width),
+              borderTopWidth: Number.parseFloat(style.borderTopWidth),
+              borderTopStyle: style.borderTopStyle,
               sectionWidth: rect.width,
-              borderColor: style.backgroundColor || style.borderTopColor,
             };
           });
+          const headerInner = document.querySelector(".header-inner");
+          const footerInner = document.querySelector(".footer-inner");
+          const headerStyle = getComputedStyle(headerInner);
+          const footerStyle = getComputedStyle(footerInner);
+          const headerRect = headerInner.getBoundingClientRect();
+          const footerRect = footerInner.getBoundingClientRect();
           const postPreview = document.querySelector(".post-preview");
           const description = document.querySelector(".post-preview-description");
           const descriptionStyle = description ? getComputedStyle(description) : null;
+          const caption = document.querySelector(".hero-caption");
           const viewAll = [...document.querySelectorAll(".section-heading a")].map(link => ({
             href: link.getAttribute("href"),
             text: link.textContent.trim(),
           }));
+          const homeDate = document.querySelector(".post-preview time")?.textContent?.trim() ?? "";
 
           return {
             scrollWidth: document.documentElement.scrollWidth,
@@ -147,13 +155,24 @@ try {
             darkAlt: darkImage?.getAttribute("alt") ?? "",
             lightNaturalWidth: lightImage?.naturalWidth ?? 0,
             darkNaturalWidth: darkImage?.naturalWidth ?? 0,
+            lightNaturalHeight: lightImage?.naturalHeight ?? 0,
             imageWidth: visibleImage?.getBoundingClientRect().width ?? 0,
+            imageHeight: visibleImage?.getBoundingClientRect().height ?? 0,
             visibleDisplay: visibleStyle.display,
+            captionText: caption?.textContent?.trim() ?? "",
             zenText: document.body.textContent.includes("见了便做"),
             sectionRules,
+            headerBorderBottom: headerStyle.borderBottomWidth,
+            headerWidth: headerRect.width,
+            footerBorderTop: footerStyle.borderTopWidth,
+            footerWidth: footerRect.width,
+            shellAligned:
+              Math.abs(headerRect.left - footerRect.left) < 1 &&
+              Math.abs(headerRect.width - footerRect.width) < 1,
             postPreviewOrder: postPreview
               ? [...postPreview.children].map(child => child.tagName.toLowerCase())
               : [],
+            homeDate,
             descriptionWhiteSpace: descriptionStyle?.whiteSpace ?? "",
             descriptionOverflow: descriptionStyle?.overflow ?? "",
             descriptionTextOverflow: descriptionStyle?.textOverflow ?? "",
@@ -171,6 +190,7 @@ try {
         }
         assert.equal(actual.zenText, false, "首页不得再展示禅语三行文字");
         assert.equal(actual.h1Count, 1, "首页应保留唯一主标题");
+        assert.equal(actual.captionText, "Talk is cheap. Show me the code.");
         assert.ok(actual.lightSrc, "亮色主视觉应有 src");
         assert.ok(actual.darkSrc, "暗色主视觉应有 src");
         assert.notEqual(actual.lightSrc, actual.darkSrc);
@@ -178,6 +198,10 @@ try {
         assert.equal(actual.lightAlt, actual.darkAlt, "亮暗主视觉共用 alt");
         assert.ok(actual.lightNaturalWidth > 0, "亮色主视觉资源应成功加载");
         assert.ok(actual.darkNaturalWidth > 0, "暗色主视觉资源应成功加载");
+        assert.ok(
+          actual.lightNaturalWidth > actual.lightNaturalHeight,
+          "主视觉应为横图（宽大于高）",
+        );
         if (theme === "dark") {
           assert.notEqual(actual.darkDisplay, "none", "暗色主题应显示暗色主视觉");
           assert.equal(actual.lightDisplay, "none", "暗色主题应隐藏亮色主视觉");
@@ -187,8 +211,10 @@ try {
         }
         assert.ok(actual.imageWidth > 0, "主视觉应占据可见宽度");
         assert.ok(actual.imageWidth <= actual.heroWidth + 1, "主视觉不得溢出 hero 栏");
+        assert.ok(actual.imageWidth > actual.imageHeight, "渲染后主视觉应为横向比例");
         assert.notEqual(actual.visibleDisplay, "none");
         assert.deepEqual(actual.postPreviewOrder.slice(0, 3), ["time", "h3", "p"]);
+        assert.match(actual.homeDate, /^\d{4}\.\d{2}\.\d{2}$/, "首页日期应为 YYYY.MM.DD");
         assert.equal(actual.descriptionWhiteSpace, "nowrap");
         assert.equal(actual.descriptionOverflow, "hidden");
         assert.equal(actual.descriptionTextOverflow, "ellipsis");
@@ -205,8 +231,15 @@ try {
           "说说「查看全部 (N)」文案与链接",
         );
         for (const rule of actual.sectionRules) {
-          assert.ok(rule.width > 0, "分区线应有可见长度");
-          assert.ok(rule.width < rule.sectionWidth * 0.5, "分区线应短于区块半宽以协调版式");
+          assert.ok(rule.borderTopWidth >= 1, "分区线应有可见顶边");
+          assert.notEqual(rule.borderTopStyle, "none");
+        }
+        assert.ok(Number.parseFloat(actual.headerBorderBottom) >= 1, "导航底线应可见");
+        assert.ok(Number.parseFloat(actual.footerBorderTop) >= 1, "页脚线应可见");
+        assert.equal(actual.shellAligned, true, "导航底线与页脚线应与内容壳左右对齐");
+        if (width === 1440) {
+          assertNear(actual.headerWidth, 1120);
+          assertNear(actual.footerWidth, 1120);
         }
 
         if (width === 1440) {

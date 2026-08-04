@@ -225,19 +225,30 @@ assert.ok(lightHeroSrc && darkHeroSrc, "亮/暗主视觉应能解析 src");
 assert.notEqual(lightHeroSrc, darkHeroSrc, "亮色与暗色主视觉资源应不同");
 await access(`dist${lightHeroSrc}`);
 await access(`dist${darkHeroSrc}`);
+assert.match(pages[""], /Talk is cheap\. Show me the code\./, "首页应展示可配置 caption");
+assert.match(pages[""], /class="hero-caption"/);
 assert.match(pages[""], /最近文章/);
 assert.match(pages[""], new RegExp(escapeRegExp(latestPost.title)));
 assert.match(pages[""], new RegExp(`/posts/${latestPost.slug}/`));
+const compactHomeDate = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+})
+  .format(new Date(latestPost.publishedAt))
+  .replaceAll("-", ".");
 assert.match(
   pages[""],
   new RegExp(
-    `<time datetime="${new Date(latestPost.publishedAt).toISOString()}">[^<]*</time>[\\s\\S]*?${escapeRegExp(escapeHtml(latestPost.title))}[\\s\\S]*?class="post-preview-description"[\\s\\S]*?${escapeRegExp(escapeHtml(latestPost.description))}`,
+    `<time datetime="${new Date(latestPost.publishedAt).toISOString()}">${escapeRegExp(compactHomeDate)}</time>[\\s\\S]*?${escapeRegExp(escapeHtml(latestPost.title))}[\\s\\S]*?class="post-preview-description"[\\s\\S]*?${escapeRegExp(escapeHtml(latestPost.description))}`,
   ),
-  "最近文章应为日期 + 标题 + 单行描述结构",
+  "最近文章应为 YYYY.MM.DD + 标题 + 单行描述结构",
 );
 assert.equal(listedPostSlugs(pages[""]).length, 1, "首页最近文章仅展示 1 条");
 assert.match(pages[""], /最近说说/);
-assert.match(pages[""], /暂无说说/);
+assert.match(pages[""], /Talk is cheap\. Show me the code\./);
+assert.doesNotMatch(pages[""], /暂无说说/, "已发布测试说说后首页不应再显示空态");
 const articleMenu = pages[""].match(/<ul class="article-menu-list"[^>]*>([\s\S]*?)<\/ul>/)?.[1];
 assert.ok(articleMenu, "首页应包含文章菜单");
 assert.deepEqual(
@@ -252,13 +263,14 @@ assert.match(
 );
 assert.match(
   pages[""],
-  /href="\/shuoshuo\/"[^>]*>查看全部 \(0\)<\/a>/,
-  "说说「查看全部 (0)」在无已发布说说时仍应显示",
+  /href="\/shuoshuo\/"[^>]*>查看全部 \(1\)<\/a>/,
+  "说说「查看全部 (N)」应为已发布总数",
 );
 assert.doesNotMatch(pages[""], /href="\/posts\/"[^>]*>查看全部/);
 assert.doesNotMatch(pages[""], /查看全部（\d+）/, "不得使用全角括号");
 await assert.rejects(access("dist/categories/index.html"), "不得生成分类索引页");
-assert.match(pages.shuoshuo, /暂无说说/);
+assert.match(pages.shuoshuo, /Talk is cheap\. Show me the code\./);
+assert.doesNotMatch(pages.shuoshuo, /暂无说说/);
 for (const fixtureText of [
   "这是发布时间最新的公开说说",
   "这是一条不应公开的草稿",
@@ -276,10 +288,14 @@ assert.doesNotMatch(
 await access("dist/fonts/noto-serif-sc-4.woff2");
 assert.doesNotMatch(styles, /fonts\.(?:googleapis|gstatic)\.com/, "构建产物不得请求第三方字体服务");
 assert.match(styles, /\.post-preview-description/, "最近文章描述应有单行截断样式钩子");
-assert.match(
+assert.match(styles, /\.feed-section\{[^}]*border-top:/, "分区线应为信息流栏满宽顶边线");
+assert.doesNotMatch(styles, /\.feed-section::before/, "分区线不得使用短装饰伪元素");
+assert.match(styles, /\.header-inner\{[^}]*border-bottom:/, "导航底线应落在内容壳 header-inner 上");
+assert.match(styles, /\.footer-inner\{[^}]*border-top:/, "页脚线应落在内容壳 footer-inner 上");
+assert.doesNotMatch(
   styles,
-  /\.feed-section(?::before|:after)?[\s\S]{0,200}width:/,
-  "分区线应有长度约束以协调版式",
+  /\.site-header\{[^}]*border-bottom:/,
+  "导航底线不得整屏通栏画在 site-header 上",
 );
 assert.match(pages[""], /<script type="application\/ld\+json">/);
 assert.match(pages[""], /"@type":"WebSite"/);
@@ -322,7 +338,12 @@ assert.match(sitemap, /https:\/\/blog\.jasper0507\.cc\.cd\/about\//);
 await access("dist/pagefind/pagefind.js");
 await access("dist/pagefind/pagefind-component-ui.js");
 await access("dist/pagefind/pagefind-component-ui.css");
-assert.equal(searchIndex.languages["zh-cn"].page_count, POST_MIGRATIONS.length);
+// 说说列表条目也带 data-pagefind-body；第二轮「仅搜技术文章」由 #16 收紧
+assert.equal(
+  searchIndex.languages["zh-cn"].page_count,
+  POST_MIGRATIONS.length + 1,
+  "Pagefind 应索引全部技术文章与已发布说说条目",
+);
 assert.match(pages.search, /<pagefind-searchbox[^>]*show-sub-results/);
 assert.match(pages.search, /<pagefind-config[^>]*no-worker[^>]*lang="zh-cn"/);
 assert.match(pages.search, /\/pagefind\/pagefind-component-ui\.js/);
@@ -342,7 +363,12 @@ assert.doesNotMatch(sitemap, /\/posts\/2\//);
 assert.doesNotMatch(sitemap, /\/categories\//);
 assert.doesNotMatch(sitemap, /\/shuoshuo\/#/);
 assert.match(rss, /<rss version="2\.0"/);
-assert.equal((rss.match(/<item>/g) ?? []).length, POST_MIGRATIONS.length);
+assert.equal(
+  (rss.match(/<item>/g) ?? []).length,
+  POST_MIGRATIONS.length + 1,
+  "RSS 应包含全部技术文章与已发布说说",
+);
+assert.match(rss, /Talk is cheap\. Show me the code\./);
 assert.doesNotMatch(rss, /不可公开的草稿|draft-markdown-capabilities/);
 
 for (const [route, html] of Object.entries(pages)) {

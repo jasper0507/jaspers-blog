@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { render } from "astro:content";
-import { formatPostDate, getPublishedPosts } from "../lib/posts";
+import { formatPostDateCompact, getPublishedPosts } from "../lib/posts";
 import { getPublishedShuoshuo, getShuoshuoLabel } from "../lib/shuoshuo";
 import { siteConfig } from "../lib/site";
 
@@ -18,7 +18,7 @@ const shuoshuoCount = publishedShuoshuo.length;
 <BaseLayout pageClass="home">
   <div class="home-grid">
     <section class="hero" aria-labelledby="home-title">
-      <h1 id="home-title" class="hero-title">{siteConfig.title}</h1>
+      <h1 id="home-title" class="hero-caption">{hero.caption}</h1>
       <img
         class="hero-image hero-image-light"
         src={hero.src}
@@ -48,7 +48,7 @@ const shuoshuoCount = publishedShuoshuo.length;
           latestPost ? (
             <article class="post-preview">
               <time datetime={latestPost.data.publishedAt.toISOString()}>
-                {formatPostDate(latestPost.data.publishedAt)}
+                {formatPostDateCompact(latestPost.data.publishedAt)}
               </time>
               <h3>
                 <a href={`/posts/${latestPost.id}/`}>{latestPost.data.title}</a>

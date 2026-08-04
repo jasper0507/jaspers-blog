@@ -31,6 +31,19 @@ export function formatPostDate(date: Date) {
   return dateFormatter.format(date);
 }
 
+/** 首页信息流等紧凑场景：YYYY.MM.DD（Asia/Shanghai） */
+export function formatPostDateCompact(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find(part => part.type === type)?.value ?? "";
+  return `${value("year")}.${value("month")}.${value("day")}`;
+}
+
 export function getPostYear(date: Date) {
   return yearFormatter.format(date);
 }

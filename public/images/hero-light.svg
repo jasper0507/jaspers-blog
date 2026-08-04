@@ -1,19 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="560" height="700" viewBox="0 0 560 700" role="img" aria-hidden="true">
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640" role="img" aria-hidden="true">
   <defs>
-    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f3efe6"/>
-      <stop offset="100%" stop-color="#e8e0d2"/>
+    <linearGradient id="sky" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#d8cfc0"/>
+      <stop offset="55%" stop-color="#c4b5a0"/>
+      <stop offset="100%" stop-color="#8a6a52"/>
     </linearGradient>
-    <linearGradient id="ink" x1="0.2" y1="0" x2="0.8" y2="1">
-      <stop offset="0%" stop-color="#b05c3f"/>
-      <stop offset="100%" stop-color="#8f3f2d"/>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0.4">
+      <stop offset="0%" stop-color="#6b5344"/>
+      <stop offset="40%" stop-color="#b05c3f"/>
+      <stop offset="100%" stop-color="#3d342c"/>
     </linearGradient>
   </defs>
-  <rect width="560" height="700" fill="url(#paper)"/>
-  <circle cx="420" cy="160" r="92" fill="#f7f2e8" opacity="0.9"/>
-  <path d="M72 520c68-120 150-198 248-234 86-32 148-18 176 28 24 40 12 96-34 138-78 72-188 96-286 112-42 7-82 4-104-12z" fill="#ddd4c4"/>
-  <path d="M120 180c40-52 110-78 176-58 58 18 96 68 94 124-2 54-40 98-98 118-72 24-140-2-178-54-28-38-24-90 6-130z" fill="url(#ink)" opacity="0.88"/>
-  <path d="M210 250c28-18 62-16 86 8 20 20 24 52 8 76-18 28-54 38-84 24-34-16-46-56-28-88 6-10 12-16 18-20z" fill="#faf7f0"/>
-  <rect x="88" y="580" width="120" height="4" rx="2" fill="#b05c3f" opacity="0.55"/>
-  <rect x="88" y="598" width="72" height="3" rx="1.5" fill="#8a8276" opacity="0.45"/>
+  <rect width="960" height="640" fill="url(#sky)"/>
+  <path d="M0 280c80-40 160-60 260-40 90 18 150 70 240 90 100 22 190 10 280-20 70-24 130-30 180-18v348H0V280z" fill="url(#wave)" opacity="0.92"/>
+  <path d="M0 360c90-30 180-50 280-30 110 22 180 80 300 95 110 14 210-8 300-40 50-18 80-20 80-20v275H0V360z" fill="#4a3b32" opacity="0.55"/>
+  <circle cx="720" cy="150" r="48" fill="#f3e6d0" opacity="0.35"/>
 </svg>
