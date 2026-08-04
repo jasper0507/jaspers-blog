@@ -4,8 +4,8 @@ import { spawn } from "node:child_process";
 import { chromium } from "playwright-core";
 
 const host = "http://127.0.0.1:4321";
-const screenshotDir = "artifacts/issue-2";
-const postScreenshotDir = "artifacts/issue-3";
+const screenshotDir = "artifacts/visual/home";
+const postScreenshotDir = "artifacts/visual/post";
 const postPath = "/posts/markdown-quick-start/";
 const longPostPath = "/posts/dsfedmed-paper-notes/";
 const widths = [1440, 768, 375, 320];
@@ -595,7 +595,7 @@ try {
         "/posts/",
         "/posts/2/",
         "/tags/",
-        "/tags/data-structures-and-algorithms/",
+        "/tags/数据结构与算法/",
         "/archives/",
       ]) {
         await navigationPage.goto(`${host}${path}`);

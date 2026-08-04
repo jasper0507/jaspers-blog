@@ -1,7 +1,7 @@
 ---
 import type { CollectionEntry } from "astro:content";
 import { formatPostDate } from "../lib/posts";
-import { getTagSlug } from "../lib/tags";
+import PostTags from "./PostTags.astro";
 
 interface Props {
   posts: CollectionEntry<"posts">[];
@@ -24,13 +24,7 @@ const Heading = headingLevel;
           <time datetime={post.data.publishedAt.toISOString()}>
             {formatPostDate(post.data.publishedAt)}
           </time>
-          <ul class="post-tags" aria-label="标签">
-            {post.data.tags.map(tag => (
-              <li>
-                <a href={`/tags/${getTagSlug(tag)}/`}>{tag}</a>
-              </li>
-            ))}
-          </ul>
+          <PostTags tags={post.data.tags} />
         </article>
       </li>
     ))

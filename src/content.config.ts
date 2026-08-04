@@ -31,7 +31,7 @@ const posts = defineCollection({
             }
           }),
       )
-      .min(1)
+      .default([])
       .refine(tags => new Set(tags).size === tags.length, "标签不得重复"),
     draft: z.boolean(),
   }),

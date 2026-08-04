@@ -6,12 +6,49 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { getTagError, tagVocabulary } from "../src/lib/tags.js";
+import { getTagSlug } from "../src/lib/tags.js";
 import { LEGACY_ASSETS, POST_MIGRATIONS } from "./migrate-hexo.mjs";
 
 const postSlug = "markdown-quick-start";
 const execFileAsync = promisify(execFile);
-const tagSlugs = new Map(Object.entries(tagVocabulary));
+const root = fileURLToPath(new URL("..", import.meta.url));
+
+const escapeHtml = value =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+const escapeRegExp = value => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const postMetadata = [];
+for (const { slug } of POST_MIGRATIONS) {
+  const markdown = await readFile(`src/content/posts/${slug}.md`, "utf8");
+  const frontmatter = markdown.match(/^---\n([\s\S]*?)\n---/)?.[1];
+  assert.ok(frontmatter, `${slug} 应有 frontmatter`);
+  const jsonField = name => JSON.parse(frontmatter.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1]);
+  const dateField = name => frontmatter.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1];
+  const title = jsonField("title");
+  const description = jsonField("description");
+  const tags = [...frontmatter.matchAll(/^  - (.+)$/gm)].map(([, tag]) => JSON.parse(tag));
+  postMetadata.push({
+    slug,
+    title,
+    description,
+    publishedAt: dateField("publishedAt"),
+    tags,
+  });
+}
+
+const usedTags = [
+  ...new Map(
+    postMetadata.flatMap(({ tags }) =>
+      tags.map(tag => [tag, { name: tag, slug: getTagSlug(tag) }]),
+    ),
+  ).values(),
+];
+const tagSlugs = new Map(usedTags.map(({ name, slug }) => [name, slug]));
+
 const routes = [
   "",
   "posts",
@@ -19,7 +56,7 @@ const routes = [
   ...POST_MIGRATIONS.map(({ slug }) => `posts/${slug}`),
   "shuoshuo",
   "tags",
-  ...[...tagSlugs.values()].map(slug => `tags/${slug}`),
+  ...usedTags.map(({ slug }) => `tags/${slug}`),
   "archives",
   "about",
   "search",
@@ -73,45 +110,27 @@ for (const { slug } of POST_MIGRATIONS) {
 }
 assert.equal(publicPostSlugs.includes("hello-world"), false);
 
-const escapeHtml = value =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-const escapeRegExp = value => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const postMetadata = [];
-for (const { slug } of POST_MIGRATIONS) {
+for (const { slug, title, description, tags } of postMetadata) {
   const markdown = await readFile(`src/content/posts/${slug}.md`, "utf8");
   const frontmatter = markdown.match(/^---\n([\s\S]*?)\n---/)?.[1];
-  assert.ok(frontmatter, `${slug} 应有 frontmatter`);
-  const jsonField = name => JSON.parse(frontmatter.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1]);
   const dateField = name => frontmatter.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1];
-  const title = jsonField("title");
-  const description = jsonField("description");
-  const tags = [...frontmatter.matchAll(/^  - (.+)$/gm)].map(([, tag]) => JSON.parse(tag));
-  postMetadata.push({
-    slug,
-    title,
-    description,
-    publishedAt: dateField("publishedAt"),
-    tags,
-  });
   const page = pages[`posts/${slug}`];
   const canonical = `https://blog.jasper0507.cc.cd/posts/${slug}/`;
 
   assert.match(page, new RegExp(`<h1 id="post-title">${escapeRegExp(escapeHtml(title))}</h1>`));
   assert.match(page, new RegExp(`<link rel="canonical" href="${canonical}">`));
   assert.match(page, new RegExp(escapeRegExp(escapeHtml(description))));
-  assert.ok(tags.length > 0, `${slug} 应保留分类与标签`);
-  for (const tag of tags) {
-    assert.match(
-      page,
-      new RegExp(
-        `href="/tags/${tagSlugs.get(tag)}/"[^>]*>${escapeRegExp(escapeHtml(tag))}</a></li>`,
-      ),
-    );
+  if (tags.length === 0) {
+    assert.doesNotMatch(page, /aria-label="标签"/, `${slug} 无标签时不应渲染标签区域`);
+  } else {
+    for (const tag of tags) {
+      assert.match(
+        page,
+        new RegExp(
+          `href="/tags/${escapeRegExp(tagSlugs.get(tag))}/"[^>]*>${escapeRegExp(escapeHtml(tag))}</a></li>`,
+        ),
+      );
+    }
   }
   for (const field of ["publishedAt", "updatedAt"]) {
     assert.match(page, new RegExp(`datetime="${new Date(dateField(field)).toISOString()}"`));
@@ -148,15 +167,11 @@ assert.match(pages.posts, /aria-label="文章分页"/);
 assert.match(pages.posts, /href="\/posts\/2\/"/);
 assert.match(pages["posts/2"], /href="\/posts\/"/);
 
-assert.deepEqual(
-  [...new Set(postMetadata.flatMap(({ tags }) => tags))].toSorted(),
-  [...tagSlugs.keys()].toSorted(),
-  "中央标签词表应覆盖全部迁移标签",
-);
-for (const [tag, slug] of tagSlugs) {
+assert.ok(usedTags.length > 0, "生产内容应包含至少一个标签以便验收聚合");
+for (const { name: tag, slug } of usedTags) {
   assert.match(
     pages.tags,
-    new RegExp(`href="/tags/${slug}/"[^>]*>${escapeRegExp(escapeHtml(tag))}`),
+    new RegExp(`href="/tags/${escapeRegExp(slug)}/"[^>]*>${escapeRegExp(escapeHtml(tag))}`),
   );
   assert.deepEqual(
     listedPostSlugs(pages[`tags/${slug}`]),
@@ -285,7 +300,8 @@ for (const { slug, title } of postMetadata) {
   assert.match(rss, new RegExp(`/posts/${slug}/`));
 }
 for (const slug of tagSlugs.values()) {
-  assert.match(sitemap, new RegExp(`/tags/${slug}/`));
+  const sitemapPath = new URL(`/tags/${slug}/`, "https://blog.jasper0507.cc.cd").pathname;
+  assert.match(sitemap, new RegExp(escapeRegExp(sitemapPath)));
 }
 assert.match(sitemap, /\/posts\/2\//);
 assert.doesNotMatch(sitemap, /\/shuoshuo\/#/);
@@ -294,42 +310,55 @@ assert.equal((rss.match(/<item>/g) ?? []).length, POST_MIGRATIONS.length);
 assert.doesNotMatch(rss, /不可公开的草稿|draft-markdown-capabilities/);
 
 for (const [route, html] of Object.entries(pages)) {
-  const canonicalUrl = `https://blog.jasper0507.cc.cd/${route ? `${route}/` : ""}`;
-  assert.match(html, new RegExp(`<link rel="canonical" href="${canonicalUrl}"`));
+  const canonicalUrl = new URL(route ? `/${route}/` : "/", "https://blog.jasper0507.cc.cd").href;
+  assert.match(html, new RegExp(`<link rel="canonical" href="${escapeRegExp(canonicalUrl)}"`));
   assert.match(html, /<meta property="og:title" content="[^"]+">/);
   assert.match(html, /<meta property="og:description" content="[^"]+">/);
-  assert.match(html, new RegExp(`<meta property="og:url" content="${canonicalUrl}"`));
+  assert.match(html, new RegExp(`<meta property="og:url" content="${escapeRegExp(canonicalUrl)}"`));
 }
 assert.match(post, /<meta property="og:type" content="article">/);
 assert.match(post, /"@type":"BlogPosting"/);
 
+async function buildWithPostContent(contentDir, outDir) {
+  return execFileAsync(
+    process.execPath,
+    [join(root, "node_modules/astro/bin/astro.mjs"), "build", "--force", "--outDir", outDir],
+    {
+      cwd: root,
+      env: {
+        ...process.env,
+        POST_CONTENT_DIR: contentDir,
+      },
+    },
+  );
+}
+
+const tagRulesOutDir = await mkdtemp(join(tmpdir(), "newblog-tag-rules-"));
+try {
+  await buildWithPostContent("./tests/fixtures/posts-tag-rules", tagRulesOutDir);
+  const openPost = await readFile(join(tagRulesOutDir, "posts/open/index.html"), "utf8");
+  const emptyPost = await readFile(join(tagRulesOutDir, "posts/empty/index.html"), "utf8");
+  const tagsIndex = await readFile(join(tagRulesOutDir, "tags/index.html"), "utf8");
+  const openTagDetail = await readFile(join(tagRulesOutDir, "tags/自由主题词/index.html"), "utf8");
+  assert.match(openPost, /href="\/tags\/自由主题词\/"[^>]*>自由主题词<\/a>/);
+  assert.match(tagsIndex, /href="\/tags\/自由主题词\/"/);
+  assert.match(openTagDetail, /开放标签 fixture/);
+  assert.doesNotMatch(openTagDetail, /空标签 fixture/, "标签详情只应列出带该标签的文章");
+  assert.doesNotMatch(emptyPost, /aria-label="标签"/, "无标签时不应渲染标签区域");
+  assert.doesNotMatch(emptyPost, /class="post-tags"/);
+} finally {
+  await rm(tagRulesOutDir, { recursive: true, force: true });
+}
+
 const invalidTagOutDir = await mkdtemp(join(tmpdir(), "newblog-invalid-tag-"));
 try {
-  assert.equal(getTagError("未知标签"), "未登记标签：未知标签");
-  const root = fileURLToPath(new URL("..", import.meta.url));
   let buildError;
   try {
-    await execFileAsync(
-      process.execPath,
-      [
-        join(root, "node_modules/astro/bin/astro.mjs"),
-        "build",
-        "--force",
-        "--outDir",
-        invalidTagOutDir,
-      ],
-      {
-        cwd: root,
-        env: {
-          ...process.env,
-          POST_CONTENT_DIR: "./tests/fixtures/posts-invalid-tag",
-        },
-      },
-    );
+    await buildWithPostContent("./tests/fixtures/posts-invalid-tag", invalidTagOutDir);
   } catch (error) {
     buildError = error;
   }
-  assert.ok(buildError, "未登记标签必须使构建失败");
+  assert.ok(buildError, "无法生成有效 URL 的标签必须使构建失败");
 } finally {
   await rm(invalidTagOutDir, { recursive: true, force: true });
 }

@@ -1,6 +1,6 @@
 import { getCollection } from "astro:content";
 import { isPublished } from "./content";
-import { tags } from "./tags";
+import { getTagSlug } from "./tags";
 
 export const POSTS_PER_PAGE = 10;
 
@@ -39,11 +39,28 @@ export function getPostYear(date: Date) {
 
 export async function getPublishedPostTags() {
   const posts = await getPublishedPosts();
+  const byName = new Map<string, { name: string; slug: string; posts: typeof posts }>();
+  const slugOwners = new Map<string, string>();
 
-  return tags
-    .map(tag => ({
-      ...tag,
-      posts: posts.filter(post => post.data.tags.includes(tag.name)),
-    }))
-    .filter(tag => tag.posts.length > 0);
+  for (const post of posts) {
+    for (const name of post.data.tags) {
+      let entry = byName.get(name);
+      if (!entry) {
+        const slug = getTagSlug(name);
+        const owner = slugOwners.get(slug);
+        if (owner && owner !== name) {
+          throw new Error(`标签「${owner}」与「${name}」生成了相同的 URL slug：${slug}`);
+        }
+        slugOwners.set(slug, name);
+        entry = { name, slug, posts: [] };
+        byName.set(name, entry);
+      }
+      entry.posts.push(post);
+    }
+  }
+
+  return [...byName.values()].sort(
+    (left, right) =>
+      right.posts.length - left.posts.length || left.name.localeCompare(right.name, "zh-CN"),
+  );
 }
