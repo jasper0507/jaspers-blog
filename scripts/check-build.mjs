@@ -442,10 +442,58 @@ for (const fixtureText of [
 assert.doesNotMatch(
   pages[""],
   /rel="preload"[^>]*noto-serif-sc-(?:115|117|118|119)/,
-  "首页不再为禅语预加载专用字重分段",
+  "首页不为无关中文分段预加载字体",
 );
+assert.doesNotMatch(
+  pages[""],
+  /rel="preload"[^>]*noto-sans-sc-/,
+  "首页不为 Noto Sans SC 分段预加载字体",
+);
+// 字体资源：Noto Serif SC 真字重（可变 wght 覆盖 400/600/700）与 Noto Sans SC 常用字重
 await access("dist/fonts/noto-serif-sc-4.woff2");
+await access("dist/fonts/noto-serif-sc-119.woff2");
+await access("dist/fonts/noto-sans-sc-4.woff2");
+await access("dist/fonts/noto-sans-sc-119.woff2");
+await access("dist/fonts/source-serif-4-latin.woff2");
+await access("dist/fonts/ibm-plex-sans-latin.woff2");
+await access("dist/fonts/ibm-plex-mono-latin.woff2");
+assert.match(
+  styles,
+  /font-family:(?:'|")?Noto Serif SC(?:'|")?;[^}]*font-weight:200 900/,
+  "Noto Serif SC 应以可变字重覆盖 400/600/700",
+);
+assert.match(
+  styles,
+  /font-family:(?:'|")?Noto Sans SC(?:'|")?;[^}]*font-weight:200 900/,
+  "Noto Sans SC 应以可变字重覆盖常用界面字重",
+);
+assert.match(styles, /--font-sans:[^;]*"Noto Sans SC"/, "界面字体栈应包含自托管 Noto Sans SC");
+assert.match(
+  styles,
+  /--font-mono:[^;]*"Sarasa Mono SC"/,
+  "代码字体栈应以 Sarasa Mono SC 作为中文可选系统回退",
+);
+assert.match(
+  styles,
+  /\.post-header h1\{[^}]*font-weight:600/,
+  "技术文章标题应为 Noto Serif SC 600 角色",
+);
+assert.match(
+  styles,
+  /\.post-body (?:strong|b),\.post-body (?:b|strong)\{[^}]*font-weight:700|\.post-body strong,\s*\.post-body b\{[^}]*font-weight:700/,
+  "正文粗体应为 Noto Serif SC 700 真字重而非仅依赖伪粗",
+);
+assert.doesNotMatch(
+  styles,
+  /\.post-body strong,\s*\.post-body b\{[^}]*font-family:var\(--font-sans\)/,
+  "正文粗体不得再回退到无衬线以避免宋体伪粗（已有真 700）",
+);
 assert.doesNotMatch(styles, /fonts\.(?:googleapis|gstatic)\.com/, "构建产物不得请求第三方字体服务");
+assert.doesNotMatch(
+  Object.values(pages).join("\n"),
+  /fonts\.(?:googleapis|gstatic)\.com|fonts\.font\.im|use\.typekit\.net/,
+  "页面不得外链第三方字体服务",
+);
 assert.match(styles, /\.post-preview-description/, "最近文章描述应有单行截断样式钩子");
 assert.match(styles, /\.feed-section\{[^}]*border-top:/, "分区线应为信息流栏满宽顶边线");
 assert.doesNotMatch(styles, /\.feed-section::before/, "分区线不得使用短装饰伪元素");

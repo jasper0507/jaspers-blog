@@ -8,7 +8,7 @@
 
 首页「最近文章」「最近说说」各 1 条；字段节奏同构为 `YYYY.MM.DD` + 标题/正文首行 +（文章）单行截断描述；「查看全部 (N)」使用半角括号与已发布总数（可为 0），文章链归档、说说链说说列表；区头链接默认无下划线。首页说说不再渲染折叠 Markdown 摘要块。
 
-本决策部分撤回 ADR-0001 中「禅语文字主视觉」与「文章下拉为全部文章/标签/归档」的约定。
+本决策部分撤回 ADR-0001 中「禅语文字主视觉」「文章下拉为全部文章/标签/归档」「文章主标题字重 500」「中文粗体回退黑体体系以避免宋体伪粗」的约定；标题与粗体改由 Noto Serif SC 真字重 600/700 承担（见下文字体段与 #17）。
 
 ## 归档（#13 已落地）
 
@@ -26,6 +26,6 @@
 
 主导航「搜索」为放大镜（非独立搜索页文案链）：点击或按 `/`（焦点不在 input/textarea/可编辑控件时）打开居中面板（遮罩 + 圆角卡片）；Esc、遮罩或关闭控件可退出。搜索范围仅技术文章（`pagefind --glob "posts/**/*.html"` + 单篇 `data-pagefind-body`）；结果关闭 sub-results。独立 `/search/` 内容页废除并重定向首页；sitemap 不再列出；Pagefind 静态索引与 Component UI 资源仍随构建产出。验收落在 dist 合同与 visual（打开/关闭/`/`/检索）上。
 
-## 仍属第二轮、由后续工单落地
+## 字体（#17 已落地）
 
-字体按角色自托管并对齐阅读主题：中文正文/标题/粗体为 Noto Serif SC 400/600/700，英文正文 Source Serif 4，界面 IBM Plex Sans 与 Noto Sans SC，代码 IBM Plex Mono，代码中文以 Sarasa Mono SC 为可选系统回退（#17）。单篇技术文章页标题区保持既有结构。
+字体按角色自托管：中文正文/标题/粗体为 Noto Serif SC 400/600/700（可变 wght 200–900 的 unicode-range 分包，真字重而非伪粗），英文正文 Source Serif 4，界面 IBM Plex Sans 与 Noto Sans SC，代码 IBM Plex Mono，代码中文以 Sarasa Mono SC 为可选系统回退（不自托管）。禁止第三方字体 CDN；不为无关中文分段 preload。资源可用 `node scripts/fetch-fonts.mjs` 重生。验收落在 dist 合同与 visual 上。

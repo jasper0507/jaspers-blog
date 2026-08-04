@@ -427,7 +427,7 @@ try {
           theme === "light" ? "rgb(250, 249, 245)" : "rgb(47, 46, 42)",
         );
         assert.match(article.titleFontFamily, /^"Source Serif 4", "Noto Serif SC"/);
-        assert.equal(article.titleFontWeight, "500");
+        assert.equal(article.titleFontWeight, "600");
         assert.equal(article.wideContentContained, true);
         const insufficientContrast = article.contrastSamples.filter(
           ([foreground, background]) => contrastRatio(foreground, background) < 4.5,
