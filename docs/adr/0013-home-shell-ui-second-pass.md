@@ -28,4 +28,4 @@
 
 ## 仍属第二轮、由后续工单落地
 
-主导航「文章」为下拉（归档、标签）— **#11 已落地**。单篇技术文章页仍保留文章自身标题区。字体按角色自托管并对齐阅读主题：中文正文/标题/粗体为 Noto Serif SC 400/600/700，英文正文 Source Serif 4，界面 IBM Plex Sans 与 Noto Sans SC，代码 IBM Plex Mono，代码中文以 Sarasa Mono SC 为可选系统回退（#17）。
+字体按角色自托管并对齐阅读主题：中文正文/标题/粗体为 Noto Serif SC 400/600/700，英文正文 Source Serif 4，界面 IBM Plex Sans 与 Noto Sans SC，代码 IBM Plex Mono，代码中文以 Sarasa Mono SC 为可选系统回退（#17）。单篇技术文章页标题区保持既有结构。

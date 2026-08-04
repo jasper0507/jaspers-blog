@@ -34,3 +34,4 @@
 - 技术文章：在 `src/content/posts/<ascii-slug>.md` 创建或编辑 Markdown。
 - 说说：运行 `npm run new:shuoshuo`，再编辑生成的 Markdown。
 - 发布：运行 `npm run build`，然后提交并推送到 `main`。
+- 本地验收搜索：须先 `npm run build`（生成 Pagefind 索引），再 `npm run preview`；`npm run dev` 下索引可能不完整。

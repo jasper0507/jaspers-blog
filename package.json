@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "astro dev",
+    "preview": "astro preview",
     "format": "prettier --write \"src/**/*.{astro,js,ts}\" \"src/styles/global.css\" \"scripts/**/*.mjs\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
     "format:check": "prettier --check \"src/**/*.{astro,js,ts}\" \"src/styles/global.css\" \"scripts/**/*.mjs\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
     "check": "astro check",
