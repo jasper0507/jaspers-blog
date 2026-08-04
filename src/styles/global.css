@@ -457,11 +457,6 @@ html[data-theme="dark"] .hero-image-dark {
   font-size: 0.78rem;
 }
 
-.shuoshuo-preview > a {
-  display: inline-block;
-  margin-top: 0.7rem;
-}
-
 .post-body.shuoshuo-body {
   width: auto;
   margin: 0;
@@ -470,11 +465,6 @@ html[data-theme="dark"] .hero-image-dark {
   box-shadow: none;
   font-size: 1rem;
   overflow: hidden;
-}
-
-.shuoshuo-body.shuoshuo-summary[data-collapsed] {
-  max-height: 5.2rem;
-  mask-image: linear-gradient(to bottom, #000 65%, transparent);
 }
 
 .shuoshuo-list {
