@@ -72,11 +72,15 @@ const searchRedirect = await readFile("dist/search/index.html", "utf8");
 const sitemap = await readFile("dist/sitemap.xml", "utf8");
 const rss = await readFile("dist/rss.xml", "utf8");
 const searchIndex = JSON.parse(await readFile("dist/pagefind/pagefind-entry.json", "utf8"));
+// 仅聚合生产路由引用的 CSS，避免 /prototype/* 等抛弃式页面污染外壳合同
+const productionCssHrefs = new Set(
+  Object.values(pages).flatMap(html =>
+    [...html.matchAll(/href="(\/_astro\/[^"]+\.css)"/g)].map(([, href]) => href),
+  ),
+);
 const styles = (
   await Promise.all(
-    (await readdir("dist/_astro"))
-      .filter(file => file.endsWith(".css"))
-      .map(file => readFile(`dist/_astro/${file}`, "utf8")),
+    [...productionCssHrefs].map(href => readFile(join("dist", href.slice(1)), "utf8")),
   )
 ).join("\n");
 const [nodeVersion, deploymentGuide, thirdPartyNotices, packageManifest] = await Promise.all([
@@ -315,6 +319,15 @@ for (const [route, html] of Object.entries(pages)) {
 }
 
 assert.match(pages[""], /<title>Jasper(?:'|&#39;)s Blog<\/title>/);
+const brandAnchor = pages[""].match(/<a\b[^>]*\bclass="brand"[^>]*>[\s\S]*?<\/a>/)?.[0] ?? "";
+assert.match(brandAnchor, />JaspersBlog<\/a>/, "顶栏品牌可见文案应为 JaspersBlog");
+assert.match(brandAnchor, /aria-label="JaspersBlog 首页"/, "顶栏品牌 aria-label 应对齐可见文案");
+assert.doesNotMatch(brandAnchor, />Jasper<\/a>/, "顶栏品牌不得再是单独的 Jasper");
+assert.match(
+  pages[""],
+  /© \d{4} Jasper\. 保留所有权利。/,
+  "页脚版权名保持 Jasper，不因顶栏改名扩大重命名",
+);
 assert.match(pages[""], /<link rel="canonical" href="https:\/\/blog\.jasper0507\.cc\.cd\/">/);
 assert.doesNotMatch(pages[""], /见了便做|做了便放下|了了有何不了/, "首页不得再展示禅语三行主视觉");
 const heroImages = [...pages[""].matchAll(/<img\b[^>]*class="[^"]*hero-image[^"]*"[^>]*>/g)];

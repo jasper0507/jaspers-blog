@@ -146,6 +146,7 @@ try {
           const viewAllLink = document.querySelector(".section-heading a");
           const viewAllStyle = viewAllLink ? getComputedStyle(viewAllLink) : null;
           const caption = document.querySelector(".hero-caption");
+          const brand = document.querySelector(".brand");
           const viewAll = [...document.querySelectorAll(".section-heading a")].map(link => ({
             href: link.getAttribute("href"),
             text: link.textContent.trim(),
@@ -154,8 +155,18 @@ try {
           const mediaRect = media.getBoundingClientRect();
           const feedRect = feed.getBoundingClientRect();
           const toggleRect = themeToggle.getBoundingClientRect();
+          const shellHeight =
+            (document.querySelector(".site-header")?.getBoundingClientRect().height ?? 0) +
+            (main?.getBoundingClientRect().height ?? 0) +
+            (document.querySelector(".site-footer")?.getBoundingClientRect().height ?? 0);
+          const shellFitsViewport = shellHeight <= innerHeight + 0.5;
 
           return {
+            brandText: brand?.textContent?.trim() ?? "",
+            brandAriaLabel: brand?.getAttribute("aria-label") ?? "",
+            verticalOverflow:
+              document.documentElement.scrollHeight - document.documentElement.clientHeight,
+            shellFitsViewport,
             scrollWidth: document.documentElement.scrollWidth,
             mainWidth: main.getBoundingClientRect().width,
             gridColumns: getComputedStyle(grid)
@@ -220,6 +231,15 @@ try {
         });
 
         assert.equal(actual.scrollWidth, width, `${width}px 不得横向溢出`);
+        assert.equal(actual.brandText, "JaspersBlog", "顶栏品牌可见文案应为 JaspersBlog");
+        assert.equal(actual.brandAriaLabel, "JaspersBlog 首页", "顶栏品牌 aria-label 应对齐");
+        if (actual.shellFitsViewport) {
+          assert.equal(
+            actual.verticalOverflow,
+            0,
+            `${width}px 首页内容不足一屏时不得出现假纵向滚动（overflow=${actual.verticalOverflow}）`,
+          );
+        }
         assert.equal(actual.background, expectedColors[theme].background);
         if (theme === "dark") {
           assert.equal(actual.text, expectedColors.dark.text);

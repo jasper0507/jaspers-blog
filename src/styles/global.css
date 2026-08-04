@@ -124,6 +124,17 @@ button {
   border: 0;
 }
 
+/*
+ * Pagefind 的 live region 自带 position:absolute + 1×1，但未钉坐标也无负 margin。
+ * 静态位置落在文档流末尾时，1px 盒子会把 scrollHeight 撑出视口（假纵向滚动）。
+ * 钉到视口原点，保留可读性语义、不参与可滚动溢出。
+ */
+[data-pf-sr-hidden] {
+  top: 0 !important;
+  left: 0 !important;
+  margin: 0 !important;
+}
+
 .site-header {
   position: relative;
   z-index: 10;
