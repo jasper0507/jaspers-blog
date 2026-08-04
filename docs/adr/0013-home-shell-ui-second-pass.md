@@ -28,4 +28,8 @@
 
 ## 字体（#17 已落地）
 
-字体按角色自托管：中文正文/标题/粗体为 Noto Serif SC 400/600/700（可变 wght 200–900 的 unicode-range 分包，真字重而非伪粗），英文正文 Source Serif 4，界面 IBM Plex Sans 与 Noto Sans SC，代码 IBM Plex Mono，代码中文以 Sarasa Mono SC 为可选系统回退（不自托管）。禁止第三方字体 CDN；不为无关中文分段 preload。资源可用 `node scripts/fetch-fonts.mjs` 重生。验收落在 dist 合同与 visual 上。
+字体按角色自托管：中文正文/标题/粗体为 Noto Serif SC 400/600/700（可变 wght 200–900 的 unicode-range 分包，真字重而非伪粗），英文正文 Source Serif 4，界面 IBM Plex Sans 与 Noto Sans SC，代码 IBM Plex Mono，代码中文以 Sarasa Mono SC 为可选系统回退（不自托管）。禁止第三方字体 CDN；不为无关中文分段 preload。资源可用 `npm run fonts:fetch`（`scripts/fetch-fonts.mjs`）重生。验收落在 dist 合同与 visual 上；人工验收通过（`233f1cd`）。
+
+## 第二轮范围（#9）
+
+父票 #9 下子工单 #10–#17 均已落地并人工验收。单篇技术文章页标题区与 768 纸张卡片排版合同保持不变。后续改动按新工单开，不再挂「仍属第二轮」待办段。

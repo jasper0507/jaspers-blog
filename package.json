@@ -13,6 +13,7 @@
     "format:check": "prettier --check \"src/**/*.{astro,js,ts}\" \"src/styles/global.css\" \"scripts/**/*.mjs\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
     "check": "astro check",
     "build": "astro build && pagefind --site dist --glob \"posts/**/*.html\"",
+    "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
     "test:dist": "node scripts/check-build.mjs",
     "test:migration": "node scripts/check-migration.mjs",

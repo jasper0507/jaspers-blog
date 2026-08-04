@@ -35,3 +35,4 @@
 - 说说：运行 `npm run new:shuoshuo`，再编辑生成的 Markdown。
 - 发布：运行 `npm run build`，然后提交并推送到 `main`。
 - 本地验收搜索：须先 `npm run build`（生成 Pagefind 索引），再 `npm run preview`；`npm run dev` 下索引可能不完整。
+- 字体：Noto / Source Serif / IBM Plex 均自托管于 `public/fonts/`，构建产物不得依赖 Google Fonts 等 CDN。若需更新 Noto 分包，运行 `npm run fonts:fetch` 后提交生成的 woff2 与 `src/styles/fonts.css`。
