@@ -12,12 +12,9 @@ const shuoshuo = await Promise.all(
 ---
 
 <BaseLayout title="说说" description="Jasper 发布的轻量文字与照片内容。" pageClass="page-shell">
-  <section class="page-intro" aria-labelledby="shuoshuo-title">
-    <h1 id="shuoshuo-title">说说</h1>
-    <p>{shuoshuo.length ? "轻量文字与照片。" : "暂无说说"}</p>
-  </section>
+  <h1 id="shuoshuo-title" class="sr-only">说说</h1>
   {
-    shuoshuo.length > 0 && (
+    shuoshuo.length > 0 ? (
       <ol class="shuoshuo-list">
         {shuoshuo.map(({ entry, Content }) => {
           const bodyId = `shuoshuo-body-${entry.id}`;
@@ -25,7 +22,7 @@ const shuoshuo = await Promise.all(
 
           return (
             <li>
-              <article aria-label={label} data-pagefind-body>
+              <article class="shuoshuo-card" aria-label={label} data-pagefind-body>
                 <h2 class="sr-only" id={entry.id}>
                   {label}
                 </h2>
@@ -52,6 +49,8 @@ const shuoshuo = await Promise.all(
           );
         })}
       </ol>
+    ) : (
+      <p class="empty-state">暂无说说</p>
     )
   }
 </BaseLayout>

@@ -63,6 +63,13 @@ try {
     timeline,
     new RegExp(`<h2 class="sr-only" id="${stableId}">说说 · 2026年2月3日 09:30</h2>`),
   );
+  assert.match(
+    timeline,
+    /<h1[^>]*\bsr-only\b[^>]*>说说<\/h1>|<h1[^>]*class="[^"]*\bsr-only\b[^"]*"[^>]*>说说<\/h1>/,
+    "说说页应保留无障碍页面名",
+  );
+  assert.doesNotMatch(timeline, /class="page-intro"/, "说说页不得有栏目 intro 壳");
+  assert.match(timeline, /class="shuoshuo-card"/, "说说列表条目应为纸面卡片");
   assert.match(timeline, /data-pagefind-body/);
   assert.match(timeline, /data-shuoshuo-toggle/);
   assert.doesNotMatch(

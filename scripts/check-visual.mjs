@@ -149,6 +149,7 @@ try {
           const footerRect = footerInner.getBoundingClientRect();
           const postPreview = document.querySelector(".post-preview:not(.shuoshuo-preview)");
           const shuoshuoPreview = document.querySelector(".shuoshuo-preview");
+          const shuoshuoPreviewStyle = shuoshuoPreview ? getComputedStyle(shuoshuoPreview) : null;
           const description = document.querySelector(".post-preview-description");
           const descriptionStyle = description ? getComputedStyle(description) : null;
           const viewAllLink = document.querySelector(".section-heading a");
@@ -201,6 +202,13 @@ try {
             shuoshuoPreviewOrder: shuoshuoPreview
               ? [...shuoshuoPreview.children].map(child => child.tagName.toLowerCase())
               : [],
+            shuoshuoPreviewBackground: shuoshuoPreviewStyle?.backgroundColor ?? "",
+            shuoshuoPreviewBorderWidth: shuoshuoPreviewStyle
+              ? Number.parseFloat(shuoshuoPreviewStyle.borderTopWidth)
+              : 0,
+            shuoshuoPreviewRadius: shuoshuoPreviewStyle
+              ? Number.parseFloat(shuoshuoPreviewStyle.borderRadius)
+              : 0,
             homeDate,
             descriptionWhiteSpace: descriptionStyle?.whiteSpace ?? "",
             descriptionOverflow: descriptionStyle?.overflow ?? "",
@@ -252,6 +260,13 @@ try {
         assert.notEqual(actual.visibleDisplay, "none");
         assert.deepEqual(actual.postPreviewOrder.slice(0, 3), ["time", "h3", "p"]);
         assert.deepEqual(actual.shuoshuoPreviewOrder.slice(0, 2), ["time", "h3"]);
+        assert.notEqual(
+          actual.shuoshuoPreviewBackground,
+          "rgba(0, 0, 0, 0)",
+          "首页说说预览应有纸面背景",
+        );
+        assert.ok(actual.shuoshuoPreviewBorderWidth >= 1, "首页说说预览应有细边");
+        assert.ok(actual.shuoshuoPreviewRadius >= 6, "首页说说预览应有可见圆角");
         assert.match(actual.homeDate, /^\d{4}\.\d{2}\.\d{2}$/, "首页日期应为 YYYY.MM.DD");
         assert.equal(actual.descriptionWhiteSpace, "nowrap");
         assert.equal(actual.descriptionOverflow, "hidden");
@@ -728,6 +743,134 @@ try {
       assert.equal(tagDetail.hasPreview, false, "标签详情不得复用预览列表壳");
       assert.equal(tagDetail.scrollWidth, 1440, "标签详情不得横向溢出");
       await tagsContext.close();
+    }
+
+    {
+      const shuoshuoContext = await browser.newContext({
+        viewport: { width: 1440, height: 960 },
+        colorScheme: "light",
+      });
+      const shuoshuoPage = await shuoshuoContext.newPage();
+      await shuoshuoPage.goto(`${host}/shuoshuo/`, { waitUntil: "networkidle" });
+      await shuoshuoPage.evaluate(() => document.fonts.ready);
+
+      const shuoshuo = await shuoshuoPage.evaluate(() => {
+        const h1 = document.querySelector("h1");
+        const intro = document.querySelector(".page-intro");
+        const list = document.querySelector(".shuoshuo-list");
+        const cards = [...document.querySelectorAll(".shuoshuo-card")];
+        const items = list ? [...list.querySelectorAll(":scope > li")] : [];
+        const h1Style = h1 ? getComputedStyle(h1) : null;
+        const firstCard = cards[0];
+        const firstCardStyle = firstCard ? getComputedStyle(firstCard) : null;
+        const firstItemStyle = items[0] ? getComputedStyle(items[0]) : null;
+        const listStyle = list ? getComputedStyle(list) : null;
+
+        const isVisuallyHidden = style => {
+          if (!style || !h1) return false;
+          if (style.display === "none" || style.visibility === "hidden") return true;
+          if (Number.parseFloat(style.opacity) === 0) return true;
+          const rect = h1.getBoundingClientRect();
+          if (rect.width <= 1 && rect.height <= 1) return true;
+          if (style.clipPath && style.clipPath !== "none" && style.clipPath.includes("inset")) {
+            return true;
+          }
+          if (style.position === "absolute" && (rect.width <= 1 || rect.height <= 1)) return true;
+          return false;
+        };
+
+        let gapBetweenCards = null;
+        if (items.length >= 2) {
+          const a = items[0].getBoundingClientRect();
+          const b = items[1].getBoundingClientRect();
+          gapBetweenCards = b.top - a.bottom;
+        }
+
+        return {
+          title: document.title,
+          hasIntro: Boolean(intro),
+          h1Text: h1?.textContent?.trim() ?? "",
+          h1Hidden: isVisuallyHidden(h1Style),
+          cardCount: cards.length,
+          itemCount: items.length,
+          cardBackground: firstCardStyle?.backgroundColor ?? "",
+          cardBorderWidth: firstCardStyle ? Number.parseFloat(firstCardStyle.borderTopWidth) : 0,
+          cardRadius: firstCardStyle ? Number.parseFloat(firstCardStyle.borderRadius) : 0,
+          itemBorderTop: firstItemStyle ? Number.parseFloat(firstItemStyle.borderTopWidth) : 0,
+          itemBorderBottom: firstItemStyle
+            ? Number.parseFloat(firstItemStyle.borderBottomWidth)
+            : 0,
+          listGap: listStyle ? Number.parseFloat(listStyle.rowGap || listStyle.gap) : 0,
+          gapBetweenCards,
+          scrollWidth: document.documentElement.scrollWidth,
+        };
+      });
+
+      assert.match(shuoshuo.title, /说说/);
+      assert.equal(shuoshuo.hasIntro, false, "说说页不得有可见栏目 intro");
+      assert.equal(shuoshuo.h1Text, "说说");
+      assert.equal(shuoshuo.h1Hidden, true, "说说主标题应对视觉隐藏、仅服务无障碍");
+      assert.ok(shuoshuo.cardCount >= 1, "说说列表应有卡片条目");
+      assert.equal(shuoshuo.cardCount, shuoshuo.itemCount, "每条说说应对应一张卡片");
+      assert.notEqual(shuoshuo.cardBackground, "rgba(0, 0, 0, 0)", "说说卡片应有纸面背景");
+      assert.ok(shuoshuo.cardBorderWidth >= 1, "说说卡片应有细边");
+      assert.ok(shuoshuo.cardRadius >= 6, "说说卡片应有可见圆角");
+      assert.equal(shuoshuo.itemBorderTop, 0, "说说列表不得用条目顶部分割线");
+      assert.equal(shuoshuo.itemBorderBottom, 0, "说说列表不得用条目底部分割线");
+      if (shuoshuo.itemCount >= 2) {
+        assert.ok(
+          (shuoshuo.gapBetweenCards ?? 0) >= 8 || shuoshuo.listGap >= 8,
+          "说说卡片之间应以间距区分",
+        );
+      }
+      assert.equal(shuoshuo.scrollWidth, 1440, "说说页不得横向溢出");
+      await shuoshuoContext.close();
+    }
+
+    {
+      const aboutContext = await browser.newContext({
+        viewport: { width: 1440, height: 960 },
+        colorScheme: "light",
+      });
+      const aboutPage = await aboutContext.newPage();
+      await aboutPage.goto(`${host}/about/`, { waitUntil: "networkidle" });
+      await aboutPage.evaluate(() => document.fonts.ready);
+
+      const about = await aboutPage.evaluate(() => {
+        const h1 = document.querySelector("h1");
+        const intro = document.querySelector(".page-intro");
+        const h1Style = h1 ? getComputedStyle(h1) : null;
+
+        const isVisuallyHidden = style => {
+          if (!style || !h1) return false;
+          if (style.display === "none" || style.visibility === "hidden") return true;
+          if (Number.parseFloat(style.opacity) === 0) return true;
+          const rect = h1.getBoundingClientRect();
+          if (rect.width <= 1 && rect.height <= 1) return true;
+          if (style.clipPath && style.clipPath !== "none" && style.clipPath.includes("inset")) {
+            return true;
+          }
+          if (style.position === "absolute" && (rect.width <= 1 || rect.height <= 1)) return true;
+          return false;
+        };
+
+        return {
+          title: document.title,
+          hasIntro: Boolean(intro),
+          h1Text: h1?.textContent?.trim() ?? "",
+          h1Hidden: isVisuallyHidden(h1Style),
+          bodyHasJasper: document.body.textContent.includes("Jasper"),
+          scrollWidth: document.documentElement.scrollWidth,
+        };
+      });
+
+      assert.match(about.title, /关于/);
+      assert.equal(about.hasIntro, false, "关于页不得有可见栏目 intro");
+      assert.equal(about.h1Text, "关于");
+      assert.equal(about.h1Hidden, true, "关于主标题应对视觉隐藏、仅服务无障碍");
+      assert.equal(about.bodyHasJasper, true, "关于页应保留正文内容");
+      assert.equal(about.scrollWidth, 1440, "关于页不得横向溢出");
+      await aboutContext.close();
     }
 
     const intermediateContext = await browser.newContext({

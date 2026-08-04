@@ -5,7 +5,7 @@ description: 关于 Jasper 与 Jasper's Blog。
 pageClass: prose
 ---
 
-# 关于
+<h1 class="sr-only">关于</h1>
 
 我是 Jasper。
 

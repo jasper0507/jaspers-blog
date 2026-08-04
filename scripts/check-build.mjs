@@ -397,6 +397,34 @@ assert.doesNotMatch(pages[""], /查看全部（\d+）/, "不得使用全角括�
 await assert.rejects(access("dist/categories/index.html"), "不得生成分类索引页");
 assert.match(pages.shuoshuo, /Talk is cheap\. Show me the code\./);
 assert.doesNotMatch(pages.shuoshuo, /暂无说说/);
+assert.match(
+  pages.shuoshuo,
+  /<h1[^>]*\bsr-only\b[^>]*>说说<\/h1>|<h1[^>]*class="[^"]*\bsr-only\b[^"]*"[^>]*>说说<\/h1>/,
+  "说说页应保留无障碍页面名",
+);
+assert.doesNotMatch(pages.shuoshuo, /class="page-intro"/, "说说页不得有栏目 intro 壳");
+assert.doesNotMatch(
+  pages.shuoshuo,
+  /class="page-intro"[\s\S]*?轻量文字与照片|轻量文字与照片。/,
+  "说说页不得有 intro 文案",
+);
+assert.match(pages.shuoshuo, /class="shuoshuo-card"/, "说说列表条目应为纸面卡片");
+assert.match(pages.shuoshuo, /class="shuoshuo-list"/, "说说列表应保留列表结构");
+assert.doesNotMatch(
+  styles,
+  /\.shuoshuo-list\s*>\s*li\{[^}]*border-(?:top|bottom):/,
+  "说说列表不得用条目分割线",
+);
+assert.match(
+  styles,
+  /\.shuoshuo-card[^{]*\{[^}]*background:var\(--surface\)/,
+  "说说卡片应为纸面表面",
+);
+assert.match(
+  styles,
+  /\.shuoshuo-preview[^{]*\{[^}]*background:var\(--surface\)/,
+  "首页说说预览应与列表同为纸面卡片",
+);
 for (const fixtureText of [
   "这是发布时间最新的公开说说",
   "这是一条不应公开的草稿",
@@ -461,6 +489,18 @@ assert.doesNotMatch(post, /href="#footnote-label"/);
 assert.match(pages.about, /Jasper/);
 assert.match(pages.about, /github\.com\/jasper0507/);
 assert.match(pages.about, /jasper0507\.self@gmail\.com/);
+assert.match(pages.about, /<title>关于 \| Jasper(?:'|&#39;)s Blog<\/title>/);
+assert.match(
+  pages.about,
+  /<h1[^>]*\bsr-only\b[^>]*>关于<\/h1>|<h1[^>]*class="[^"]*\bsr-only\b[^"]*"[^>]*>关于<\/h1>/,
+  "关于页应保留无障碍页面名",
+);
+assert.doesNotMatch(pages.about, /class="page-intro"/, "关于页不得有栏目 intro 壳");
+assert.doesNotMatch(
+  pages.about,
+  /<h1(?![^>]*\bsr-only\b)(?![^>]*class="[^"]*\bsr-only\b[^"]*")[^>]*>关于<\/h1>/,
+  "关于页不得有可见栏目大标题",
+);
 assert.match(sitemap, /https:\/\/blog\.jasper0507\.cc\.cd\/about\//);
 
 await access("dist/pagefind/pagefind.js");
