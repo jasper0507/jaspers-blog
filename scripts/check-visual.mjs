@@ -62,6 +62,22 @@ function assertNear(actual, expected, tolerance = 1) {
   );
 }
 
+/** 从 getComputedStyle(...).transform 读取均匀缩放系数（默认 1）。 */
+function parseCssScale(transform) {
+  if (!transform || transform === "none") return 1;
+  const matrix3d = transform.match(/^matrix3d\((.+)\)$/);
+  if (matrix3d) {
+    const value = Number.parseFloat(matrix3d[1].split(",")[0]);
+    return Number.isFinite(value) ? value : 1;
+  }
+  const matrix = transform.match(/^matrix\((.+)\)$/);
+  if (matrix) {
+    const value = Number.parseFloat(matrix[1].split(",")[0]);
+    return Number.isFinite(value) ? value : 1;
+  }
+  return 1;
+}
+
 function contrastRatio(foreground, background) {
   const luminance = color => {
     const channels = color
@@ -577,21 +593,6 @@ try {
           return false;
         };
 
-        const parseScale = transform => {
-          if (!transform || transform === "none") return 1;
-          const matrix3d = transform.match(/^matrix3d\((.+)\)$/);
-          if (matrix3d) {
-            const parts = matrix3d[1].split(",").map(part => Number.parseFloat(part.trim()));
-            return Number.isFinite(parts[0]) ? parts[0] : 1;
-          }
-          const matrix = transform.match(/^matrix\((.+)\)$/);
-          if (matrix) {
-            const parts = matrix[1].split(",").map(part => Number.parseFloat(part.trim()));
-            return Number.isFinite(parts[0]) ? parts[0] : 1;
-          }
-          return 1;
-        };
-
         return {
           title: document.title,
           hasIntro: Boolean(intro),
@@ -608,7 +609,7 @@ try {
           chipBorderWidth: firstLinkStyle ? Number.parseFloat(firstLinkStyle.borderTopWidth) : 0,
           chipRadius: firstLinkStyle ? Number.parseFloat(firstLinkStyle.borderRadius) : 0,
           countBackground: firstCountStyle?.backgroundColor ?? "",
-          restScale: firstLinkStyle ? parseScale(firstLinkStyle.transform) : 1,
+          restTransform: firstLinkStyle?.transform ?? "none",
           scrollWidth: document.documentElement.scrollWidth,
         };
       });
@@ -630,10 +631,8 @@ try {
       assert.ok(tagsIndex.chipBorderWidth >= 1, "标签 chip 应有描边");
       assert.ok(tagsIndex.chipRadius >= 6, "标签 chip 应有可见圆角");
       assert.notEqual(tagsIndex.countBackground, "rgba(0, 0, 0, 0)", "计数应为极淡角标底");
-      assert.ok(
-        Math.abs(tagsIndex.restScale - 1) <= 0.02,
-        `默认态不得缩放（scale=${tagsIndex.restScale}）`,
-      );
+      const restScale = parseCssScale(tagsIndex.restTransform);
+      assert.ok(Math.abs(restScale - 1) <= 0.02, `默认态不得缩放（scale=${restScale}）`);
       assert.equal(tagsIndex.scrollWidth, 1440, "标签索引不得横向溢出");
 
       const hoverTransformRule = await tagsPage.evaluate(() => {
@@ -664,19 +663,9 @@ try {
       const firstChip = tagsPage.locator(".tag-cloud a").first();
       await firstChip.hover();
       await tagsPage.waitForTimeout(200);
-      const hoverScale = await firstChip.evaluate(link => {
-        const transform = getComputedStyle(link).transform;
-        if (!transform || transform === "none") return 1;
-        const matrix3d = transform.match(/^matrix3d\((.+)\)$/);
-        if (matrix3d) {
-          return Number.parseFloat(matrix3d[1].split(",")[0]);
-        }
-        const matrix = transform.match(/^matrix\((.+)\)$/);
-        if (matrix) {
-          return Number.parseFloat(matrix[1].split(",")[0]);
-        }
-        return 1;
-      });
+      const hoverScale = parseCssScale(
+        await firstChip.evaluate(link => getComputedStyle(link).transform),
+      );
       // 实机 :hover 在无头环境偶发不生效；样式表规则已断言，此处仅在生效时校验量级
       if (hoverScale > 1.01) {
         assert.ok(
