@@ -2,8 +2,6 @@ import { getCollection } from "astro:content";
 import { isPublished } from "./content";
 import { getTagSlug } from "./tags";
 
-export const POSTS_PER_PAGE = 10;
-
 const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "long",
   timeZone: "Asia/Shanghai",

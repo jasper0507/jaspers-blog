@@ -185,23 +185,15 @@ const structuredData = JSON.stringify(
                 <ul class="article-menu-list" id="article-menu-list">
                   <li>
                     <a
-                      href="/posts/"
-                      aria-current={path.startsWith("/posts/") ? "page" : undefined}
+                      href="/archives/"
+                      aria-current={path.startsWith("/archives/") ? "page" : undefined}
                     >
-                      全部文章
+                      归档
                     </a>
                   </li>
                   <li>
                     <a href="/tags/" aria-current={path.startsWith("/tags/") ? "page" : undefined}>
                       标签
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="/archives/"
-                      aria-current={path.startsWith("/archives/") ? "page" : undefined}
-                    >
-                      归档
                     </a>
                   </li>
                 </ul>

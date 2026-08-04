@@ -61,6 +61,10 @@ const transformerCodeTitle = {
 export default defineConfig({
   site: "https://blog.jasper0507.cc.cd",
   trailingSlash: "always",
+  redirects: {
+    "/posts": "/archives",
+    "/posts/2": "/archives",
+  },
   markdown: {
     processor: unified({
       remarkPlugins: [remarkMath, [remarkAlert, { legacyTitle: true }]],

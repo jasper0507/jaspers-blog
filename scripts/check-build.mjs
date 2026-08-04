@@ -51,8 +51,6 @@ const tagSlugs = new Map(usedTags.map(({ name, slug }) => [name, slug]));
 
 const routes = [
   "",
-  "posts",
-  "posts/2",
   ...POST_MIGRATIONS.map(({ slug }) => `posts/${slug}`),
   "shuoshuo",
   "tags",
@@ -69,6 +67,8 @@ const pages = Object.fromEntries(
     ]),
   ),
 );
+const postsListRedirect = await readFile("dist/posts/index.html", "utf8");
+const postsPage2Redirect = await readFile("dist/posts/2/index.html", "utf8");
 const sitemap = await readFile("dist/sitemap.xml", "utf8");
 const rss = await readFile("dist/rss.xml", "utf8");
 const searchIndex = JSON.parse(await readFile("dist/pagefind/pagefind-entry.json", "utf8"));
@@ -145,27 +145,12 @@ const latestPost = orderedPosts[0];
 const listedPostSlugs = html =>
   [...html.matchAll(/<h[23]><a href="\/posts\/([^/]+)\/">/g)].map(([, slug]) => slug);
 
-assert.deepEqual(listedPostSlugs(pages.posts), [
-  ...orderedPosts.slice(0, 10).map(({ slug }) => slug),
-]);
-assert.deepEqual(listedPostSlugs(pages["posts/2"]), [
-  ...orderedPosts.slice(10).map(({ slug }) => slug),
-]);
-for (const metadata of orderedPosts) {
-  const page = [pages.posts, pages["posts/2"]].find(html =>
-    listedPostSlugs(html).includes(metadata.slug),
-  );
-  assert.ok(page, `${metadata.slug} 应出现在文章分页中`);
-  assert.match(page, new RegExp(escapeRegExp(escapeHtml(metadata.title))));
-  assert.match(page, new RegExp(escapeRegExp(escapeHtml(metadata.description))));
-  assert.match(page, new RegExp(`datetime="${new Date(metadata.publishedAt).toISOString()}"`));
-  for (const tag of metadata.tags) {
-    assert.match(page, new RegExp(escapeRegExp(escapeHtml(tag))));
-  }
+for (const redirectHtml of [postsListRedirect, postsPage2Redirect]) {
+  assert.match(redirectHtml, /http-equiv="refresh"/i);
+  assert.match(redirectHtml, /url=\/archives\/?/i);
 }
-assert.match(pages.posts, /aria-label="文章分页"/);
-assert.match(pages.posts, /href="\/posts\/2\/"/);
-assert.match(pages["posts/2"], /href="\/posts\/"/);
+assert.doesNotMatch(postsListRedirect, /aria-label="文章分页"/);
+assert.doesNotMatch(postsListRedirect, /全部文章/);
 
 assert.ok(usedTags.length > 0, "生产内容应包含至少一个标签以便验收聚合");
 for (const { name: tag, slug } of usedTags) {
@@ -225,8 +210,12 @@ const articleMenu = pages[""].match(/<ul class="article-menu-list"[^>]*>([\s\S]*
 assert.ok(articleMenu, "首页应包含文章菜单");
 assert.deepEqual(
   [...articleMenu.matchAll(/href="([^"]+)"/g)].map(([, href]) => href),
-  ["/posts/", "/tags/", "/archives/"],
+  ["/archives/", "/tags/"],
 );
+assert.doesNotMatch(articleMenu, /全部文章|分类/);
+assert.match(pages[""], /href="\/archives\/"[^>]*>查看全部<\/a>/);
+assert.doesNotMatch(pages[""], /href="\/posts\/"[^>]*>查看全部<\/a>/);
+await assert.rejects(access("dist/categories/index.html"), "不得生成分类索引页");
 assert.match(pages.shuoshuo, /暂无说说/);
 for (const fixtureText of [
   "这是发布时间最新的公开说说",
@@ -248,11 +237,10 @@ for (const segment of ["115", "117", "118", "119"]) {
 assert.doesNotMatch(styles, /fonts\.(?:googleapis|gstatic)\.com/, "构建产物不得请求第三方字体服务");
 assert.match(pages[""], /<script type="application\/ld\+json">/);
 assert.match(pages[""], /"@type":"WebSite"/);
-const postListPages = `${pages.posts}\n${pages["posts/2"]}`;
-assert.match(postListPages, /Markdown快速上手语法/);
-assert.match(postListPages, new RegExp(`/posts/${postSlug}/`));
+assert.match(pages.archives, /Markdown快速上手语法/);
+assert.match(pages.archives, new RegExp(`/posts/${postSlug}/`));
 assert.doesNotMatch(pages[""], /不可公开的草稿/);
-assert.doesNotMatch(postListPages, /不可公开的草稿/);
+assert.doesNotMatch(pages.archives, /不可公开的草稿/);
 assert.doesNotMatch(sitemap, /draft-markdown-capabilities/);
 await assert.rejects(
   access("dist/posts/draft-markdown-capabilities/index.html"),
@@ -303,7 +291,9 @@ for (const slug of tagSlugs.values()) {
   const sitemapPath = new URL(`/tags/${slug}/`, "https://blog.jasper0507.cc.cd").pathname;
   assert.match(sitemap, new RegExp(escapeRegExp(sitemapPath)));
 }
-assert.match(sitemap, /\/posts\/2\//);
+assert.doesNotMatch(sitemap, /<loc>https:\/\/blog\.jasper0507\.cc\.cd\/posts\/<\/loc>/);
+assert.doesNotMatch(sitemap, /\/posts\/2\//);
+assert.doesNotMatch(sitemap, /\/categories\//);
 assert.doesNotMatch(sitemap, /\/shuoshuo\/#/);
 assert.match(rss, /<rss version="2\.0"/);
 assert.equal((rss.match(/<item>/g) ?? []).length, POST_MIGRATIONS.length);

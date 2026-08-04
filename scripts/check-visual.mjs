@@ -12,7 +12,6 @@ const widths = [1440, 768, 375, 320];
 const themes = ["light", "dark"];
 const smokePaths = [
   "/",
-  "/posts/",
   postPath,
   longPostPath,
   "/shuoshuo/",
@@ -562,7 +561,7 @@ try {
       const list = navigationPage.locator("#article-menu-list");
       assert.deepEqual(
         await list.locator("a").evaluateAll(links => links.map(link => link.getAttribute("href"))),
-        ["/posts/", "/tags/", "/archives/"],
+        ["/archives/", "/tags/"],
       );
 
       if (width === 1440) {
@@ -591,13 +590,7 @@ try {
       assert.equal(await trigger.getAttribute("aria-expanded"), "false");
       await list.waitFor({ state: "hidden", timeout: 1_000 });
 
-      for (const path of [
-        "/posts/",
-        "/posts/2/",
-        "/tags/",
-        "/tags/数据结构与算法/",
-        "/archives/",
-      ]) {
+      for (const path of [postPath, "/tags/", "/tags/数据结构与算法/", "/archives/"]) {
         await navigationPage.goto(`${host}${path}`);
         const overflow = await navigationPage.evaluate(() => ({
           scrollWidth: document.documentElement.scrollWidth,
