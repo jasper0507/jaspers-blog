@@ -387,6 +387,13 @@ try {
             ),
           ];
           const metaText = meta?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+          const postTags = meta?.querySelector(".post-tags");
+          const firstTagLink = postTags?.querySelector("a");
+          const firstTagStyle = firstTagLink ? getComputedStyle(firstTagLink) : null;
+          const firstTagLiStyle = firstTagLink?.parentElement
+            ? getComputedStyle(firstTagLink.parentElement)
+            : null;
+          const firstTagHash = firstTagLink?.querySelector(".tag-hash");
 
           const result = {
             scrollWidth: document.documentElement.scrollWidth,
@@ -408,6 +415,18 @@ try {
             titleFontWeight: titleStyle.fontWeight,
             metaText,
             hasPublishedPrefix: /发布于|更新于/.test(metaText),
+            tagsInMeta: Boolean(postTags),
+            tagCount: postTags?.querySelectorAll("a").length ?? 0,
+            firstTagText: firstTagLink?.textContent?.replace(/\s+/g, "").trim() ?? "",
+            firstTagHash: firstTagHash?.textContent ?? "",
+            firstTagBorderWidth: firstTagStyle
+              ? Number.parseFloat(firstTagStyle.borderTopWidth)
+              : null,
+            firstTagBackground: firstTagStyle?.backgroundColor ?? "",
+            firstTagLiBorderWidth: firstTagLiStyle
+              ? Number.parseFloat(firstTagLiStyle.borderTopWidth)
+              : null,
+            firstTagLiBackground: firstTagLiStyle?.backgroundColor ?? "",
             tocExists: Boolean(toc),
             tocDisplay: tocStyle?.display ?? "none",
             tocPosition: tocStyle?.position ?? "",
@@ -476,6 +495,20 @@ try {
           "元信息应以 YYYY.MM.DD 发布时间开头",
         );
         assert.equal(article.hasPublishedPrefix, false, "不得展示「发布于/更新于」");
+        // 挂在技术文章上的标签：元信息行内弱化 #tag，非 pill
+        assert.equal(article.tagsInMeta, true, "标签应在标题区元信息行内");
+        assert.ok(article.tagCount >= 1, "单篇页应至少有一个标签");
+        assert.equal(article.firstTagHash, "#", "标签应有可见 # 前缀");
+        assert.match(article.firstTagText, /^#.+/, "标签文案应为 #tag 形态");
+        assert.ok(
+          (article.firstTagBorderWidth ?? 0) < 1 &&
+            (article.firstTagLiBorderWidth ?? 0) < 1 &&
+            (article.firstTagBackground === "rgba(0, 0, 0, 0)" ||
+              article.firstTagBackground === "") &&
+            (article.firstTagLiBackground === "rgba(0, 0, 0, 0)" ||
+              article.firstTagLiBackground === ""),
+          `单篇标签不得呈 pill/边框按钮：border=${article.firstTagBorderWidth}/${article.firstTagLiBorderWidth} bg=${article.firstTagBackground}/${article.firstTagLiBackground}`,
+        );
         assert.match(article.titleFontFamily, /^"Source Serif 4", "Noto Serif SC"/);
         assert.equal(article.titleFontWeight, "600");
         assert.equal(article.wideContentContained, true);
@@ -536,6 +569,12 @@ try {
         const firstTime = firstCard?.querySelector("time");
         const firstTitle = firstCard?.querySelector(".archive-card-title");
         const firstTags = firstCard?.querySelector(".post-tags");
+        const firstTagLink = firstTags?.querySelector("a");
+        const firstTagStyle = firstTagLink ? getComputedStyle(firstTagLink) : null;
+        const firstTagLiStyle = firstTagLink?.parentElement
+          ? getComputedStyle(firstTagLink.parentElement)
+          : null;
+        const firstTagHash = firstTagLink?.querySelector(".tag-hash");
 
         const isVisuallyHidden = style => {
           if (!style || !h1) return false;
@@ -581,6 +620,16 @@ try {
           firstHref: firstTitle?.getAttribute("href") ?? "",
           hasTags: Boolean(firstTags),
           tagCount: firstTags?.querySelectorAll("a").length ?? 0,
+          firstTagText: firstTagLink?.textContent?.replace(/\s+/g, "").trim() ?? "",
+          firstTagHash: firstTagHash?.textContent ?? "",
+          firstTagBorderWidth: firstTagStyle
+            ? Number.parseFloat(firstTagStyle.borderTopWidth)
+            : null,
+          firstTagBackground: firstTagStyle?.backgroundColor ?? "",
+          firstTagLiBorderWidth: firstTagLiStyle
+            ? Number.parseFloat(firstTagLiStyle.borderTopWidth)
+            : null,
+          firstTagLiBackground: firstTagLiStyle?.backgroundColor ?? "",
           cardBackground: firstCardStyle?.backgroundColor ?? "",
           cardDisplay: firstCardStyle?.display ?? "",
           railDotDelta,
@@ -605,6 +654,17 @@ try {
       assert.match(archive.firstHref, /^\/posts\/[^/]+\/$/);
       assert.equal(archive.hasTags, true, "归档卡片应展示标签");
       assert.ok(archive.tagCount >= 1, "归档卡片应至少有一个可点标签");
+      assert.equal(archive.firstTagHash, "#", "归档标签应有可见 # 前缀");
+      assert.match(archive.firstTagText, /^#.+/, "归档标签文案应为 #tag 形态");
+      assert.ok(
+        (archive.firstTagBorderWidth ?? 0) < 1 &&
+          (archive.firstTagLiBorderWidth ?? 0) < 1 &&
+          (archive.firstTagBackground === "rgba(0, 0, 0, 0)" ||
+            archive.firstTagBackground === "") &&
+          (archive.firstTagLiBackground === "rgba(0, 0, 0, 0)" ||
+            archive.firstTagLiBackground === ""),
+        `归档标签不得呈 pill/边框按钮：border=${archive.firstTagBorderWidth}/${archive.firstTagLiBorderWidth} bg=${archive.firstTagBackground}/${archive.firstTagLiBackground}`,
+      );
       assert.notEqual(archive.cardBackground, "rgba(0, 0, 0, 0)", "归档卡片应有表面背景");
       assert.ok(
         archive.railDotDelta != null && archive.railDotDelta <= 1,

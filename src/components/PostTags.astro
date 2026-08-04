@@ -13,7 +13,12 @@ const { tags } = Astro.props;
     <ul class="post-tags" aria-label="标签">
       {tags.map(tag => (
         <li>
-          <a href={`/tags/${getTagSlug(tag)}/`}>{tag}</a>
+          <a href={`/tags/${getTagSlug(tag)}/`}>
+            <span class="tag-hash" aria-hidden="true">
+              #
+            </span>
+            {tag}
+          </a>
         </li>
       ))}
     </ul>

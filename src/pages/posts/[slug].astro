@@ -50,8 +50,8 @@ const publishedLabel = formatPostDateCompact(post.data.publishedAt);
       <p class="post-description">{post.data.description}</p>
       <div class="post-meta">
         <time datetime={post.data.publishedAt.toISOString()}>{publishedLabel}</time>
+        <PostTags tags={post.data.tags} />
       </div>
-      <PostTags tags={post.data.tags} />
     </header>
 
     <div class="post-body">

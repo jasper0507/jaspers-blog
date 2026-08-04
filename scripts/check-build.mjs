@@ -130,12 +130,19 @@ for (const { slug, title, description, tags } of postMetadata) {
   if (tags.length === 0) {
     assert.doesNotMatch(page, /aria-label="标签"/, `${slug} 无标签时不应渲染标签区域`);
   } else {
+    // 元信息行内：左时间、右 #tag 弱文本链（非 pill）
+    assert.match(
+      page,
+      /class="post-meta"[\s\S]*?class="post-tags"/,
+      `${slug} 标签应落在标题区元信息行`,
+    );
     for (const tag of tags) {
       assert.match(
         page,
         new RegExp(
-          `href="/tags/${escapeRegExp(tagSlugs.get(tag))}/"[^>]*>${escapeRegExp(escapeHtml(tag))}</a></li>`,
+          `href="/tags/${escapeRegExp(tagSlugs.get(tag))}/"[^>]*>[\\s\\S]*?<span[^>]*class="tag-hash"[^>]*>#</span>${escapeRegExp(escapeHtml(tag))}</a></li>`,
         ),
+        `${slug} 标签「${tag}」应为 #tag 文本链`,
       );
     }
   }
@@ -286,9 +293,9 @@ for (const { slug, title, description, publishedAt, tags } of orderedPosts) {
       assert.match(
         pages.archives,
         new RegExp(
-          `href="/posts/${escapeRegExp(slug)}/"[\\s\\S]*?href="/tags/${escapeRegExp(tagSlug)}/"[^>]*>${escapeRegExp(escapeHtml(tag))}`,
+          `href="/posts/${escapeRegExp(slug)}/"[\\s\\S]*?href="/tags/${escapeRegExp(tagSlug)}/"[^>]*>[\\s\\S]*?<span[^>]*class="tag-hash"[^>]*>#</span>${escapeRegExp(escapeHtml(tag))}`,
         ),
-        `归档卡片 ${slug} 应展示可点标签「${tag}」`,
+        `归档卡片 ${slug} 应展示 #tag 文本链「${tag}」`,
       );
     }
   }
@@ -672,7 +679,12 @@ try {
   const emptyPost = await readFile(join(tagRulesOutDir, "posts/empty/index.html"), "utf8");
   const tagsIndex = await readFile(join(tagRulesOutDir, "tags/index.html"), "utf8");
   const openTagDetail = await readFile(join(tagRulesOutDir, "tags/自由主题词/index.html"), "utf8");
-  assert.match(openPost, /href="\/tags\/自由主题词\/"[^>]*>自由主题词<\/a>/);
+  assert.match(
+    openPost,
+    /href="\/tags\/自由主题词\/"[^>]*>[\s\S]*?<span[^>]*class="tag-hash"[^>]*>#<\/span>自由主题词<\/a>/,
+    "单篇页标签应为 #tag 文本链",
+  );
+  assert.match(openPost, /class="post-meta"[\s\S]*?class="post-tags"/, "标签应在元信息行内");
   assert.match(tagsIndex, /class="tag-cloud"/);
   assert.match(
     tagsIndex,
