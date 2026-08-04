@@ -31,7 +31,7 @@ export function formatPostDate(date: Date) {
   return dateFormatter.format(date);
 }
 
-/** 首页信息流等紧凑场景：YYYY.MM.DD（Asia/Shanghai） */
+/** 紧凑日期 YYYY.MM.DD（Asia/Shanghai）：首页信息流、单篇元信息等 */
 export function formatPostDateCompact(date: Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Shanghai",
