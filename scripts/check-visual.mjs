@@ -540,6 +540,125 @@ try {
       await archiveContext.close();
     }
 
+    {
+      const tagsContext = await browser.newContext({
+        viewport: { width: 1440, height: 960 },
+        colorScheme: "light",
+      });
+      const tagsPage = await tagsContext.newPage();
+      await tagsPage.goto(`${host}/tags/`, { waitUntil: "networkidle" });
+      await tagsPage.evaluate(() => document.fonts.ready);
+
+      const tagsIndex = await tagsPage.evaluate(() => {
+        const h1 = document.querySelector("h1");
+        const intro = document.querySelector(".page-intro");
+        const cloud = document.querySelector(".tag-cloud");
+        const items = cloud ? [...cloud.querySelectorAll(":scope > li")] : [];
+        const firstLink = items[0]?.querySelector("a");
+        const firstCount = firstLink?.querySelector(".tag-count");
+        const h1Style = h1 ? getComputedStyle(h1) : null;
+        const sizes = items.map(item => Number.parseFloat(getComputedStyle(item).fontSize));
+
+        const isVisuallyHidden = style => {
+          if (!style || !h1) return false;
+          if (style.display === "none" || style.visibility === "hidden") return true;
+          if (Number.parseFloat(style.opacity) === 0) return true;
+          const rect = h1.getBoundingClientRect();
+          if (rect.width <= 1 && rect.height <= 1) return true;
+          if (style.clipPath && style.clipPath !== "none" && style.clipPath.includes("inset")) {
+            return true;
+          }
+          if (style.position === "absolute" && (rect.width <= 1 || rect.height <= 1)) return true;
+          return false;
+        };
+
+        return {
+          title: document.title,
+          hasIntro: Boolean(intro),
+          h1Text: h1?.textContent?.trim() ?? "",
+          h1Hidden: isVisuallyHidden(h1Style),
+          hasCloud: Boolean(cloud),
+          tagCount: items.length,
+          firstHref: firstLink?.getAttribute("href") ?? "",
+          firstLabel: firstLink?.textContent?.replace(/\s+/g, " ").trim() ?? "",
+          firstCount: firstCount?.textContent?.trim() ?? "",
+          minFontSize: sizes.length ? Math.min(...sizes) : 0,
+          maxFontSize: sizes.length ? Math.max(...sizes) : 0,
+          scrollWidth: document.documentElement.scrollWidth,
+        };
+      });
+
+      assert.match(tagsIndex.title, /标签/);
+      assert.equal(tagsIndex.hasIntro, false, "标签索引不得有可见栏目 intro");
+      assert.equal(tagsIndex.h1Text, "标签");
+      assert.equal(tagsIndex.h1Hidden, true, "标签主标题应对视觉隐藏、仅服务无障碍");
+      assert.equal(tagsIndex.hasCloud, true, "标签索引应为标签云");
+      assert.ok(tagsIndex.tagCount >= 1, "标签云应有条目");
+      assert.match(tagsIndex.firstHref, /^\/tags\/[^/]+\/$/);
+      assert.ok(tagsIndex.firstLabel, "标签云条目应有名称");
+      assert.match(tagsIndex.firstCount, /^\d+$/, "标签云应展示数字计数");
+      assert.ok(
+        tagsIndex.maxFontSize - tagsIndex.minFontSize <= 8,
+        `标签云字号变化应克制（跨度 ${tagsIndex.maxFontSize - tagsIndex.minFontSize}px）`,
+      );
+      assert.equal(tagsIndex.scrollWidth, 1440, "标签索引不得横向溢出");
+
+      const detailHref = tagsIndex.firstHref;
+      await tagsPage.goto(`${host}${detailHref}`, { waitUntil: "networkidle" });
+      await tagsPage.evaluate(() => document.fonts.ready);
+
+      const tagDetail = await tagsPage.evaluate(() => {
+        const h1 = document.querySelector("h1");
+        const intro = document.querySelector(".page-intro");
+        const list = document.querySelector(".tag-post-list");
+        const items = list ? [...list.querySelectorAll(":scope > li")] : [];
+        const first = items[0];
+        const firstTime = first?.querySelector("time");
+        const firstTitle = first?.querySelector(".tag-post-title");
+        const h1Style = h1 ? getComputedStyle(h1) : null;
+
+        const isVisuallyHidden = style => {
+          if (!style || !h1) return false;
+          if (style.display === "none" || style.visibility === "hidden") return true;
+          if (Number.parseFloat(style.opacity) === 0) return true;
+          const rect = h1.getBoundingClientRect();
+          if (rect.width <= 1 && rect.height <= 1) return true;
+          if (style.clipPath && style.clipPath !== "none" && style.clipPath.includes("inset")) {
+            return true;
+          }
+          if (style.position === "absolute" && (rect.width <= 1 || rect.height <= 1)) return true;
+          return false;
+        };
+
+        return {
+          hasIntro: Boolean(intro),
+          h1Text: h1?.textContent?.trim() ?? "",
+          h1Hidden: isVisuallyHidden(h1Style),
+          hasList: Boolean(list),
+          itemCount: items.length,
+          firstDate: firstTime?.textContent?.trim() ?? "",
+          firstDateTime: firstTime?.getAttribute("datetime") ?? "",
+          firstTitle: firstTitle?.textContent?.trim() ?? "",
+          firstHref: firstTitle?.getAttribute("href") ?? "",
+          hasPreview: Boolean(document.querySelector(".post-preview, .post-list")),
+          scrollWidth: document.documentElement.scrollWidth,
+        };
+      });
+
+      assert.equal(tagDetail.hasIntro, false, "标签详情不得有可见栏目 intro");
+      assert.ok(tagDetail.h1Text, "标签详情应有无障碍页面名");
+      assert.equal(tagDetail.h1Hidden, true, "标签详情主标题应对视觉隐藏");
+      assert.equal(tagDetail.hasList, true, "标签详情应为日期+标题列表");
+      assert.ok(tagDetail.itemCount >= 1, "标签详情应有文章条目");
+      assert.match(tagDetail.firstDate, /^\d{4}-\d{2}-\d{2}$/, "标签详情日期应为 YYYY-MM-DD");
+      assert.ok(tagDetail.firstDateTime, "标签详情日期应有 datetime");
+      assert.ok(tagDetail.firstTitle, "标签详情应有标题");
+      assert.match(tagDetail.firstHref, /^\/posts\/[^/]+\/$/);
+      assert.equal(tagDetail.hasPreview, false, "标签详情不得复用预览列表壳");
+      assert.equal(tagDetail.scrollWidth, 1440, "标签详情不得横向溢出");
+      await tagsContext.close();
+    }
+
     const intermediateContext = await browser.newContext({
       viewport: { width: 1024, height: 960 },
       colorScheme: "light",

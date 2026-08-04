@@ -513,35 +513,6 @@ html[data-theme="dark"] .hero-image-dark {
   text-underline-offset: 0.22em;
 }
 
-.post-list {
-  margin: 3rem 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.post-list > li {
-  padding-block: 1.75rem;
-  border-top: 1px solid var(--line);
-}
-
-.post-list > li:last-child {
-  border-bottom: 1px solid var(--line);
-}
-
-.pagination {
-  margin-top: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.pagination a {
-  color: var(--text);
-}
-
 .post-tags {
   margin: 0.8rem 0 0;
   padding: 0;
@@ -560,27 +531,90 @@ html[data-theme="dark"] .hero-image-dark {
   text-decoration: none;
 }
 
-.tag-list {
-  margin: 3rem 0 0;
+.tag-cloud {
+  margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
-  gap: 0.75rem;
   list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.55rem 0.85rem;
 }
 
-.tag-list a {
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--line);
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
+.tag-cloud li {
+  /* 字号变化克制：约 0.92rem → 1.15rem，主要靠计数传达权重 */
+  font-size: calc(0.92rem + var(--tag-weight, 0.5) * 0.23rem);
+  line-height: 1.45;
+}
+
+.tag-cloud a {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35em;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.tag-cloud a:hover {
+  color: var(--accent);
+}
+
+.tag-count {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  font-variant-numeric: tabular-nums;
+}
+
+.tag-post-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0;
+}
+
+.tag-post-list > li {
+  padding-block: 0.95rem;
+  border-top: 1px solid var(--line);
+}
+
+.tag-post-list > li:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.tag-post-item {
+  display: grid;
+  grid-template-columns: 7.25rem minmax(0, 1fr);
+  gap: 0.85rem 1.1rem;
+  align-items: baseline;
+}
+
+.tag-post-item time {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.tag-post-title {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
   text-decoration: none;
 }
 
-.tag-list span {
-  color: var(--muted);
-  white-space: nowrap;
+.tag-post-title:hover {
+  color: var(--accent);
+}
+
+@media (max-width: 40rem) {
+  .tag-post-item {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
 }
 
 .archive-page .archive-year {

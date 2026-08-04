@@ -157,17 +157,76 @@ assert.doesNotMatch(postsListRedirect, /aria-label="文章分页"/);
 assert.doesNotMatch(postsListRedirect, /全部文章/);
 
 assert.ok(usedTags.length > 0, "生产内容应包含至少一个标签以便验收聚合");
+assert.match(pages.tags, /<title>标签 \| Jasper(?:'|&#39;)s Blog<\/title>/);
+assert.match(
+  pages.tags,
+  /<h1[^>]*\bsr-only\b[^>]*>标签<\/h1>|<h1[^>]*class="[^"]*\bsr-only\b[^"]*"[^>]*>标签<\/h1>/,
+  "标签索引应保留无障碍页面名",
+);
+assert.doesNotMatch(pages.tags, /class="page-intro"/, "标签索引不得有栏目 intro 壳");
+assert.doesNotMatch(pages.tags, /按主题浏览技术文章/, "标签索引不得有 intro 文案");
+assert.match(pages.tags, /class="tag-cloud"/, "标签索引应为标签云");
+assert.doesNotMatch(pages.tags, /class="tag-list"/, "标签索引不得使用旧网格列表");
+
+const listedTagPostSlugs = html =>
+  [...html.matchAll(/class="tag-post-title"[^>]*href="\/posts\/([^/]+)\/"/g)].map(
+    ([, slug]) => slug,
+  );
+const tagCounts = Object.fromEntries(
+  usedTags.map(({ name }) => [name, orderedPosts.filter(post => post.tags.includes(name)).length]),
+);
+
 for (const { name: tag, slug } of usedTags) {
+  const count = tagCounts[tag];
   assert.match(
     pages.tags,
-    new RegExp(`href="/tags/${escapeRegExp(slug)}/"[^>]*>${escapeRegExp(escapeHtml(tag))}`),
+    new RegExp(
+      `href="/tags/${escapeRegExp(slug)}/"[^>]*>[\\s\\S]*?${escapeRegExp(escapeHtml(tag))}[\\s\\S]*?<span[^>]*class="tag-count"[^>]*>${count}</span>`,
+    ),
+    `标签云应展示「${tag}」及计数 ${count}`,
   );
+  const tagPage = pages[`tags/${slug}`];
+  assert.match(
+    tagPage,
+    new RegExp(
+      `<h1[^>]*\\bsr-only\\b[^>]*>${escapeRegExp(escapeHtml(tag))}</h1>|<h1[^>]*class="[^"]*\\bsr-only\\b[^"]*"[^>]*>${escapeRegExp(escapeHtml(tag))}</h1>`,
+    ),
+    `${tag} 详情页应保留无障碍页面名`,
+  );
+  assert.doesNotMatch(tagPage, /class="page-intro"/, `${tag} 详情页不得有栏目 intro 壳`);
+  assert.doesNotMatch(
+    tagPage,
+    /class="post-list"|class="post-preview"/,
+    `${tag} 详情不得复用预览列表壳`,
+  );
+  assert.match(tagPage, /class="tag-post-list"/, `${tag} 详情应为日期+标题列表`);
   assert.deepEqual(
-    listedPostSlugs(pages[`tags/${slug}`]),
+    listedTagPostSlugs(tagPage),
     orderedPosts.filter(post => post.tags.includes(tag)).map(post => post.slug),
     `${tag} 标签页应只列出匹配的技术文章并保持发布时间倒序`,
   );
-  assert.doesNotMatch(pages[`tags/${slug}`], /不可公开的草稿/);
+  for (const post of orderedPosts.filter(post => post.tags.includes(tag))) {
+    const date = new Date(post.publishedAt);
+    const isoDate = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Shanghai",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date);
+    assert.match(
+      tagPage,
+      new RegExp(
+        `<time datetime="${escapeRegExp(date.toISOString())}">${escapeRegExp(isoDate)}</time>[\\s\\S]*?class="tag-post-title"[^>]*href="/posts/${escapeRegExp(post.slug)}/"[^>]*>[\\s\\S]*?${escapeRegExp(escapeHtml(post.title))}`,
+      ),
+      `${tag} 列表应展示 ISO 日期与标题并链到 ${post.slug}`,
+    );
+    assert.doesNotMatch(
+      tagPage,
+      new RegExp(escapeRegExp(escapeHtml(post.description))),
+      `${tag} 列表不得展示摘要：${post.slug}`,
+    );
+  }
+  assert.doesNotMatch(tagPage, /不可公开的草稿/);
 }
 
 assert.match(pages.archives, /<title>归档 \| Jasper(?:'|&#39;)s Blog<\/title>/);
@@ -471,13 +530,32 @@ try {
   const tagsIndex = await readFile(join(tagRulesOutDir, "tags/index.html"), "utf8");
   const openTagDetail = await readFile(join(tagRulesOutDir, "tags/自由主题词/index.html"), "utf8");
   assert.match(openPost, /href="\/tags\/自由主题词\/"[^>]*>自由主题词<\/a>/);
-  assert.match(tagsIndex, /href="\/tags\/自由主题词\/"/);
+  assert.match(tagsIndex, /class="tag-cloud"/);
+  assert.match(
+    tagsIndex,
+    /href="\/tags\/自由主题词\/"[^>]*>[\s\S]*?自由主题词[\s\S]*?<span[^>]*class="tag-count"[^>]*>1<\/span>/,
+  );
+  assert.doesNotMatch(tagsIndex, /class="page-intro"/);
+  assert.match(openTagDetail, /class="tag-post-list"/);
   assert.match(openTagDetail, /开放标签 fixture/);
+  assert.doesNotMatch(openTagDetail, /class="page-intro"/);
   assert.doesNotMatch(openTagDetail, /空标签 fixture/, "标签详情只应列出带该标签的文章");
   assert.doesNotMatch(emptyPost, /aria-label="标签"/, "无标签时不应渲染标签区域");
   assert.doesNotMatch(emptyPost, /class="post-tags"/);
 } finally {
   await rm(tagRulesOutDir, { recursive: true, force: true });
+}
+
+const emptyTagsOutDir = await mkdtemp(join(tmpdir(), "newblog-empty-tags-"));
+try {
+  await buildWithPostContent("./tests/fixtures/posts-empty-tags", emptyTagsOutDir);
+  const tagsIndex = await readFile(join(emptyTagsOutDir, "tags/index.html"), "utf8");
+  assert.match(tagsIndex, /class="empty-state"/, "无标签时应有空态");
+  assert.match(tagsIndex, /暂无标签/);
+  assert.doesNotMatch(tagsIndex, /class="tag-cloud"/, "无标签时不应渲染空标签云");
+  assert.doesNotMatch(tagsIndex, /class="page-intro"/);
+} finally {
+  await rm(emptyTagsOutDir, { recursive: true, force: true });
 }
 
 const invalidTagOutDir = await mkdtemp(join(tmpdir(), "newblog-invalid-tag-"));

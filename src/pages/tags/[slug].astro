@@ -1,8 +1,7 @@
 ---
 import type { GetStaticPaths } from "astro";
-import PostList from "../../components/PostList.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { getPublishedPostTags } from "../../lib/posts";
+import { formatPostDateIso, getPublishedPostTags } from "../../lib/posts";
 
 type PublishedTag = Awaited<ReturnType<typeof getPublishedPostTags>>[number];
 
@@ -24,9 +23,21 @@ const { tag } = Astro.props;
   description={`浏览标签“${tag.name}”下的技术文章。`}
   pageClass="page-shell"
 >
-  <section class="page-intro" aria-labelledby="tag-title">
-    <h1 id="tag-title">{tag.name}</h1>
-    <p>{tag.posts.length} 篇技术文章</p>
-  </section>
-  <PostList posts={tag.posts} />
+  <h1 id="tag-title" class="sr-only">{tag.name}</h1>
+  <ol class="tag-post-list">
+    {
+      tag.posts.map(post => (
+        <li>
+          <article class="tag-post-item">
+            <time datetime={post.data.publishedAt.toISOString()}>
+              {formatPostDateIso(post.data.publishedAt)}
+            </time>
+            <a class="tag-post-title" href={`/posts/${post.id}/`}>
+              {post.data.title}
+            </a>
+          </article>
+        </li>
+      ))
+    }
+  </ol>
 </BaseLayout>
