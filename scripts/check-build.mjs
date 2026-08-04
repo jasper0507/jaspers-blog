@@ -167,6 +167,7 @@ assert.doesNotMatch(pages.tags, /class="page-intro"/, "标签索引不得有栏�
 assert.doesNotMatch(pages.tags, /按主题浏览技术文章/, "标签索引不得有 intro 文案");
 assert.match(pages.tags, /class="tag-cloud"/, "标签索引应为标签云");
 assert.doesNotMatch(pages.tags, /class="tag-list"/, "标签索引不得使用旧网格列表");
+assert.doesNotMatch(pages.tags, /--tag-weight/, "标签云不得再按频次缩放字号");
 
 const listedTagPostSlugs = html =>
   [...html.matchAll(/class="tag-post-title"[^>]*href="\/posts\/([^/]+)\/"/g)].map(

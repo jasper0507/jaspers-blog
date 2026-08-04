@@ -557,7 +557,12 @@ try {
         const firstLink = items[0]?.querySelector("a");
         const firstCount = firstLink?.querySelector(".tag-count");
         const h1Style = h1 ? getComputedStyle(h1) : null;
-        const sizes = items.map(item => Number.parseFloat(getComputedStyle(item).fontSize));
+        const firstLinkStyle = firstLink ? getComputedStyle(firstLink) : null;
+        const firstCountStyle = firstCount ? getComputedStyle(firstCount) : null;
+        const sizes = items.map(item => {
+          const link = item.querySelector("a");
+          return Number.parseFloat(getComputedStyle(link ?? item).fontSize);
+        });
 
         const isVisuallyHidden = style => {
           if (!style || !h1) return false;
@@ -572,6 +577,21 @@ try {
           return false;
         };
 
+        const parseScale = transform => {
+          if (!transform || transform === "none") return 1;
+          const matrix3d = transform.match(/^matrix3d\((.+)\)$/);
+          if (matrix3d) {
+            const parts = matrix3d[1].split(",").map(part => Number.parseFloat(part.trim()));
+            return Number.isFinite(parts[0]) ? parts[0] : 1;
+          }
+          const matrix = transform.match(/^matrix\((.+)\)$/);
+          if (matrix) {
+            const parts = matrix[1].split(",").map(part => Number.parseFloat(part.trim()));
+            return Number.isFinite(parts[0]) ? parts[0] : 1;
+          }
+          return 1;
+        };
+
         return {
           title: document.title,
           hasIntro: Boolean(intro),
@@ -584,6 +604,11 @@ try {
           firstCount: firstCount?.textContent?.trim() ?? "",
           minFontSize: sizes.length ? Math.min(...sizes) : 0,
           maxFontSize: sizes.length ? Math.max(...sizes) : 0,
+          chipBackground: firstLinkStyle?.backgroundColor ?? "",
+          chipBorderWidth: firstLinkStyle ? Number.parseFloat(firstLinkStyle.borderTopWidth) : 0,
+          chipRadius: firstLinkStyle ? Number.parseFloat(firstLinkStyle.borderRadius) : 0,
+          countBackground: firstCountStyle?.backgroundColor ?? "",
+          restScale: firstLinkStyle ? parseScale(firstLinkStyle.transform) : 1,
           scrollWidth: document.documentElement.scrollWidth,
         };
       });
@@ -598,10 +623,67 @@ try {
       assert.ok(tagsIndex.firstLabel, "标签云条目应有名称");
       assert.match(tagsIndex.firstCount, /^\d+$/, "标签云应展示数字计数");
       assert.ok(
-        tagsIndex.maxFontSize - tagsIndex.minFontSize <= 8,
-        `标签云字号变化应克制（跨度 ${tagsIndex.maxFontSize - tagsIndex.minFontSize}px）`,
+        Math.abs(tagsIndex.maxFontSize - tagsIndex.minFontSize) <= 0.5,
+        `标签 chip 应同字号（跨度 ${tagsIndex.maxFontSize - tagsIndex.minFontSize}px）`,
+      );
+      assert.notEqual(tagsIndex.chipBackground, "rgba(0, 0, 0, 0)", "标签 chip 应有表面背景");
+      assert.ok(tagsIndex.chipBorderWidth >= 1, "标签 chip 应有描边");
+      assert.ok(tagsIndex.chipRadius >= 6, "标签 chip 应有可见圆角");
+      assert.notEqual(tagsIndex.countBackground, "rgba(0, 0, 0, 0)", "计数应为极淡角标底");
+      assert.ok(
+        Math.abs(tagsIndex.restScale - 1) <= 0.02,
+        `默认态不得缩放（scale=${tagsIndex.restScale}）`,
       );
       assert.equal(tagsIndex.scrollWidth, 1440, "标签索引不得横向溢出");
+
+      const hoverTransformRule = await tagsPage.evaluate(() => {
+        for (const sheet of document.styleSheets) {
+          let rules;
+          try {
+            rules = [...sheet.cssRules];
+          } catch {
+            continue;
+          }
+          for (const rule of rules) {
+            if (
+              rule instanceof CSSStyleRule &&
+              rule.selectorText.split(",").some(part => part.trim() === ".tag-cloud a:hover")
+            ) {
+              return rule.style.transform;
+            }
+          }
+        }
+        return "";
+      });
+      assert.match(
+        hoverTransformRule,
+        /scale\(\s*1\.04\s*\)/,
+        `悬停规则应为 scale(1.04)，实际「${hoverTransformRule}」`,
+      );
+
+      const firstChip = tagsPage.locator(".tag-cloud a").first();
+      await firstChip.hover();
+      await tagsPage.waitForTimeout(200);
+      const hoverScale = await firstChip.evaluate(link => {
+        const transform = getComputedStyle(link).transform;
+        if (!transform || transform === "none") return 1;
+        const matrix3d = transform.match(/^matrix3d\((.+)\)$/);
+        if (matrix3d) {
+          return Number.parseFloat(matrix3d[1].split(",")[0]);
+        }
+        const matrix = transform.match(/^matrix\((.+)\)$/);
+        if (matrix) {
+          return Number.parseFloat(matrix[1].split(",")[0]);
+        }
+        return 1;
+      });
+      // 实机 :hover 在无头环境偶发不生效；样式表规则已断言，此处仅在生效时校验量级
+      if (hoverScale > 1.01) {
+        assert.ok(
+          Math.abs(hoverScale - 1.04) <= 0.015,
+          `悬停应轻微缩放至约 1.04（实际 ${hoverScale}）`,
+        );
+      }
 
       const detailHref = tagsIndex.firstHref;
       await tagsPage.goto(`${host}${detailHref}`, { waitUntil: "networkidle" });
