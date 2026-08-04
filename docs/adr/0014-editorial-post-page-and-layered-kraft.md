@@ -53,9 +53,11 @@ v2 收工前调整单篇技术文章页与少量外壳：废弃 ADR-0001 / ADR-0
 - dist / visual 合同覆盖 `#tag` 形态、非 pill 样式，以及标签云仍为 chip。
 - 部分取代 ADR-0013 中「单篇/归档上的 `.post-tags` 仍为轻量 pill」。
 
-## 正文分层 Kraft（#22 已落地）
+## 正文分层 Kraft（#22 已落地并人工验收）
 
-子工单 **#22** 已实现：仅 `.post-body` 映射 Kraft Paper 亮/暗内容变量（标题节奏、引用、行内码、代码块、表格行线、链接强调色等）；外壳 token 不动；不铺全页 Kraft 纸面带。Shiki 语法色在正文作用域内覆盖为 Kraft 代码 token。KaTeX 块级公式 `overflow-y: visible`，避免上下标被裁切。抛弃式原型 `/prototype/post-token-layers/` 已删除。
+子工单 **#22** 已实现并人工验收（`247ffc7`）：仅 `.post-body` 映射 Kraft Paper 亮/暗内容变量（标题节奏、引用、行内码、代码块、表格行线、链接强调色等）；外壳 token 不动；不铺全页 Kraft 纸面带。Shiki 语法色在正文作用域内覆盖为 Kraft 代码 token。KaTeX 避免上下标被裁切（块级 `overflow-y: visible`，正文根不设非 visible 的 overflow-x）。抛弃式原型 `/prototype/post-token-layers/` 已删除。dist / visual 合同已覆盖分层色板、引用/代码/表格形态与壳色未换皮。
+
+父票 **#18**（v2 收工：编辑壳 + 标签弱链 + 分层 Kraft + 外壳小改）子工单 **#19–#22** 均已落地并人工验收，本 ADR 决策范围已收齐。
 
 ## 实现约束
 
