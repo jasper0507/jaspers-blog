@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import PostTags from "../../components/PostTags.astro";
 import { formatPostDateIso, getPostYear, getPublishedPosts } from "../../lib/posts";
 
 const posts = await getPublishedPosts();
@@ -21,12 +22,15 @@ const years = [...new Set(posts.map(post => getPostYear(post.data.publishedAt)))
             .filter(post => getPostYear(post.data.publishedAt) === year)
             .map(post => (
               <li>
-                <a class="archive-card" href={`/posts/${post.id}/`}>
+                <article class="archive-card">
                   <time datetime={post.data.publishedAt.toISOString()}>
                     {formatPostDateIso(post.data.publishedAt)}
                   </time>
-                  <span class="archive-card-title">{post.data.title}</span>
-                </a>
+                  <a class="archive-card-title" href={`/posts/${post.id}/`}>
+                    {post.data.title}
+                  </a>
+                  <PostTags tags={post.data.tags} />
+                </article>
               </li>
             ))}
         </ol>

@@ -455,15 +455,16 @@ try {
         const years = [...document.querySelectorAll(".archive-year")];
         const cards = [...document.querySelectorAll(".archive-card")];
         const timeline = document.querySelector(".archive-timeline");
+        const firstItem = timeline?.querySelector(":scope > li");
         const h1Style = h1 ? getComputedStyle(h1) : null;
         const firstCard = cards[0];
         const firstCardStyle = firstCard ? getComputedStyle(firstCard) : null;
         const firstTime = firstCard?.querySelector("time");
-        const firstTitle =
-          firstCard?.querySelector(".archive-card-title") ?? firstCard?.querySelector("h3");
+        const firstTitle = firstCard?.querySelector(".archive-card-title");
+        const firstTags = firstCard?.querySelector(".post-tags");
 
         const isVisuallyHidden = style => {
-          if (!style) return false;
+          if (!style || !h1) return false;
           if (style.display === "none" || style.visibility === "hidden") return true;
           if (Number.parseFloat(style.opacity) === 0) return true;
           const rect = h1.getBoundingClientRect();
@@ -474,6 +475,22 @@ try {
           if (style.position === "absolute" && (rect.width <= 1 || rect.height <= 1)) return true;
           return false;
         };
+
+        // 轴线与圆点应对齐：translateX(-50%) 后中心落在 left 坐标上
+        let railDotDelta = null;
+        if (timeline && firstItem) {
+          const line = getComputedStyle(timeline, "::before");
+          const dot = getComputedStyle(firstItem, "::before");
+          const lineLeft = Number.parseFloat(line.left);
+          const dotLeft = Number.parseFloat(dot.left);
+          if (Number.isFinite(lineLeft) && Number.isFinite(dotLeft)) {
+            const paddingEdge = element =>
+              element.getBoundingClientRect().left + element.clientLeft;
+            const lineCenterX = paddingEdge(timeline) + lineLeft;
+            const dotCenterX = paddingEdge(firstItem) + dotLeft;
+            railDotDelta = Math.abs(lineCenterX - dotCenterX);
+          }
+        }
 
         return {
           title: document.title,
@@ -487,9 +504,12 @@ try {
           firstDate: firstTime?.textContent?.trim() ?? "",
           firstDateTime: firstTime?.getAttribute("datetime") ?? "",
           firstTitle: firstTitle?.textContent?.trim() ?? "",
-          firstHref: firstCard?.getAttribute("href") ?? "",
+          firstHref: firstTitle?.getAttribute("href") ?? "",
+          hasTags: Boolean(firstTags),
+          tagCount: firstTags?.querySelectorAll("a").length ?? 0,
           cardBackground: firstCardStyle?.backgroundColor ?? "",
           cardDisplay: firstCardStyle?.display ?? "",
+          railDotDelta,
           scrollWidth: document.documentElement.scrollWidth,
         };
       });
@@ -509,7 +529,13 @@ try {
       assert.ok(archive.firstDateTime, "归档日期应有 datetime");
       assert.ok(archive.firstTitle, "归档卡片应有标题");
       assert.match(archive.firstHref, /^\/posts\/[^/]+\/$/);
+      assert.equal(archive.hasTags, true, "归档卡片应展示标签");
+      assert.ok(archive.tagCount >= 1, "归档卡片应至少有一个可点标签");
       assert.notEqual(archive.cardBackground, "rgba(0, 0, 0, 0)", "归档卡片应有表面背景");
+      assert.ok(
+        archive.railDotDelta != null && archive.railDotDelta <= 1,
+        `时间轴线应穿过圆点中心（偏差 ${archive.railDotDelta}px）`,
+      );
       assert.equal(archive.scrollWidth, 1440, "归档页不得横向溢出");
       await archiveContext.close();
     }

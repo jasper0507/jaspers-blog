@@ -145,7 +145,9 @@ const latestPost = orderedPosts[0];
 const listedPostSlugs = html =>
   [...html.matchAll(/<h[23]><a href="\/posts\/([^/]+)\/">/g)].map(([, slug]) => slug);
 const listedArchiveSlugs = html =>
-  [...html.matchAll(/class="archive-card"[^>]*href="\/posts\/([^/]+)\/"/g)].map(([, slug]) => slug);
+  [...html.matchAll(/class="archive-card-title"[^>]*href="\/posts\/([^/]+)\/"/g)].map(
+    ([, slug]) => slug,
+  );
 
 for (const redirectHtml of [postsListRedirect, postsPage2Redirect]) {
   assert.match(redirectHtml, /http-equiv="refresh"/i);
@@ -189,7 +191,7 @@ assert.deepEqual(
   orderedPosts.map(({ slug }) => slug),
   "归档应按发布时间倒序，更新时间不得改变位置",
 );
-for (const { slug, title, description, publishedAt } of orderedPosts) {
+for (const { slug, title, description, publishedAt, tags } of orderedPosts) {
   const date = new Date(publishedAt);
   const isoDate = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Shanghai",
@@ -200,7 +202,7 @@ for (const { slug, title, description, publishedAt } of orderedPosts) {
   assert.match(
     pages.archives,
     new RegExp(
-      `class="archive-card"[^>]*href="/posts/${escapeRegExp(slug)}/"[\\s\\S]*?<time datetime="${escapeRegExp(date.toISOString())}">${escapeRegExp(isoDate)}</time>[\\s\\S]*?${escapeRegExp(escapeHtml(title))}`,
+      `<time datetime="${escapeRegExp(date.toISOString())}">${escapeRegExp(isoDate)}</time>[\\s\\S]*?class="archive-card-title"[^>]*href="/posts/${escapeRegExp(slug)}/"[^>]*>[\\s\\S]*?${escapeRegExp(escapeHtml(title))}`,
     ),
     `归档卡片应展示 ISO 日期与标题并链到 ${slug}`,
   );
@@ -209,6 +211,18 @@ for (const { slug, title, description, publishedAt } of orderedPosts) {
     new RegExp(escapeRegExp(escapeHtml(description))),
     `归档条目不得展示摘要：${slug}`,
   );
+  if (tags.length > 0) {
+    for (const tag of tags) {
+      const tagSlug = tagSlugs.get(tag);
+      assert.match(
+        pages.archives,
+        new RegExp(
+          `href="/posts/${escapeRegExp(slug)}/"[\\s\\S]*?href="/tags/${escapeRegExp(tagSlug)}/"[^>]*>${escapeRegExp(escapeHtml(tag))}`,
+        ),
+        `归档卡片 ${slug} 应展示可点标签「${tag}」`,
+      );
+    }
+  }
 }
 assert.doesNotMatch(pages.archives, /分类|categories/i, "归档不得展示分类路径");
 assert.doesNotMatch(pages.archives, /不可公开的草稿/);
