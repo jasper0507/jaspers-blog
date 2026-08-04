@@ -21,6 +21,24 @@
     "Source Serif 4", "Noto Serif SC", Georgia, "Songti SC", "Source Han Serif SC", serif;
   --font-sans: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* Pagefind 面板：对齐站内暖纸 token */
+  --pf-text: var(--text);
+  --pf-text-secondary: var(--muted);
+  --pf-text-muted: var(--muted);
+  --pf-background: var(--surface);
+  --pf-border: var(--line);
+  --pf-border-focus: var(--accent);
+  --pf-skeleton: var(--line);
+  --pf-skeleton-shine: var(--background);
+  --pf-hover: var(--background);
+  --pf-mark: var(--accent);
+  --pf-outline-focus: var(--focus);
+  --pf-font: var(--font-sans);
+  --pf-border-radius: 0.75rem;
+  --pf-modal-backdrop: light-dark(rgb(40 39 36 / 45%), rgb(0 0 0 / 55%));
+  --pf-modal-max-width: 36rem;
+  --pf-modal-top: 12dvh;
 }
 
 html[data-theme="light"] {
@@ -166,6 +184,46 @@ button {
 .article-menu > button[data-active="true"] {
   border-bottom-color: var(--accent);
   color: var(--text);
+}
+
+/* 导航放大镜：压成与文字链同高的无边框图标钮 */
+.nav-search {
+  display: flex;
+  align-items: center;
+}
+
+.nav-search pagefind-modal-trigger {
+  --pf-input-height: 2.75rem;
+  --pf-background: transparent;
+  --pf-border: transparent;
+  --pf-border-focus: transparent;
+  --pf-text-muted: var(--muted);
+  --pf-border-radius: 0;
+  width: auto;
+}
+
+.nav-search .pf-trigger-btn {
+  width: auto !important;
+  min-width: 2.75rem;
+  padding-inline: 0.55rem !important;
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--muted) !important;
+  justify-content: center;
+}
+
+.nav-search .pf-trigger-btn:hover {
+  border-bottom-color: var(--accent) !important;
+  color: var(--text) !important;
+}
+
+.nav-search .pf-trigger-icon {
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  background: currentColor !important;
 }
 
 .article-menu {
@@ -783,11 +841,6 @@ html[data-theme="dark"] .hero-image-dark {
 .page-intro p {
   max-width: 38rem;
   margin: 0;
-}
-
-pagefind-searchbox {
-  margin-top: 3rem;
-  display: block;
 }
 
 .prose p,

@@ -23,12 +23,24 @@ const buildSearchFixture = async (directory, environment) => {
     cwd: root,
     env: environment,
   });
-  await execFileAsync(pagefind, ["--site", directory], { cwd: root });
+  try {
+    await execFileAsync(pagefind, ["--site", directory, "--glob", "posts/**/*.html"], {
+      cwd: root,
+    });
+  } catch {
+    // 无技术文章时 Pagefind 无法建索引；视为 0 页。
+  }
 };
-const getIndexedPageCount = async directory =>
-  Object.values(
-    JSON.parse(await readFile(join(directory, "pagefind/pagefind-entry.json"), "utf8")).languages,
-  ).reduce((sum, language) => sum + language.page_count, 0);
+const getIndexedPageCount = async directory => {
+  try {
+    const entry = JSON.parse(
+      await readFile(join(directory, "pagefind/pagefind-entry.json"), "utf8"),
+    );
+    return Object.values(entry.languages).reduce((sum, language) => sum + language.page_count, 0);
+  } catch {
+    return 0;
+  }
+};
 
 try {
   await Promise.all([mkdir(emptyPostsDirectory), mkdir(emptyShuoshuoDirectory)]);
@@ -70,7 +82,7 @@ try {
   );
   assert.doesNotMatch(timeline, /class="page-intro"/, "说说页不得有栏目 intro 壳");
   assert.match(timeline, /class="shuoshuo-card"/, "说说列表条目应为纸面卡片");
-  assert.match(timeline, /data-pagefind-body/);
+  assert.doesNotMatch(timeline, /data-pagefind-body/, "说说不得进入 Pagefind 索引");
   assert.match(timeline, /data-shuoshuo-toggle/);
   assert.doesNotMatch(
     timeline,
@@ -80,7 +92,11 @@ try {
   assert.match(timeline, /https:\/\/example\.com\/fixture-photo\.jpg/);
   assert.doesNotMatch(timeline, new RegExp(draftId));
   assert.doesNotMatch(timeline, /这是一条不应公开的草稿/);
-  assert.equal(searchIndex.languages["zh-cn"].page_count, 16);
+  assert.equal(
+    searchIndex.languages["zh-cn"].page_count,
+    15,
+    "fixture 构建应仅索引技术文章，不含说说",
+  );
   assert.equal((rss.match(/<item>/g) ?? []).length, 17);
   assert.match(rss, /说说 · 2026年2月3日 09:30/);
   assert.match(rss, new RegExp(`/shuoshuo/#${stableId}`));
@@ -94,7 +110,7 @@ try {
   const shuoshuoOnlyRss = await readFile(join(shuoshuoOnlyOutDir, "rss.xml"), "utf8");
   assert.equal((shuoshuoOnlyRss.match(/<item>/g) ?? []).length, 2);
   assert.doesNotMatch(shuoshuoOnlyRss, /Markdown快速上手语法/);
-  assert.equal(await getIndexedPageCount(shuoshuoOnlyOutDir), 1);
+  assert.equal(await getIndexedPageCount(shuoshuoOnlyOutDir), 0, "仅说说时 Pagefind 索引应为空");
 
   const emptyOutDir = join(temporaryDirectory, "empty-dist");
   await buildSearchFixture(emptyOutDir, {
@@ -103,7 +119,7 @@ try {
     SHUOSHUO_CONTENT_DIR: emptyShuoshuoDirectory,
   });
   assert.doesNotMatch(await readFile(join(emptyOutDir, "rss.xml"), "utf8"), /<item>/);
-  assert.equal(await getIndexedPageCount(emptyOutDir), 1);
+  assert.equal(await getIndexedPageCount(emptyOutDir), 0, "无内容时 Pagefind 索引应为空");
 
   const styles = (
     await Promise.all(
@@ -130,7 +146,8 @@ try {
         Promise.all((await pagefind.search(term)).results.map(result => result.data()));
       return {
         post: await search("Markdown快速上手语法"),
-        shuoshuo: await search("这是发布时间最新的公开说说"),
+        // 仅出现在 fixture 说说正文中的长句，避免与技术文章分词重合
+        shuoshuoOnly: await search("故意使用与发布时间不同的文件名"),
         draft: await search("这是一条不应公开的草稿"),
       };
     });
@@ -138,14 +155,10 @@ try {
       searchResults.post.some(result => result.url === "/posts/markdown-quick-start/"),
       "搜索应链接到技术文章永久链接",
     );
+    assert.equal(searchResults.shuoshuoOnly.length, 0, "仅出现在说说中的文句不得被 Pagefind 索引");
     assert.ok(
-      searchResults.shuoshuo
-        .flatMap(result => result.sub_results)
-        .some(
-          result =>
-            result.title === "说说 · 2026年2月3日 09:30" && result.url === `/shuoshuo/#${stableId}`,
-        ),
-      "搜索应使用机器标签并链接到说说稳定锚点",
+      searchResults.post.every(result => result.url.startsWith("/posts/")),
+      "搜索结果应只指向技术文章",
     );
     assert.equal(searchResults.draft.length, 0, "搜索不得收录说说草稿");
     await searchPage.close();

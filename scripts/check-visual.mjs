@@ -10,16 +10,7 @@ const postPath = "/posts/markdown-quick-start/";
 const longPostPath = "/posts/dsfedmed-paper-notes/";
 const widths = [1440, 768, 375, 320];
 const themes = ["light", "dark"];
-const smokePaths = [
-  "/",
-  postPath,
-  longPostPath,
-  "/shuoshuo/",
-  "/tags/",
-  "/archives/",
-  "/search/",
-  "/about/",
-];
+const smokePaths = ["/", postPath, longPostPath, "/shuoshuo/", "/tags/", "/archives/", "/about/"];
 const expectedColors = {
   light: {
     background: "rgb(245, 244, 242)",
@@ -1035,48 +1026,6 @@ try {
           await smokePage.keyboard.press("Enter");
           await smokePage.waitForURL(/#main-content$/);
 
-          if (path === "/search/") {
-            const searchInput = smokePage.locator("pagefind-searchbox input");
-            let reachedSearchInput = false;
-            for (let tabs = 0; tabs < 20; tabs += 1) {
-              await smokePage.keyboard.press("Tab");
-              reachedSearchInput = await searchInput.evaluate(
-                element => element === element.getRootNode().activeElement,
-              );
-              if (reachedSearchInput) break;
-            }
-            assert.equal(reachedSearchInput, true, "应能仅用 Tab 到达搜索输入框");
-            const searchFocus = await searchInput.evaluate(element => {
-              const style = getComputedStyle(element);
-              return [style.outlineStyle, style.outlineWidth, style.boxShadow];
-            });
-            assert.equal(
-              (searchFocus[0] !== "none" && searchFocus[1] !== "0px") || searchFocus[2] !== "none",
-              true,
-              "搜索框应有可见焦点",
-            );
-            await smokePage.keyboard.type("Markdown快速上手语法");
-            const result = smokePage.getByRole("option", { name: /Markdown快速上手语法/ }).first();
-            try {
-              await result.waitFor({ state: "visible", timeout: 5_000 });
-            } catch (error) {
-              throw new Error(
-                `搜索组件未返回结果：${JSON.stringify({
-                  markup: await smokePage
-                    .locator("pagefind-searchbox")
-                    .evaluate(element => element.outerHTML),
-                  pageErrors,
-                  consoleErrors,
-                  failedRequests,
-                })}`,
-                { cause: error },
-              );
-            }
-            assert.equal(new URL(await result.getAttribute("href"), host).pathname, postPath);
-            await smokePage.keyboard.press("Enter");
-            await smokePage.waitForURL(`${host}${postPath}`);
-          }
-
           assert.deepEqual(pageErrors, [], `${path} 不得产生页面脚本错误`);
           assert.deepEqual(consoleErrors, [], `${path} 不得产生控制台错误`);
           assert.deepEqual(
@@ -1133,6 +1082,98 @@ try {
       await navigationPage.locator(".brand").click();
       assert.equal(await trigger.getAttribute("aria-expanded"), "false");
       await list.waitFor({ state: "hidden", timeout: 1_000 });
+
+      if (width === 1440) {
+        await navigationPage.goto(host);
+        await navigationPage.waitForFunction(
+          () =>
+            customElements.get("pagefind-modal-trigger") &&
+            customElements.get("pagefind-modal") &&
+            document.querySelector("pagefind-modal-trigger .pf-trigger-btn") &&
+            document.querySelector("dialog.pf-modal"),
+        );
+        const searchTrigger = navigationPage.locator("pagefind-modal-trigger .pf-trigger-btn");
+        const searchModal = navigationPage.locator("dialog.pf-modal");
+        const searchInput = navigationPage.locator("pagefind-modal input");
+        const waitModalOpen = async expected => {
+          await navigationPage.waitForFunction(
+            open => document.querySelector("dialog.pf-modal")?.open === open,
+            expected,
+            { timeout: 5_000 },
+          );
+        };
+
+        assert.equal(await searchTrigger.count(), 1, "导航应有放大镜搜索入口");
+        assert.equal(
+          await navigationPage.locator('header a[href="/search/"]').count(),
+          0,
+          "主导航不得再是独立搜索页链",
+        );
+
+        await searchTrigger.click();
+        await waitModalOpen(true);
+        assert.equal(
+          await searchModal.evaluate(dialog => dialog.open),
+          true,
+          "点击放大镜应打开搜索面板",
+        );
+        await navigationPage.keyboard.press("Escape");
+        await waitModalOpen(false);
+        assert.equal(
+          await searchModal.evaluate(dialog => dialog.open),
+          false,
+          "Esc 应关闭搜索面板",
+        );
+
+        // 离开触发钮焦点，避免个别环境下按键被按钮吞掉
+        await navigationPage.locator(".brand").focus();
+        await navigationPage.keyboard.press("/");
+        await waitModalOpen(true);
+        assert.equal(await searchModal.evaluate(dialog => dialog.open), true, "/ 应打开搜索面板");
+        await navigationPage.keyboard.press("Escape");
+        await waitModalOpen(false);
+
+        await navigationPage.evaluate(() => {
+          const input = document.createElement("input");
+          input.id = "search-slash-probe";
+          document.body.appendChild(input);
+          input.focus();
+        });
+        await navigationPage.keyboard.type("/");
+        assert.equal(
+          await navigationPage.locator("#search-slash-probe").inputValue(),
+          "/",
+          "输入焦点下 / 不得劫持为打开搜索",
+        );
+        assert.equal(
+          await searchModal.evaluate(dialog => dialog.open),
+          false,
+          "输入焦点下 / 不得打开搜索面板",
+        );
+        await navigationPage.locator("#search-slash-probe").evaluate(element => element.remove());
+
+        await searchTrigger.click();
+        await waitModalOpen(true);
+        await searchInput.first().waitFor({ state: "visible", timeout: 5_000 });
+        await searchInput.first().fill("Markdown快速上手语法");
+        const result = navigationPage
+          .locator("pagefind-results a, dialog.pf-modal a")
+          .filter({ hasText: /Markdown快速上手语法/ })
+          .first();
+        try {
+          await result.waitFor({ state: "visible", timeout: 5_000 });
+        } catch (error) {
+          throw new Error(
+            `搜索面板未返回结果：${JSON.stringify({
+              markup: await navigationPage.locator("pagefind-modal").evaluate(el => el.outerHTML),
+            })}`,
+            { cause: error },
+          );
+        }
+        assert.equal(new URL(await result.getAttribute("href"), host).pathname, postPath);
+        await navigationPage.keyboard.press("Escape");
+        await waitModalOpen(false);
+      }
 
       for (const path of [postPath, "/tags/", "/tags/数据结构与算法/", "/archives/"]) {
         await navigationPage.goto(`${host}${path}`);

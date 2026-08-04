@@ -57,7 +57,6 @@ const routes = [
   ...usedTags.map(({ slug }) => `tags/${slug}`),
   "archives",
   "about",
-  "search",
 ];
 const pages = Object.fromEntries(
   await Promise.all(
@@ -69,6 +68,7 @@ const pages = Object.fromEntries(
 );
 const postsListRedirect = await readFile("dist/posts/index.html", "utf8");
 const postsPage2Redirect = await readFile("dist/posts/2/index.html", "utf8");
+const searchRedirect = await readFile("dist/search/index.html", "utf8");
 const sitemap = await readFile("dist/sitemap.xml", "utf8");
 const rss = await readFile("dist/rss.xml", "utf8");
 const searchIndex = JSON.parse(await readFile("dist/pagefind/pagefind-entry.json", "utf8"));
@@ -87,7 +87,10 @@ const [nodeVersion, deploymentGuide, thirdPartyNotices, packageManifest] = await
 ]);
 
 assert.equal(nodeVersion.trim(), "22.16.0");
-assert.equal(packageManifest.scripts.build, "astro build && pagefind --site dist");
+assert.equal(
+  packageManifest.scripts.build,
+  'astro build && pagefind --site dist --glob "posts/**/*.html"',
+);
 assert.match(deploymentGuide, /Node\.js `22\.16\.0`/);
 assert.match(deploymentGuide, /包管理器：`npm`/);
 assert.match(deploymentGuide, /构建命令：`npm run build`/);
@@ -153,6 +156,8 @@ for (const redirectHtml of [postsListRedirect, postsPage2Redirect]) {
   assert.match(redirectHtml, /http-equiv="refresh"/i);
   assert.match(redirectHtml, /url=\/archives\/?/i);
 }
+assert.match(searchRedirect, /http-equiv="refresh"/i);
+assert.match(searchRedirect, /url=\/?/i);
 assert.doesNotMatch(postsListRedirect, /aria-label="文章分页"/);
 assert.doesNotMatch(postsListRedirect, /全部文章/);
 
@@ -506,15 +511,24 @@ assert.match(sitemap, /https:\/\/blog\.jasper0507\.cc\.cd\/about\//);
 await access("dist/pagefind/pagefind.js");
 await access("dist/pagefind/pagefind-component-ui.js");
 await access("dist/pagefind/pagefind-component-ui.css");
-// 说说列表条目也带 data-pagefind-body；第二轮「仅搜技术文章」由 #16 收紧
 assert.equal(
   searchIndex.languages["zh-cn"].page_count,
-  POST_MIGRATIONS.length + 1,
-  "Pagefind 应索引全部技术文章与已发布说说条目",
+  POST_MIGRATIONS.length,
+  "Pagefind 应仅索引技术文章",
 );
-assert.match(pages.search, /<pagefind-searchbox[^>]*show-sub-results/);
-assert.match(pages.search, /<pagefind-config[^>]*no-worker[^>]*lang="zh-cn"/);
-assert.match(pages.search, /\/pagefind\/pagefind-component-ui\.js/);
+assert.match(pages[""], /<pagefind-modal-trigger[^>]*compact/);
+assert.match(pages[""], /shortcut="\/"/);
+assert.match(pages[""], /<pagefind-config[^>]*no-worker[^>]*lang="zh-cn"/);
+assert.match(pages[""], /<pagefind-results[^>]*hide-sub-results/);
+assert.match(pages[""], /\/pagefind\/pagefind-component-ui\.js/);
+assert.doesNotMatch(
+  pages[""].match(/<header[\s\S]*?<\/header>/)?.[0] ?? "",
+  /href="\/search\/"/,
+  "主导航不得再是独立搜索页文案链",
+);
+assert.doesNotMatch(pages[""], /show-sub-results/, "搜索结果不得开启 sub-results");
+assert.doesNotMatch(pages.shuoshuo, /data-pagefind-body/, "说说不得进入 Pagefind 索引");
+assert.doesNotMatch(sitemap, /\/search\//, "sitemap 不得包含已废除的搜索页");
 assert.match(pages[""], /href="\/rss\.xml"[^>]*>RSS<\/a>/);
 
 for (const { slug, title } of postMetadata) {

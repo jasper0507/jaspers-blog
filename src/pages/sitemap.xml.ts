@@ -3,7 +3,7 @@ import { getPublishedPosts } from "../lib/posts";
 import { getTagSlug } from "../lib/tags";
 import { escapeXml } from "../lib/xml";
 
-const staticRoutes = ["/", "/shuoshuo/", "/tags/", "/archives/", "/about/", "/search/"];
+const staticRoutes = ["/", "/shuoshuo/", "/tags/", "/archives/", "/about/"];
 
 export const GET: APIRoute = async ({ site }) => {
   if (!site) throw new Error("缺少站点地址，无法生成 sitemap。");

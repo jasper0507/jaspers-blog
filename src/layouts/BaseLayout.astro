@@ -59,8 +59,10 @@ const structuredData = JSON.stringify(
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <slot name="head" />
+    <link rel="stylesheet" href="/pagefind/pagefind-component-ui.css" />
     <title>{title}</title>
     <script type="application/ld+json" set:html={structuredData} is:inline />
+    <script is:inline type="module" src="/pagefind/pagefind-component-ui.js"></script>
     <script is:inline>
       (() => {
         const key = "jasper-theme";
@@ -201,10 +203,10 @@ const structuredData = JSON.stringify(
                 关于
               </a>
             </li>
-            <li>
-              <a href="/search/" aria-current={path.startsWith("/search/") ? "page" : undefined}>
-                搜索
-              </a>
+            <li class="nav-search">
+              {/* 放大镜入口；/ 打开面板（可编辑焦点下不劫持）；Esc/遮罩/关闭钮退出 */}
+              <pagefind-modal-trigger compact hide-shortcut shortcut="/" placeholder="搜索"
+              ></pagefind-modal-trigger>
             </li>
           </ul>
         </nav>
@@ -225,6 +227,20 @@ const structuredData = JSON.stringify(
         </ul>
       </div>
     </footer>
+    {/* ponytail: 当前索引很小；内容规模明显增长时再恢复 Worker。 */}
+    <pagefind-config no-worker lang="zh-cn"></pagefind-config>
+    <pagefind-modal reset-on-close>
+      <pagefind-modal-header>
+        <pagefind-input placeholder="搜索技术文章"></pagefind-input>
+      </pagefind-modal-header>
+      <pagefind-modal-body>
+        <pagefind-summary></pagefind-summary>
+        <pagefind-results hide-sub-results></pagefind-results>
+      </pagefind-modal-body>
+      <pagefind-modal-footer>
+        <pagefind-keyboard-hints></pagefind-keyboard-hints>
+      </pagefind-modal-footer>
+    </pagefind-modal>
     <button
       class="theme-toggle"
       id="theme-toggle"

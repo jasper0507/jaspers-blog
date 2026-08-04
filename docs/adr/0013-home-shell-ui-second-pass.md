@@ -22,6 +22,10 @@
 
 说说列表与首页预览统一 **浅色纸面卡片**（`surface` + 细边 + 圆角）：列表以 `gap` 间距堆叠、无条目分割线；锚点高亮改到卡片边框。说说页与关于页 **打开即见内容**：无可见栏目大标题、intro 与顶部分割装饰；保留 document title 与 `sr-only` 页面名。长说说展开/收起行为保持不变。验收落在 dist 合同与 visual 上。
 
+## 搜索面板（#16 已落地）
+
+主导航「搜索」为放大镜（非独立搜索页文案链）：点击或按 `/`（焦点不在 input/textarea/可编辑控件时）打开居中面板（遮罩 + 圆角卡片）；Esc、遮罩或关闭控件可退出。搜索范围仅技术文章（`pagefind --glob "posts/**/*.html"` + 单篇 `data-pagefind-body`）；结果关闭 sub-results。独立 `/search/` 内容页废除并重定向首页；sitemap 不再列出；Pagefind 静态索引与 Component UI 资源仍随构建产出。验收落在 dist 合同与 visual（打开/关闭/`/`/检索）上。
+
 ## 仍属第二轮、由后续工单落地
 
-主导航「文章」为下拉（归档、标签）— **#11 已落地**。「搜索」改为放大镜：点击或按 `/`（输入焦点不在可编辑控件时）打开居中搜索面板，不再使用独立搜索页；搜索范围仅技术文章，结果不展示 sub-results（#16）。单篇技术文章页仍保留文章自身标题区。字体按角色自托管并对齐阅读主题：中文正文/标题/粗体为 Noto Serif SC 400/600/700，英文正文 Source Serif 4，界面 IBM Plex Sans 与 Noto Sans SC，代码 IBM Plex Mono，代码中文以 Sarasa Mono SC 为可选系统回退（#17）。
+主导航「文章」为下拉（归档、标签）— **#11 已落地**。单篇技术文章页仍保留文章自身标题区。字体按角色自托管并对齐阅读主题：中文正文/标题/粗体为 Noto Serif SC 400/600/700，英文正文 Source Serif 4，界面 IBM Plex Sans 与 Noto Sans SC，代码 IBM Plex Mono，代码中文以 Sarasa Mono SC 为可选系统回退（#17）。
