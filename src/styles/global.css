@@ -939,15 +939,57 @@ html[data-theme="dark"] .hero-image-dark {
   margin-inline-start: auto;
 }
 
+/*
+ * 正文内容层（分层 A / ADR-0014）：仅 .post-body 映射 Kraft Paper 亮/暗内容变量。
+ * 外壳 token（--background / --text / --muted / 导航·页脚·标题区·目录）保持不动；
+ * 不铺全页 Kraft 纸面带。font-family 继续站点现有配置。
+ * 选择器按真实 DOM（.post-body / .astro-code / .katex）映射，不复制 Typora #write。
+ */
 .post-body {
+  /* Kraft 内容色板 */
+  --body-text: light-dark(#2b2621, #e8e6de);
+  --body-heading: light-dark(#1c1815, #f5f3ec);
+  --body-muted: light-dark(#72695e, #a29a8d);
+  --body-quote: light-dark(#625950, #b5ac9f);
+  --body-quote-border: light-dark(#dcd2c4, #45413a);
+  --body-border: light-dark(#ddd5ca, #3e3b36);
+  --body-accent: light-dark(#c15f3c, #d97757);
+  --body-accent-hover: light-dark(#a14d2e, #e69373);
+  --body-inline-color: light-dark(#a34a3a, #e39a82);
+  --body-inline-bg: light-dark(#f2eeea, #363430);
+  --body-inline-border: light-dark(#d7cec5, #47443e);
+  --body-code-bg: light-dark(#fcfcfa, #2d2c29);
+  --body-code-border: light-dark(#e9e2d8, #3e3b36);
+  --body-table-strong: light-dark(#8a8175, #8c8478);
+  --body-table-row: light-dark(#c9bfb2, #4a463f);
+  --body-table-soft: light-dark(#e4dcd0, #3a3733);
+  --body-table-hover: light-dark(rgb(193 95 60 / 5%), rgb(217 119 87 / 7%));
+  --body-mark-bg: light-dark(#f2e3c2, #5c4726);
+  --body-details-bg: light-dark(#f4efe7, #2c2a25);
+
+  /* Shiki 语法色：正文作用域内对齐 Kraft 代码 token */
+  --code-background: var(--body-code-bg);
+  --code-foreground: light-dark(#1c1815, #e8e6de);
+  --code-comment: light-dark(#8a7f73, #978f82);
+  --code-string: light-dark(#4e7e3c, #9cbd84);
+  --code-constant: light-dark(#b4622d, #e0a175);
+  --code-keyword: light-dark(#7e4fb5, #af95de);
+  --code-function: light-dark(#3c6aa8, #85aedc);
+  --code-parameter: light-dark(#886c32, #d3b46f);
+
   min-width: 0;
   padding: 0;
   background: transparent;
   box-shadow: none;
+  color: var(--body-text);
   font-family: var(--font-serif);
-  font-size: 1.1rem;
-  line-height: 1.85;
-  overflow-x: clip;
+  font-size: 1.0625rem;
+  font-weight: 400;
+  line-height: 1.62;
+  /* 宽内容由 table/code/katex-display 自滚动；勿在根上 overflow-x 非 visible，
+   * 否则 CSS 会把 overflow-y 算成 auto，可能裁切公式上下标 */
+  overflow: visible;
+  overflow-wrap: break-word;
 }
 
 .post-body > :first-child {
@@ -960,50 +1002,86 @@ html[data-theme="dark"] .hero-image-dark {
 
 .post-body :where(h2, h3, h4, h5, h6) {
   scroll-margin-top: 1.5rem;
+  margin: 1.45rem 0 0.7rem;
+  color: var(--body-heading);
   font-family: var(--font-serif);
   font-weight: 600;
   line-height: 1.3;
 }
 
 .post-body h2 {
-  margin: 2.8rem 0 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--line);
-  font-size: 1.75rem;
+  font-size: 1.48em;
+  line-height: 1.2;
 }
 
 .post-body h3 {
-  margin: 2.2rem 0 0.8rem;
-  font-size: 1.4rem;
+  font-size: 1.24em;
+  line-height: 1.32;
 }
 
 .post-body h4 {
-  margin: 1.8rem 0 0.6rem;
-  font-size: 1.15rem;
+  font-size: 1.12em;
 }
 
-.post-body h5,
+.post-body h5 {
+  font-size: 1em;
+}
+
 .post-body h6 {
-  margin: 1.5rem 0 0.5rem;
-  font-size: 1rem;
+  color: var(--body-muted);
+  font-size: 1em;
 }
 
 .post-body p,
-.post-body :where(ul, ol, blockquote, table, pre, details, .katex-display) {
-  margin-block: 0 1.35rem;
+.post-body blockquote,
+.post-body :where(ul, ol),
+.post-body table {
+  margin: 0.78em 0;
+}
+
+.post-body :where(pre, details, .katex-display, .markdown-alert, hr) {
+  margin-block: 1.1em;
 }
 
 .post-body :where(ul, ol) {
-  padding-left: 1.5rem;
+  padding-left: 1.45rem;
+}
+
+.post-body li {
+  padding-left: 0.15rem;
 }
 
 .post-body li + li {
-  margin-top: 0.2rem;
+  margin-top: 0.15rem;
+}
+
+.post-body li::marker {
+  color: var(--body-muted);
+}
+
+.post-body li > :where(ul, ol) {
+  margin: 0;
 }
 
 .post-body strong,
 .post-body b {
+  color: var(--body-heading);
   font-weight: 700;
+}
+
+.post-body :where(h2, h3, h4, h5, h6, pre, code, kbd) :where(strong, b) {
+  font-family: inherit;
+}
+
+.post-body a {
+  color: var(--body-accent);
+  text-decoration: none;
+  text-underline-offset: 0.18em;
+}
+
+.post-body a:hover {
+  color: var(--body-accent-hover);
+  text-decoration: underline;
 }
 
 .post-body img {
@@ -1011,21 +1089,40 @@ html[data-theme="dark"] .hero-image-dark {
   height: auto;
 }
 
-.post-body blockquote,
-.post-body .markdown-alert {
-  padding: 0.85rem 1rem;
-  border-left: 3px solid var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+/* 引用：Kraft 左边线 + 透明底，非色块 */
+.post-body blockquote {
+  margin-block: 1.8em;
+  padding: 0.1em 0 0.1em 1rem;
+  border-left: 3px solid var(--body-quote-border);
+  background: transparent;
+  color: var(--body-quote);
+  border-radius: 0;
+  box-shadow: none;
 }
 
-.post-body blockquote > :last-child,
-.post-body .markdown-alert > :last-child {
+.post-body blockquote p {
+  margin: 0.35em 0;
+}
+
+.post-body blockquote > :last-child {
   margin-bottom: 0;
 }
 
+.post-body blockquote blockquote {
+  margin-left: 0.5rem;
+}
+
+/* 提示块：Kraft 未定义，暖色浅底 + 细左边线（ADR-0008） */
 .post-body .markdown-alert {
-  --alert-color: var(--accent);
-  border-left-color: var(--alert-color);
+  --alert-color: var(--body-accent);
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--alert-color);
+  background: color-mix(in srgb, var(--alert-color) 7%, transparent);
+  border-radius: 0;
+}
+
+.post-body .markdown-alert > :last-child {
+  margin-bottom: 0;
 }
 
 .post-body .markdown-alert-note {
@@ -1049,7 +1146,7 @@ html[data-theme="dark"] .hero-image-dark {
 }
 
 .post-body .markdown-alert-title {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.45rem;
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -1066,34 +1163,64 @@ html[data-theme="dark"] .hero-image-dark {
 }
 
 .post-body :not(pre) > code {
-  padding: 0.1em 0.32em;
-  border: 1px solid var(--line);
-  background: var(--code-background);
+  padding: 0.1em 0.4em 0.12em;
+  border: 1px solid var(--body-inline-border);
+  border-radius: 0.25rem;
+  background: var(--body-inline-bg);
+  color: var(--body-inline-color);
   font-family: var(--font-mono);
-  font-size: 0.88em;
+  font-size: 0.9em;
+  font-variant-ligatures: none;
   overflow-wrap: anywhere;
+}
+
+.post-body kbd {
+  padding: 0.1em 0.45em;
+  border: 1px solid var(--body-border);
+  border-bottom-width: 2px;
+  border-radius: 0.25rem;
+  background: light-dark(#fcfaf6, #32312d);
+  color: var(--body-text);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+.post-body mark {
+  padding: 0.05em 0.15em;
+  border-radius: 0.15rem;
+  background: var(--body-mark-bg);
+  color: inherit;
 }
 
 .post-body .astro-code {
   width: 100%;
   max-width: 100%;
-  padding: 1rem 1.1rem;
-  border: 1px solid var(--line);
-  background: var(--code-background) !important;
+  margin-block: 0.9em 1.1em;
+  padding: 0.9rem 1rem 0.85rem;
+  border: 1px solid var(--body-code-border);
+  border-radius: 0.5rem;
+  background: var(--body-code-bg) !important;
+  color: var(--code-foreground);
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   font-family: var(--font-mono);
-  font-size: 0.82rem;
-  line-height: 1.7;
+  font-size: 0.9em;
+  font-variant-ligatures: none;
+  line-height: 1.55;
+}
+
+.post-body .astro-code code {
+  font-family: inherit;
+  font-variant-ligatures: none;
 }
 
 .post-body .astro-code[data-title]::before {
   content: attr(data-title);
-  margin: -1rem -1.1rem 0.85rem;
-  padding: 0.45rem 1.1rem;
-  border-bottom: 1px solid var(--line);
+  margin: -0.9rem -1rem 0.75rem;
+  padding: 0.45rem 1rem;
+  border-bottom: 1px solid var(--body-code-border);
   display: block;
-  color: var(--muted);
+  color: var(--body-muted);
   font-size: 0.75rem;
 }
 
@@ -1103,8 +1230,8 @@ html[data-theme="dark"] .hero-image-dark {
 }
 
 .post-body .astro-code .line.highlighted {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  box-shadow: inset 3px 0 var(--accent);
+  background: color-mix(in srgb, var(--body-accent) 14%, transparent);
+  box-shadow: inset 3px 0 var(--body-accent);
 }
 
 .post-body .astro-code .line.diff.add {
@@ -1117,25 +1244,65 @@ html[data-theme="dark"] .hero-image-dark {
   box-shadow: inset 3px 0 light-dark(#a64d43, #e58376);
 }
 
+/* 表格：行底边线为主，无满格单元格边框（Kraft） */
 .post-body table {
   width: max-content;
   max-width: 100%;
   display: block;
   border-collapse: collapse;
+  border-bottom: 1px solid var(--body-table-soft);
   overflow-x: auto;
-  font-family: var(--font-sans);
-  font-size: 0.9rem;
+  font-family: var(--font-serif);
+  font-size: 0.93rem;
+  font-variant-numeric: lining-nums tabular-nums;
+  background: transparent;
+}
+
+.post-body thead tr {
+  border-bottom: 1px solid var(--body-table-strong);
+}
+
+.post-body tbody tr {
+  border-bottom: 1px solid var(--body-table-row);
+}
+
+.post-body tbody tr:last-child {
+  border-bottom: 0;
 }
 
 .post-body :where(th, td) {
-  min-width: 7rem;
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--line);
+  min-width: 6rem;
+  padding: 0.75rem 1.125rem 0.75rem 0;
+  border: 0;
   text-align: left;
+  vertical-align: top;
+  line-height: 1.52;
 }
 
 .post-body th {
-  background: var(--code-background);
+  color: var(--body-heading);
+  font-weight: 600;
+  vertical-align: bottom;
+  line-height: 1.48;
+  background: transparent;
+}
+
+.post-body th:last-child,
+.post-body td:last-child {
+  padding-right: 0;
+}
+
+.post-body tbody tr:hover td {
+  background: var(--body-table-hover);
+}
+
+.post-body hr {
+  height: 1px;
+  margin: 1.625rem 0;
+  padding: 0;
+  border: 0;
+  background: var(--body-border);
+  opacity: 0.75;
 }
 
 .post-body .contains-task-list {
@@ -1145,17 +1312,19 @@ html[data-theme="dark"] .hero-image-dark {
 
 .post-body input[type="checkbox"] {
   margin-right: 0.45rem;
-  accent-color: var(--accent);
+  accent-color: var(--body-accent);
 }
 
+/* details：同色系细边框，非厚重卡片（ADR-0008） */
 .post-body details {
   padding: 0.7rem 0.9rem;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+  border: 1px solid var(--body-border);
+  background: var(--body-details-bg);
+  border-radius: 0.25rem;
 }
 
 .post-body summary {
-  color: var(--accent);
+  color: var(--body-accent);
   font-family: var(--font-sans);
   font-weight: 600;
   cursor: pointer;
@@ -1165,11 +1334,46 @@ html[data-theme="dark"] .hero-image-dark {
   margin-bottom: 0.8rem;
 }
 
+/*
+ * KaTeX：允许上下标伸出，避免 overflow 裁切；保持公式自有字体与行高。
+ * 人工验收中「上下标异常」优先从裁切与行盒冲突排查。
+ */
+.post-body .katex {
+  font-size: 1.05em;
+  line-height: normal;
+  color: inherit;
+}
+
 .post-body .katex-display {
   max-width: 100%;
-  padding-block: 0.35rem;
+  margin-block: 1.1em;
+  padding-block: 0.5rem;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
+  line-height: normal;
+}
+
+.post-body .katex-display > .katex {
+  /* 块级公式略放大，与 Kraft 数学节奏接近 */
+  font-size: 1.1em;
+  text-align: center;
+}
+
+/* 普通 HTML 上下标（脚注等）；KaTeX 使用 span/vlist，不受影响 */
+.post-body sup,
+.post-body sub {
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+  font-size: 0.75em;
+}
+
+.post-body sup {
+  top: -0.4em;
+}
+
+.post-body sub {
+  bottom: -0.2em;
 }
 
 /* 宽屏 fixed 目录：落在阅读栏右侧外侧；默认隐藏，≥1280px 显示 */

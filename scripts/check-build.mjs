@@ -518,6 +518,34 @@ assert.doesNotMatch(
   /\.post-body\{[^}]*box-shadow:\s*inset/,
   "正文去卡片：.post-body 不得再有 inset 纸面边框",
 );
+// 正文分层 Kraft（#22）：内容变量作用域在 .post-body，非整站换皮
+assert.match(
+  styles,
+  /\.post-body\{[^}]*(?:--body-text:|--body-heading:)/,
+  "正文应定义 Kraft 内容层变量（--body-*）",
+);
+assert.match(
+  styles,
+  /--body-text:[^;]*#2b2621|--body-text:[^;]*#2B2621/,
+  "亮色正文色应对齐 Kraft #2b2621",
+);
+assert.match(
+  styles,
+  /--body-accent:[^;]*#c15f3c|--body-accent:[^;]*#C15F3C/,
+  "亮色正文强调色应对齐 Kraft #c15f3c",
+);
+assert.match(styles, /\.post-body blockquote\{[^}]*border-left:/, "引用应使用 Kraft 式左边线");
+// Lightning CSS 可能把 overflow-x/y 合成 overflow:auto visible
+assert.match(
+  styles,
+  /\.post-body \.katex-display\{[^}]*(?:overflow-y:\s*visible|overflow:\s*auto\s+visible)/,
+  "块级公式 overflow-y 不得 hidden，避免裁切上下标",
+);
+assert.doesNotMatch(
+  styles,
+  /\.post-body \.katex-display\{[^}]*overflow-y:\s*hidden/,
+  "块级公式不得 overflow-y:hidden",
+);
 assert.match(styles, /\.post-header\{[^}]*border-bottom:/, "标题区与正文之间应有细分隔线");
 assert.match(styles, /\.post-toc\{[^}]*position:\s*fixed/, "宽屏目录应为 position:fixed");
 // Lightning CSS 可能把 min-width:80rem 写成 width>=80rem

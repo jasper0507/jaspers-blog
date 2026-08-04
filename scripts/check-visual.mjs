@@ -14,11 +14,28 @@ const smokePaths = ["/", postPath, longPostPath, "/shuoshuo/", "/tags/", "/archi
 const expectedColors = {
   light: {
     background: "rgb(245, 244, 242)",
+    // Kraft 正文层（分层 A）：仅 .post-body，外壳仍用壳背景
+    bodyText: "rgb(43, 38, 33)", // #2b2621
+    bodyHeading: "rgb(28, 24, 21)", // #1c1815
+    bodyAccent: "rgb(193, 95, 60)", // #c15f3c
+    bodyInlineCode: "rgb(163, 74, 58)", // #a34a3a
+    bodyInlineBg: "rgb(242, 238, 234)", // #f2eeea
+    bodyCodeBg: "rgb(252, 252, 250)", // #fcfcfa
+    bodyQuote: "rgb(98, 89, 80)", // #625950
+    bodyQuoteBorder: "rgb(220, 210, 196)", // #dcd2c4
   },
   dark: {
     background: "rgb(38, 38, 36)",
     text: "rgb(232, 230, 222)",
     accent: "rgb(217, 119, 87)",
+    bodyText: "rgb(232, 230, 222)", // #e8e6de
+    bodyHeading: "rgb(245, 243, 236)", // #f5f3ec
+    bodyAccent: "rgb(217, 119, 87)", // #d97757
+    bodyInlineCode: "rgb(227, 154, 130)", // #e39a82
+    bodyInlineBg: "rgb(54, 52, 48)", // #363430
+    bodyCodeBg: "rgb(45, 44, 41)", // #2d2c29
+    bodyQuote: "rgb(181, 172, 159)", // #b5ac9f
+    bodyQuoteBorder: "rgb(69, 65, 58)", // #45413a
   },
 };
 
@@ -346,8 +363,29 @@ try {
           const titleStyle = getComputedStyle(title);
           const tocStyle = toc ? getComputedStyle(toc) : null;
           const pageBodyStyle = getComputedStyle(document.body);
-          const codeStyle = getComputedStyle(document.querySelector(".post-body .astro-code"));
-          const formulaStyle = getComputedStyle(document.querySelector(".post-body .katex"));
+          const codeEl = document.querySelector(".post-body .astro-code");
+          const codeStyle = codeEl ? getComputedStyle(codeEl) : null;
+          const formulaEl = document.querySelector(".post-body .katex");
+          const formulaStyle = formulaEl ? getComputedStyle(formulaEl) : null;
+          const formulaDisplay = document.querySelector(".post-body .katex-display");
+          const formulaDisplayStyle = formulaDisplay ? getComputedStyle(formulaDisplay) : null;
+          const h2 = document.querySelector(".post-body h2");
+          const h2Style = h2 ? getComputedStyle(h2) : null;
+          const quote = document.querySelector(".post-body blockquote");
+          const quoteStyle = quote ? getComputedStyle(quote) : null;
+          const inlineCode = document.querySelector(".post-body :not(pre) > code");
+          const inlineCodeStyle = inlineCode ? getComputedStyle(inlineCode) : null;
+          const table = document.querySelector(".post-body table");
+          const tableTh = table?.querySelector("th");
+          const tableTd = table?.querySelector("td");
+          const tableThStyle = tableTh ? getComputedStyle(tableTh) : null;
+          const tableTdStyle = tableTd ? getComputedStyle(tableTd) : null;
+          const theadTr = table?.querySelector("thead tr");
+          const theadTrStyle = theadTr ? getComputedStyle(theadTr) : null;
+          const bodyLink = document.querySelector(".post-body a[href]");
+          const bodyLinkStyle = bodyLink ? getComputedStyle(bodyLink) : null;
+          const brand = document.querySelector(".brand");
+          const brandStyle = brand ? getComputedStyle(brand) : null;
           const readingSurface =
             bodyStyle.backgroundColor === "rgba(0, 0, 0, 0)"
               ? pageBodyStyle.backgroundColor
@@ -360,27 +398,33 @@ try {
             )
             .join("");
           body.append(alertFixture);
+          // 提示块正文对比：相对整页阅读底（分层 A 不铺正文纸带），标题用语义色对浅底
           const alertSamples = [...alertFixture.querySelectorAll(".markdown-alert")].flatMap(
             alert => {
-              const background = getComputedStyle(alert).backgroundColor;
               const type = alert.className;
               return [
                 [
                   getComputedStyle(alert.querySelector(".markdown-alert-title")).color,
-                  background,
+                  readingSurface,
                   `${type} 标题`,
                 ],
                 [
                   getComputedStyle(alert.querySelector("p:last-child")).color,
-                  background,
+                  readingSurface,
                   `${type} 正文`,
                 ],
               ];
             },
           );
-          const tokenSamples = [...document.querySelectorAll(".post-body .astro-code span[style]")]
-            .filter(token => token.style.color)
-            .map(token => [getComputedStyle(token).color, codeStyle.backgroundColor, "代码标记"]);
+          const tokenSamples = codeEl
+            ? [...codeEl.querySelectorAll("span[style]")]
+                .filter(token => token.style.color)
+                .map(token => [
+                  getComputedStyle(token).color,
+                  codeStyle.backgroundColor,
+                  "代码标记",
+                ])
+            : [];
           const wideContent = [
             ...document.querySelectorAll(
               ".post-body table, .post-body .astro-code, .post-body .katex-display",
@@ -409,10 +453,35 @@ try {
             bodyPaddingLeft: Number.parseFloat(bodyStyle.paddingLeft),
             bodyBackground: bodyStyle.backgroundColor,
             bodyBoxShadow: bodyStyle.boxShadow,
+            bodyColor: bodyStyle.color,
+            bodyLineHeight: bodyStyle.lineHeight,
+            bodyFontSize: Number.parseFloat(bodyStyle.fontSize),
             headerBorderBottom: Number.parseFloat(headerStyle.borderBottomWidth),
             titleFontFamily: titleStyle.fontFamily,
             titleFontSize: Number.parseFloat(titleStyle.fontSize),
             titleFontWeight: titleStyle.fontWeight,
+            titleColor: titleStyle.color,
+            h2Color: h2Style?.color ?? "",
+            h2BorderBottomWidth: h2Style ? Number.parseFloat(h2Style.borderBottomWidth) : null,
+            quoteColor: quoteStyle?.color ?? "",
+            quoteBorderLeftColor: quoteStyle?.borderLeftColor ?? "",
+            quoteBackground: quoteStyle?.backgroundColor ?? "",
+            inlineCodeColor: inlineCodeStyle?.color ?? "",
+            inlineCodeBackground: inlineCodeStyle?.backgroundColor ?? "",
+            codeBackground: codeStyle?.backgroundColor ?? "",
+            codeBorderColor: codeStyle?.borderTopColor ?? "",
+            bodyLinkColor: bodyLinkStyle?.color ?? "",
+            tableThBorderWidth: tableThStyle
+              ? Number.parseFloat(tableThStyle.borderTopWidth)
+              : null,
+            tableTdBorderWidth: tableTdStyle
+              ? Number.parseFloat(tableTdStyle.borderTopWidth)
+              : null,
+            tableHeadBorderBottomWidth: theadTrStyle
+              ? Number.parseFloat(theadTrStyle.borderBottomWidth)
+              : null,
+            formulaDisplayOverflowY: formulaDisplayStyle?.overflowY ?? "",
+            shellBrandColor: brandStyle?.color ?? "",
             metaText,
             hasPublishedPrefix: /发布于|更新于/.test(metaText),
             tagsInMeta: Boolean(postTags),
@@ -436,9 +505,9 @@ try {
             contrastSamples: [
               [pageBodyStyle.color, pageBodyStyle.backgroundColor, "页面正文"],
               [bodyStyle.color, readingSurface, "技术文章正文"],
-              [codeStyle.color, codeStyle.backgroundColor, "代码块"],
+              ...(codeStyle ? [[codeStyle.color, codeStyle.backgroundColor, "代码块"]] : []),
               ...tokenSamples,
-              [formulaStyle.color, readingSurface, "公式"],
+              ...(formulaStyle ? [[formulaStyle.color, readingSurface, "公式"]] : []),
               ...alertSamples,
             ],
             wideContentContained: wideContent.every(
@@ -477,7 +546,7 @@ try {
           `${width}px 文章页不得横向溢出：${JSON.stringify(article)}`,
         );
         assert.equal(article.background, expectedColors[theme].background);
-        // 去卡片：正文不再铺独立纸面底，整页落在壳背景上
+        // 去卡片：正文不再铺独立纸面底，整页落在壳背景上（不铺全页 Kraft 纸带）
         assert.ok(
           article.bodyBackground === "rgba(0, 0, 0, 0)" ||
             article.bodyBackground === article.background,
@@ -488,6 +557,100 @@ try {
           true,
           "正文不得再有卡片阴影/inset 边框",
         );
+        assert.equal(
+          article.readingSurface,
+          expectedColors[theme].background,
+          `${theme} 阅读底应为壳背景，不得换成 Kraft 纸面带`,
+        );
+        // 正文层 Kraft 色板（分层 A）
+        assert.equal(
+          article.bodyColor,
+          expectedColors[theme].bodyText,
+          `${theme} 正文色应对齐 Kraft`,
+        );
+        if (article.h2Color) {
+          assert.equal(
+            article.h2Color,
+            expectedColors[theme].bodyHeading,
+            `${theme} 正文 h2 应对齐 Kraft heading`,
+          );
+          assert.ok((article.h2BorderBottomWidth ?? 0) < 1, "Kraft 正文 h2 不应再画底部分隔线");
+        }
+        if (article.quoteColor) {
+          assert.equal(
+            article.quoteColor,
+            expectedColors[theme].bodyQuote,
+            `${theme} 引用文字色应对齐 Kraft`,
+          );
+          assert.equal(
+            article.quoteBorderLeftColor,
+            expectedColors[theme].bodyQuoteBorder,
+            `${theme} 引用左边线应对齐 Kraft`,
+          );
+          assert.ok(
+            article.quoteBackground === "rgba(0, 0, 0, 0)" ||
+              article.quoteBackground === "transparent",
+            `引用应为透明底，实际 ${article.quoteBackground}`,
+          );
+        }
+        if (article.inlineCodeColor) {
+          assert.equal(
+            article.inlineCodeColor,
+            expectedColors[theme].bodyInlineCode,
+            `${theme} 行内码色应对齐 Kraft`,
+          );
+          assert.equal(
+            article.inlineCodeBackground,
+            expectedColors[theme].bodyInlineBg,
+            `${theme} 行内码底应对齐 Kraft`,
+          );
+        }
+        if (article.codeBackground) {
+          assert.equal(
+            article.codeBackground,
+            expectedColors[theme].bodyCodeBg,
+            `${theme} 代码块底应对齐 Kraft`,
+          );
+        }
+        if (article.bodyLinkColor) {
+          assert.equal(
+            article.bodyLinkColor,
+            expectedColors[theme].bodyAccent,
+            `${theme} 正文链接应对齐 Kraft 强调色`,
+          );
+        }
+        if (article.tableHeadBorderBottomWidth != null) {
+          assert.ok(article.tableHeadBorderBottomWidth >= 1, "表格表头应有 Kraft 式底边线");
+          assert.ok(
+            (article.tableThBorderWidth ?? 0) < 1 && (article.tableTdBorderWidth ?? 0) < 1,
+            "表格单元格不得再画满格边框",
+          );
+        }
+        if (article.formulaDisplayOverflowY) {
+          assert.notEqual(
+            article.formulaDisplayOverflowY,
+            "hidden",
+            "块级公式不得 overflow-y:hidden 裁切上下标",
+          );
+        }
+        // 外壳未被强制改成 Kraft 全站色：标题区 h1 / 品牌仍用壳 --text
+        if (theme === "dark") {
+          assert.equal(article.titleColor, expectedColors.dark.text, "暗色标题区应保持壳字色");
+          assert.equal(
+            article.shellBrandColor,
+            expectedColors.dark.text,
+            "暗色顶栏品牌应保持壳字色",
+          );
+        } else {
+          // 亮色壳字 #282724，与 Kraft 正文 #2b2621 刻意分层
+          assert.equal(article.titleColor, "rgb(40, 39, 36)", "亮色标题区应保持壳字色");
+          assert.equal(article.shellBrandColor, "rgb(40, 39, 36)", "亮色顶栏品牌应保持壳字色");
+          assert.notEqual(
+            article.bodyColor,
+            article.titleColor,
+            "亮色正文 Kraft 色应与壳标题色分层",
+          );
+        }
         assert.ok(article.headerBorderBottom >= 1, "标题区与正文之间应有细分隔线");
         assert.match(
           article.metaText,
