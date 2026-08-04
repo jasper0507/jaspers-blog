@@ -44,6 +44,16 @@ export function formatPostDateCompact(date: Date) {
   return `${value("year")}.${value("month")}.${value("day")}`;
 }
 
+/** 归档时间轴：YYYY-MM-DD（Asia/Shanghai） */
+export function formatPostDateIso(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
 export function getPostYear(date: Date) {
   return yearFormatter.format(date);
 }

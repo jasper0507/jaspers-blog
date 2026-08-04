@@ -144,6 +144,8 @@ const orderedPosts = postMetadata.toSorted(
 const latestPost = orderedPosts[0];
 const listedPostSlugs = html =>
   [...html.matchAll(/<h[23]><a href="\/posts\/([^/]+)\/">/g)].map(([, slug]) => slug);
+const listedArchiveSlugs = html =>
+  [...html.matchAll(/class="archive-card"[^>]*href="\/posts\/([^/]+)\/"/g)].map(([, slug]) => slug);
 
 for (const redirectHtml of [postsListRedirect, postsPage2Redirect]) {
   assert.match(redirectHtml, /http-equiv="refresh"/i);
@@ -166,12 +168,49 @@ for (const { name: tag, slug } of usedTags) {
   assert.doesNotMatch(pages[`tags/${slug}`], /不可公开的草稿/);
 }
 
+assert.match(pages.archives, /<title>归档 \| Jasper(?:'|&#39;)s Blog<\/title>/);
+assert.match(
+  pages.archives,
+  /<h1[^>]*\bsr-only\b[^>]*>归档<\/h1>|<h1[^>]*class="[^"]*\bsr-only\b[^"]*"[^>]*>归档<\/h1>/,
+  "归档页应保留无障碍页面名",
+);
+assert.doesNotMatch(pages.archives, /class="page-intro"/, "归档页不得有栏目 intro 壳");
+assert.doesNotMatch(pages.archives, /按发布时间浏览技术文章/, "归档页不得有 intro 文案");
+assert.doesNotMatch(
+  pages.archives,
+  /class="post-list"|class="post-preview"/,
+  "归档不得复用文章预览列表壳",
+);
+assert.match(pages.archives, /class="archive-timeline"/, "归档应为时间轴结构");
+assert.match(pages.archives, /class="archive-card"/, "归档条目应为卡片");
 assert.match(pages.archives, /<h2 id="archive-2026">2026 年<\/h2>/);
 assert.deepEqual(
-  listedPostSlugs(pages.archives),
+  listedArchiveSlugs(pages.archives),
   orderedPosts.map(({ slug }) => slug),
   "归档应按发布时间倒序，更新时间不得改变位置",
 );
+for (const { slug, title, description, publishedAt } of orderedPosts) {
+  const date = new Date(publishedAt);
+  const isoDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+  assert.match(
+    pages.archives,
+    new RegExp(
+      `class="archive-card"[^>]*href="/posts/${escapeRegExp(slug)}/"[\\s\\S]*?<time datetime="${escapeRegExp(date.toISOString())}">${escapeRegExp(isoDate)}</time>[\\s\\S]*?${escapeRegExp(escapeHtml(title))}`,
+    ),
+    `归档卡片应展示 ISO 日期与标题并链到 ${slug}`,
+  );
+  assert.doesNotMatch(
+    pages.archives,
+    new RegExp(escapeRegExp(escapeHtml(description))),
+    `归档条目不得展示摘要：${slug}`,
+  );
+}
+assert.doesNotMatch(pages.archives, /分类|categories/i, "归档不得展示分类路径");
 assert.doesNotMatch(pages.archives, /不可公开的草稿/);
 
 for (const asset of LEGACY_ASSETS) {
@@ -314,6 +353,8 @@ assert.match(pages[""], /<script type="application\/ld\+json">/);
 assert.match(pages[""], /"@type":"WebSite"/);
 assert.match(pages.archives, /Markdown快速上手语法/);
 assert.match(pages.archives, new RegExp(`/posts/${postSlug}/`));
+assert.match(styles, /\.archive-timeline/, "归档时间轴应有样式合同");
+assert.match(styles, /\.archive-card/, "归档卡片应有样式合同");
 assert.doesNotMatch(pages[""], /不可公开的草稿/);
 assert.doesNotMatch(pages.archives, /不可公开的草稿/);
 assert.doesNotMatch(sitemap, /draft-markdown-capabilities/);

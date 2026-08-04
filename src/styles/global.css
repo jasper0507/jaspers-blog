@@ -583,18 +583,85 @@ html[data-theme="dark"] .hero-image-dark {
   white-space: nowrap;
 }
 
-.archive-year {
-  margin-top: 3rem;
+.archive-page .archive-year {
+  margin-top: 2.5rem;
+}
+
+.archive-page .archive-year:first-of-type {
+  margin-top: 0;
 }
 
 .archive-year > h2 {
   margin: 0;
   font-family: var(--font-mono);
   font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
-.archive-year .post-list {
-  margin-top: 1rem;
+.archive-timeline {
+  margin: 1rem 0 0;
+  padding: 0 0 0 1.15rem;
+  list-style: none;
+  border-left: 1px solid var(--line);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.archive-timeline > li {
+  position: relative;
+  min-width: 0;
+  padding-left: 1rem;
+}
+
+.archive-timeline > li::before {
+  content: "";
+  position: absolute;
+  top: 1.35rem;
+  left: calc(-1.15rem - 0.28rem);
+  width: 0.55rem;
+  height: 0.55rem;
+  border: 2px solid var(--background);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.archive-card {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.archive-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  box-shadow: 0 0.35rem 1rem color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.archive-card time {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.archive-card-title {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.archive-card:hover .archive-card-title {
+  color: var(--accent);
 }
 
 .page-shell,

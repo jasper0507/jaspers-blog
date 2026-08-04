@@ -440,6 +440,80 @@ try {
       }
     }
 
+    {
+      const archiveContext = await browser.newContext({
+        viewport: { width: 1440, height: 960 },
+        colorScheme: "light",
+      });
+      const archivePage = await archiveContext.newPage();
+      await archivePage.goto(`${host}/archives/`, { waitUntil: "networkidle" });
+      await archivePage.evaluate(() => document.fonts.ready);
+
+      const archive = await archivePage.evaluate(() => {
+        const h1 = document.querySelector("h1");
+        const intro = document.querySelector(".page-intro");
+        const years = [...document.querySelectorAll(".archive-year")];
+        const cards = [...document.querySelectorAll(".archive-card")];
+        const timeline = document.querySelector(".archive-timeline");
+        const h1Style = h1 ? getComputedStyle(h1) : null;
+        const firstCard = cards[0];
+        const firstCardStyle = firstCard ? getComputedStyle(firstCard) : null;
+        const firstTime = firstCard?.querySelector("time");
+        const firstTitle =
+          firstCard?.querySelector(".archive-card-title") ?? firstCard?.querySelector("h3");
+
+        const isVisuallyHidden = style => {
+          if (!style) return false;
+          if (style.display === "none" || style.visibility === "hidden") return true;
+          if (Number.parseFloat(style.opacity) === 0) return true;
+          const rect = h1.getBoundingClientRect();
+          if (rect.width <= 1 && rect.height <= 1) return true;
+          if (style.clipPath && style.clipPath !== "none" && style.clipPath.includes("inset")) {
+            return true;
+          }
+          if (style.position === "absolute" && (rect.width <= 1 || rect.height <= 1)) return true;
+          return false;
+        };
+
+        return {
+          title: document.title,
+          hasIntro: Boolean(intro),
+          h1Text: h1?.textContent?.trim() ?? "",
+          h1Hidden: isVisuallyHidden(h1Style),
+          yearCount: years.length,
+          yearLabels: years.map(year => year.querySelector("h2")?.textContent?.trim() ?? ""),
+          cardCount: cards.length,
+          hasTimeline: Boolean(timeline),
+          firstDate: firstTime?.textContent?.trim() ?? "",
+          firstDateTime: firstTime?.getAttribute("datetime") ?? "",
+          firstTitle: firstTitle?.textContent?.trim() ?? "",
+          firstHref: firstCard?.getAttribute("href") ?? "",
+          cardBackground: firstCardStyle?.backgroundColor ?? "",
+          cardDisplay: firstCardStyle?.display ?? "",
+          scrollWidth: document.documentElement.scrollWidth,
+        };
+      });
+
+      assert.match(archive.title, /归档/);
+      assert.equal(archive.hasIntro, false, "归档页不得有可见栏目 intro");
+      assert.equal(archive.h1Text, "归档");
+      assert.equal(archive.h1Hidden, true, "归档主标题应对视觉隐藏、仅服务无障碍");
+      assert.ok(archive.yearCount >= 1, "归档应按年分组");
+      assert.ok(
+        archive.yearLabels.every(label => /\d{4}\s*年/.test(label)),
+        `年份标签格式不符：${archive.yearLabels.join(", ")}`,
+      );
+      assert.equal(archive.hasTimeline, true, "归档应有时间轴");
+      assert.ok(archive.cardCount >= 1, "归档应有卡片条目");
+      assert.match(archive.firstDate, /^\d{4}-\d{2}-\d{2}$/, "归档日期应为 YYYY-MM-DD");
+      assert.ok(archive.firstDateTime, "归档日期应有 datetime");
+      assert.ok(archive.firstTitle, "归档卡片应有标题");
+      assert.match(archive.firstHref, /^\/posts\/[^/]+\/$/);
+      assert.notEqual(archive.cardBackground, "rgba(0, 0, 0, 0)", "归档卡片应有表面背景");
+      assert.equal(archive.scrollWidth, 1440, "归档页不得横向溢出");
+      await archiveContext.close();
+    }
+
     const intermediateContext = await browser.newContext({
       viewport: { width: 1024, height: 960 },
       colorScheme: "light",
@@ -520,9 +594,10 @@ try {
           await smokePage.evaluate(() => document.fonts.ready);
 
           const smoke = await smokePage.evaluate(() => {
-            const headingLevels = [...document.querySelectorAll("h1,h2,h3,h4,h5,h6")]
-              .filter(heading => !heading.classList.contains("sr-only"))
-              .map(heading => Number(heading.tagName.slice(1)));
+            // 含 sr-only：栏目页去掉可见大标题后仍以无障碍 h1 起大纲
+            const headingLevels = [...document.querySelectorAll("h1,h2,h3,h4,h5,h6")].map(heading =>
+              Number(heading.tagName.slice(1)),
+            );
             const unnamedActions = [
               ...document.querySelectorAll("a[href], button, input, select, textarea, summary"),
             ]
