@@ -31,3 +31,23 @@ export function formatShuoshuoDate(date: Date) {
 export function getShuoshuoLabel(date: Date) {
   return `说说 · ${formatShuoshuoDate(date)}`;
 }
+
+/** 首页预览：取正文首行纯文本（说说无标题字段） */
+export function getShuoshuoPreviewLine(body: string): string {
+  const line = body
+    .replaceAll("\r\n", "\n")
+    .split("\n")
+    .map(raw =>
+      raw
+        .trim()
+        .replace(/^#{1,6}\s+/, "")
+        .replace(/^[-*+]\s+/, "")
+        .replace(/\*\*(.+?)\*\*/g, "$1")
+        .replace(/\*(.+?)\*/g, "$1")
+        .replace(/`([^`]+)`/g, "$1")
+        .replace(/!\[.*?\]\(.*?\)/g, "")
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1"),
+    )
+    .find(text => text.length > 0);
+  return line ?? "";
+}

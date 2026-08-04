@@ -227,6 +227,19 @@ await access(`dist${lightHeroSrc}`);
 await access(`dist${darkHeroSrc}`);
 assert.match(pages[""], /Talk is cheap\. Show me the code\./, "首页应展示可配置 caption");
 assert.match(pages[""], /class="hero-caption"/);
+assert.match(pages[""], /class="hero-media"/);
+assert.match(pages[""], /id="theme-toggle"/);
+assert.doesNotMatch(
+  pages[""].match(/<header[\s\S]*?<\/header>/)?.[0] ?? "",
+  /id="theme-toggle"/,
+  "主题钮不得位于顶栏",
+);
+assert.match(
+  pages[""],
+  /class="post-preview shuoshuo-preview"[\s\S]*?<time datetime="[^"]+">\d{4}\.\d{2}\.\d{2}<\/time>[\s\S]*?<h3>[\s\S]*?href="\/shuoshuo\/#[^"]+"/,
+  "首页说说预览应与文章同构：日期 + 可点首行",
+);
+assert.doesNotMatch(pages[""], /shuoshuo-summary/, "首页不再渲染折叠说说摘要块");
 assert.match(pages[""], /最近文章/);
 assert.match(pages[""], new RegExp(escapeRegExp(latestPost.title)));
 assert.match(pages[""], new RegExp(`/posts/${latestPost.slug}/`));

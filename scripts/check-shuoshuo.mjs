@@ -46,11 +46,12 @@ try {
 
   assert.match(home, new RegExp(`/shuoshuo/#${stableId}`));
   assert.match(home, /这是发布时间最新的公开说说/);
-  assert.doesNotMatch(
+  assert.match(
     home,
-    /class="post-body shuoshuo-body shuoshuo-summary"[^>]*(?:aria-hidden|inert|data-collapsed)/,
-    "无脚本时首页说说应保持完整可读",
+    /class="post-preview shuoshuo-preview"[\s\S]*?<time datetime="[^"]+">\d{4}\.\d{2}\.\d{2}<\/time>[\s\S]*?这是发布时间最新的公开说说/,
+    "首页说说应为日期 + 正文首行预览",
   );
+  assert.doesNotMatch(home, /shuoshuo-summary/, "首页不再使用折叠摘要块");
   assert.doesNotMatch(home, /这是一条不应公开的草稿/);
   assert.ok(
     timeline.indexOf(stableId) < timeline.indexOf(olderId),
@@ -142,31 +143,18 @@ try {
     assert.equal(searchResults.draft.length, 0, "搜索不得收录说说草稿");
     await searchPage.close();
 
-    const homeScript = [...home.matchAll(/<script>([\s\S]*?)<\/script>/g)].find(([, source]) =>
-      source.includes("shuoshuo-summary"),
-    );
-    assert.ok(homeScript, "首页摘要增强脚本应内联");
     const homePage = await browser.newPage({
       viewport: { width: 320, height: 800 },
     });
     await homePage.route("https://example.com/**", route => route.abort());
-    await homePage.setContent(home.replace(homeScript[0], ""));
+    await homePage.setContent(home);
     await homePage.addStyleTag({ content: styles });
-    await homePage.addScriptTag({ content: homeScript[1] });
-    const homeSummary = homePage.locator(".shuoshuo-summary");
-    assert.equal(await homeSummary.getAttribute("inert"), "");
-    assert.ok(
-      (await homeSummary.evaluate(element => element.clientHeight)) <= 84,
-      "首页说说摘要应保持约 5.2rem 高",
-    );
+    const homePreview = homePage.locator(".shuoshuo-preview");
+    assert.equal(await homePreview.locator("time").count(), 1);
+    assert.match(await homePreview.locator("h3 a").textContent(), /这是发布时间最新的公开说说/);
     assert.match(
-      await homePage.locator(".shuoshuo-preview .sr-only").textContent(),
-      /这是发布时间最新的公开说说/,
-    );
-    await homeSummary.locator("a").focus();
-    assert.equal(
-      await homeSummary.locator("a").evaluate(element => element === document.activeElement),
-      false,
+      (await homePreview.locator("h3 a").getAttribute("href")) ?? "",
+      new RegExp(`/shuoshuo/#${stableId}`),
     );
     await homePage.close();
 

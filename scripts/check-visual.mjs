@@ -102,13 +102,15 @@ try {
         const actual = await page.evaluate(() => {
           const main = document.querySelector("main");
           const grid = document.querySelector(".home-grid");
-          const hero = document.querySelector(".hero");
+          const media = document.querySelector(".hero-media");
+          const feed = document.querySelector(".home-feed");
           const lightImage = document.querySelector(".hero-image-light");
           const darkImage = document.querySelector(".hero-image-dark");
+          const themeToggle = document.querySelector("#theme-toggle");
           const bodyStyle = getComputedStyle(document.body);
-          const heroStyle = getComputedStyle(hero);
           const lightStyle = getComputedStyle(lightImage);
           const darkStyle = getComputedStyle(darkImage);
+          const toggleStyle = getComputedStyle(themeToggle);
           const visibleImage =
             lightStyle.display !== "none" && lightStyle.visibility !== "hidden"
               ? lightImage
@@ -129,15 +131,21 @@ try {
           const footerStyle = getComputedStyle(footerInner);
           const headerRect = headerInner.getBoundingClientRect();
           const footerRect = footerInner.getBoundingClientRect();
-          const postPreview = document.querySelector(".post-preview");
+          const postPreview = document.querySelector(".post-preview:not(.shuoshuo-preview)");
+          const shuoshuoPreview = document.querySelector(".shuoshuo-preview");
           const description = document.querySelector(".post-preview-description");
           const descriptionStyle = description ? getComputedStyle(description) : null;
+          const viewAllLink = document.querySelector(".section-heading a");
+          const viewAllStyle = viewAllLink ? getComputedStyle(viewAllLink) : null;
           const caption = document.querySelector(".hero-caption");
           const viewAll = [...document.querySelectorAll(".section-heading a")].map(link => ({
             href: link.getAttribute("href"),
             text: link.textContent.trim(),
           }));
-          const homeDate = document.querySelector(".post-preview time")?.textContent?.trim() ?? "";
+          const homeDate = postPreview?.querySelector("time")?.textContent?.trim() ?? "";
+          const mediaRect = media.getBoundingClientRect();
+          const feedRect = feed.getBoundingClientRect();
+          const toggleRect = themeToggle.getBoundingClientRect();
 
           return {
             scrollWidth: document.documentElement.scrollWidth,
@@ -145,8 +153,10 @@ try {
             gridColumns: getComputedStyle(grid)
               .gridTemplateColumns.split(" ")
               .map(Number.parseFloat),
-            heroWidth: hero.getBoundingClientRect().width,
-            heroPaddingLeft: Number.parseFloat(heroStyle.paddingLeft),
+            mediaWidth: mediaRect.width,
+            mediaTop: mediaRect.top,
+            feedTop: feedRect.top,
+            feedWidth: feedRect.width,
             lightDisplay: lightStyle.display,
             darkDisplay: darkStyle.display,
             lightSrc: lightImage?.getAttribute("src") ?? "",
@@ -172,11 +182,22 @@ try {
             postPreviewOrder: postPreview
               ? [...postPreview.children].map(child => child.tagName.toLowerCase())
               : [],
+            shuoshuoPreviewOrder: shuoshuoPreview
+              ? [...shuoshuoPreview.children].map(child => child.tagName.toLowerCase())
+              : [],
             homeDate,
             descriptionWhiteSpace: descriptionStyle?.whiteSpace ?? "",
             descriptionOverflow: descriptionStyle?.overflow ?? "",
             descriptionTextOverflow: descriptionStyle?.textOverflow ?? "",
+            viewAllDecoration: viewAllStyle?.textDecorationLine ?? "",
             viewAll,
+            themePosition: toggleStyle.position,
+            themeInHeader: Boolean(themeToggle.closest(".site-header")),
+            themeNearBottomRight:
+              toggleRect.bottom <= innerHeight &&
+              toggleRect.right <= innerWidth &&
+              toggleRect.bottom > innerHeight - 96 &&
+              toggleRect.right > innerWidth - 96,
             background: bodyStyle.backgroundColor,
             text: bodyStyle.color,
             h1Count: document.querySelectorAll("h1").length,
@@ -210,14 +231,16 @@ try {
           assert.equal(actual.darkDisplay, "none", "亮色主题应隐藏暗色主视觉");
         }
         assert.ok(actual.imageWidth > 0, "主视觉应占据可见宽度");
-        assert.ok(actual.imageWidth <= actual.heroWidth + 1, "主视觉不得溢出 hero 栏");
+        assert.ok(actual.imageWidth <= actual.mediaWidth + 1, "主视觉不得溢出 media 栏");
         assert.ok(actual.imageWidth > actual.imageHeight, "渲染后主视觉应为横向比例");
         assert.notEqual(actual.visibleDisplay, "none");
         assert.deepEqual(actual.postPreviewOrder.slice(0, 3), ["time", "h3", "p"]);
+        assert.deepEqual(actual.shuoshuoPreviewOrder.slice(0, 2), ["time", "h3"]);
         assert.match(actual.homeDate, /^\d{4}\.\d{2}\.\d{2}$/, "首页日期应为 YYYY.MM.DD");
         assert.equal(actual.descriptionWhiteSpace, "nowrap");
         assert.equal(actual.descriptionOverflow, "hidden");
         assert.equal(actual.descriptionTextOverflow, "ellipsis");
+        assert.equal(actual.viewAllDecoration, "none", "查看全部默认无下划线");
         assert.ok(
           actual.viewAll.some(
             item => item.href === "/archives/" && /^查看全部 \(\d+\)$/.test(item.text),
@@ -237,6 +260,9 @@ try {
         assert.ok(Number.parseFloat(actual.headerBorderBottom) >= 1, "导航底线应可见");
         assert.ok(Number.parseFloat(actual.footerBorderTop) >= 1, "页脚线应可见");
         assert.equal(actual.shellAligned, true, "导航底线与页脚线应与内容壳左右对齐");
+        assert.equal(actual.themePosition, "fixed", "主题钮应为固定悬浮");
+        assert.equal(actual.themeInHeader, false, "主题钮不得放在顶栏");
+        assert.equal(actual.themeNearBottomRight, true, "主题钮应在视口右下");
         if (width === 1440) {
           assertNear(actual.headerWidth, 1120);
           assertNear(actual.footerWidth, 1120);
@@ -245,12 +271,16 @@ try {
         if (width === 1440) {
           assertNear(actual.mainWidth, 1120);
           assert.equal(actual.gridColumns.length, 2);
-          assertNear(actual.gridColumns[0], 658);
-          assertNear(actual.heroWidth, 658);
+          const [leftCol, rightCol] = actual.gridColumns;
+          assert.ok(leftCol > rightCol, "桌面左栏应宽于右栏");
+          assert.ok(
+            leftCol / rightCol > 1.45 && leftCol / rightCol < 1.9,
+            `桌面栏宽比应约 1.65：实际 ${leftCol / rightCol}`,
+          );
+          assertNear(actual.mediaTop, actual.feedTop, 3);
         } else {
           assertNear(actual.mainWidth, width);
           assert.equal(actual.gridColumns.length, 1);
-          assertNear(actual.heroPaddingLeft, 0);
         }
 
         await page.screenshot({
@@ -430,7 +460,7 @@ try {
     const page = await context.newPage();
     await page.goto(host);
     let reachedThemeToggle = false;
-    for (let tabs = 0; tabs < 12; tabs += 1) {
+    for (let tabs = 0; tabs < 40; tabs += 1) {
       await page.keyboard.press("Tab");
       const focused = await page.evaluate(() => {
         const element = document.activeElement;
@@ -440,18 +470,21 @@ try {
           id: element.id,
           outlineStyle: style.outlineStyle,
           outlineWidth: style.outlineWidth,
-          visible: rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < innerHeight,
+          hasBox: rect.width > 0 && rect.height > 0,
+          inViewport:
+            rect.bottom > 0 && rect.top < innerHeight && rect.right > 0 && rect.left < innerWidth,
         };
       });
       assert.notEqual(focused.outlineStyle, "none", "键盘操作控件应有可见焦点");
       assert.notEqual(focused.outlineWidth, "0px", "键盘操作控件应有可见焦点");
-      assert.equal(focused.visible, true, "键盘焦点应位于视口内");
+      assert.equal(focused.hasBox, true, "焦点控件应有可交互尺寸");
       if (focused.id === "theme-toggle") {
+        assert.equal(focused.inViewport, true, "主题浮钮聚焦时应在视口内");
         reachedThemeToggle = true;
         break;
       }
     }
-    assert.equal(reachedThemeToggle, true, "应能仅用 Tab 到达主题按钮");
+    assert.equal(reachedThemeToggle, true, "应能仅用 Tab 到达右下主题按钮");
     await page.keyboard.press("Enter");
     await page.reload();
     assert.equal(

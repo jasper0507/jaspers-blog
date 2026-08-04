@@ -115,7 +115,7 @@ button {
   margin-inline: auto;
   padding-inline: var(--gutter);
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 1.25rem;
   border-bottom: 1px solid var(--text);
@@ -239,26 +239,34 @@ button {
   }
 }
 
+/* 全站右下悬浮主题钮（对齐 JacksBlog） */
 .theme-toggle {
+  position: fixed;
+  z-index: 40;
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  bottom: max(1rem, env(safe-area-inset-bottom, 0px));
   width: 2.75rem;
   height: 2.75rem;
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 50%;
-  background: transparent;
+  background: var(--surface);
+  box-shadow: 0 0.35rem 1.25rem rgb(0 0 0 / 8%);
   display: grid;
   place-items: center;
   cursor: pointer;
   transition:
     border-color 180ms ease,
     color 180ms ease,
-    background 180ms ease;
+    background 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .theme-toggle:hover {
   border-color: var(--accent);
   background: var(--surface);
   color: var(--accent);
+  box-shadow: 0 0.45rem 1.4rem rgb(0 0 0 / 12%);
 }
 
 .theme-icon {
@@ -289,29 +297,39 @@ main {
 }
 
 .home {
-  padding-block: 6rem 7rem;
+  padding-block: clamp(4.5rem, 8vw, 6.5rem) clamp(5rem, 9vw, 7.5rem);
 }
 
+/*
+ * 双行两栏：行1 caption | 空；行2 图 | 信息流
+ * 使 feed 顶与图顶对齐（JacksBlog 咬合）
+ */
 .home-grid {
   display: grid;
-  grid-template-columns: 41.125rem minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: clamp(2.5rem, 4vw, 4.5rem);
+  row-gap: 1.15rem;
   align-items: start;
-  gap: 4rem;
-}
-
-.hero {
-  position: relative;
-  min-width: 0;
 }
 
 .hero-caption {
-  margin: 0 0 1.25rem;
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
   color: var(--text);
   font-family: var(--font-serif);
-  font-size: clamp(1.5rem, 2.4vw, 1.875rem);
+  font-size: clamp(1.65rem, 2.6vw, 2rem);
   font-weight: 500;
-  letter-spacing: -0.025em;
-  line-height: 1.3;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.hero-media {
+  grid-column: 1;
+  grid-row: 2;
+  position: relative;
+  min-width: 0;
 }
 
 .hero-image {
@@ -347,18 +365,21 @@ html[data-theme="dark"] .hero-image-dark {
 }
 
 .home-feed {
+  grid-column: 2;
+  grid-row: 2;
   display: grid;
-  gap: 3.25rem;
+  gap: 3rem;
+  min-width: 0;
 }
 
 /* 分区线：信息流栏近满宽细线（JacksBlog 节奏） */
 .feed-section {
-  padding-top: 1.35rem;
+  padding-top: 1.15rem;
   border-top: 1px solid var(--text);
 }
 
 .section-heading {
-  margin-bottom: 1.35rem;
+  margin-bottom: 1.15rem;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -367,15 +388,20 @@ html[data-theme="dark"] .hero-image-dark {
 
 .section-heading h2 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
 
 .section-heading a {
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   white-space: nowrap;
+  text-decoration: none;
+}
+
+.section-heading a:hover {
+  color: var(--text);
 }
 
 .empty-state {
@@ -385,7 +411,7 @@ html[data-theme="dark"] .hero-image-dark {
 
 .post-preview {
   display: grid;
-  gap: 0.4rem;
+  gap: 0.35rem;
   min-width: 0;
 }
 
@@ -393,9 +419,9 @@ html[data-theme="dark"] .hero-image-dark {
 .post-preview h3 {
   margin: 0;
   font-family: var(--font-serif);
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
@@ -1026,16 +1052,24 @@ pagefind-searchbox {
 
   .home-grid {
     grid-template-columns: 1fr;
-    gap: 4rem;
+    grid-template-rows: none;
+    column-gap: 0;
+    row-gap: 2.5rem;
+  }
+
+  .hero-caption,
+  .hero-media,
+  .home-feed {
+    grid-column: 1;
+    grid-row: auto;
   }
 
   .home {
-    padding-block: 4rem 5rem;
+    padding-block: 3.5rem 5rem;
   }
 
-  .hero {
-    max-width: 22rem;
-    margin-inline: auto;
+  .hero-media {
+    max-width: 28rem;
   }
 
   .post-header {
