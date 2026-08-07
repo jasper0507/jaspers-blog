@@ -16,6 +16,7 @@ const emptyPostsDirectory = join(temporaryDirectory, "empty-posts");
 const emptyShuoshuoDirectory = join(temporaryDirectory, "empty-shuoshuo");
 const fixtureEnvironment = {
   ...process.env,
+  POST_CONTENT_DIR: "./tests/fixtures/posts-visual",
   SHUOSHUO_CONTENT_DIR: "./tests/fixtures/shuoshuo",
 };
 const buildSearchFixture = async (directory, environment) => {
@@ -107,10 +108,10 @@ try {
   assert.doesNotMatch(timeline, /这是一条不应公开的草稿/);
   assert.equal(
     searchIndex.languages["zh-cn"].page_count,
-    15,
+    1,
     "fixture 构建应仅索引技术文章，不含说说",
   );
-  assert.equal((rss.match(/<item>/g) ?? []).length, 17);
+  assert.equal((rss.match(/<item>/g) ?? []).length, 3);
   assert.match(rss, /说说 · 2026年2月3日 09:30/);
   assert.match(rss, new RegExp(`/shuoshuo/#${stableId}`));
   assert.doesNotMatch(rss, /这是一条不应公开的草稿/);
@@ -122,7 +123,7 @@ try {
   });
   const shuoshuoOnlyRss = await readFile(join(shuoshuoOnlyOutDir, "rss.xml"), "utf8");
   assert.equal((shuoshuoOnlyRss.match(/<item>/g) ?? []).length, 2);
-  assert.doesNotMatch(shuoshuoOnlyRss, /Markdown快速上手语法/);
+  assert.doesNotMatch(shuoshuoOnlyRss, /视觉验收专用技术文章/);
   assert.equal(await getIndexedPageCount(shuoshuoOnlyOutDir), 0, "仅说说时 Pagefind 索引应为空");
 
   const emptyOutDir = join(temporaryDirectory, "empty-dist");
@@ -158,15 +159,14 @@ try {
       const search = async term =>
         Promise.all((await pagefind.search(term)).results.map(result => result.data()));
       return {
-        post: await search("Markdown快速上手语法"),
-        // 仅出现在 fixture 说说正文中的长句，避免与技术文章分词重合
-        shuoshuoOnly: await search("故意使用与发布时间不同的文件名"),
-        draft: await search("这是一条不应公开的草稿"),
+        post: await search("视觉验收专用技术文章"),
+        shuoshuoOnly: await search("shuoshuoonly8f3c2a"),
+        draft: await search("shuoshuoodraft4b7e"),
       };
     });
     assert.ok(
-      searchResults.post.some(result => result.url === "/posts/markdown-quick-start/"),
-      "搜索应链接到技术文章永久链接",
+      searchResults.post.some(result => result.url === "/posts/visual/"),
+      "搜索应链接到文件名对应的技术文章网址",
     );
     assert.equal(searchResults.shuoshuoOnly.length, 0, "仅出现在说说中的文句不得被 Pagefind 索引");
     assert.ok(
@@ -257,6 +257,7 @@ try {
       cwd: root,
       env: {
         ...process.env,
+        POST_CONTENT_DIR: "./src/content/posts",
         SHUOSHUO_CONTENT_DIR: "./src/content/shuoshuo",
       },
     },

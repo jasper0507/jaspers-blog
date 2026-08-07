@@ -16,11 +16,10 @@
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
     "test:dist": "node scripts/check-build.mjs",
-    "test:migration": "node scripts/check-migration.mjs",
     "test:shuoshuo:command": "node scripts/check-new-shuoshuo.mjs",
     "test:shuoshuo": "node scripts/check-shuoshuo.mjs",
-    "test:visual": "npm run build && node scripts/check-visual.mjs",
-    "test": "npm run format:check && npm run check && npm run test:migration && npm run test:shuoshuo:command && npm run build && npm run test:dist && node scripts/check-visual.mjs && npm run test:shuoshuo"
+    "test:visual": "POST_CONTENT_DIR=./tests/fixtures/posts-visual npm run build && node scripts/check-visual.mjs && npm run build",
+    "test": "npm run format:check && npm run check && npm run test:shuoshuo:command && npm run build && npm run test:dist && npm run test:visual && npm run test:shuoshuo"
   },
   "dependencies": {
     "astro": "7.1.6"

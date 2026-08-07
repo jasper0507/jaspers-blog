@@ -9,6 +9,11 @@ const posts = defineCollection({
   loader: glob({
     base: process.env.POST_CONTENT_DIR ?? "./src/content/posts",
     pattern: "**/*.md",
+    generateId: ({ entry }) => {
+      const id = entry.match(/^([a-z0-9]+(?:-[a-z0-9]+)*)\.md$/)?.[1];
+      if (!id) throw new Error(`技术文章文件名必须是小写 ASCII slug：${entry}`);
+      return id;
+    },
   }),
   schema: z.object({
     title: z.string().trim().min(1),

@@ -6,11 +6,11 @@ import { chromium } from "playwright-core";
 const host = "http://127.0.0.1:4321";
 const screenshotDir = "artifacts/visual/home";
 const postScreenshotDir = "artifacts/visual/post";
-const postPath = "/posts/markdown-quick-start/";
-const longPostPath = "/posts/dsfedmed-paper-notes/";
+const postPath = "/posts/visual/";
+const longPostPath = postPath;
 const widths = [1440, 768, 375, 320];
 const themes = ["light", "dark"];
-const smokePaths = ["/", postPath, longPostPath, "/shuoshuo/", "/tags/", "/archives/", "/about/"];
+const smokePaths = ["/", postPath, "/shuoshuo/", "/tags/", "/archives/", "/about/"];
 const expectedColors = {
   light: {
     background: "rgb(245, 244, 242)",
@@ -481,6 +481,9 @@ try {
               ? Number.parseFloat(theadTrStyle.borderBottomWidth)
               : null,
             formulaDisplayOverflowY: formulaDisplayStyle?.overflowY ?? "",
+            hasFixtureCapabilities: Boolean(
+              quote && inlineCode && codeEl && table && formulaEl && bodyLink,
+            ),
             shellBrandColor: brandStyle?.color ?? "",
             metaText,
             hasPublishedPrefix: /发布于|更新于/.test(metaText),
@@ -546,6 +549,11 @@ try {
           `${width}px 文章页不得横向溢出：${JSON.stringify(article)}`,
         );
         assert.equal(article.background, expectedColors[theme].background);
+        assert.equal(
+          article.hasFixtureCapabilities,
+          true,
+          "视觉 fixture 应覆盖引用、行内代码、代码块、表格、公式和链接",
+        );
         // 去卡片：正文不再铺独立纸面底，整页落在壳背景上（不铺全页 Kraft 纸带）
         assert.ok(
           article.bodyBackground === "rgba(0, 0, 0, 0)" ||
@@ -1483,10 +1491,10 @@ try {
         await searchTrigger.click();
         await waitModalOpen(true);
         await searchInput.first().waitFor({ state: "visible", timeout: 5_000 });
-        await searchInput.first().fill("Markdown快速上手语法");
+        await searchInput.first().fill("视觉验收专用技术文章");
         const result = navigationPage
           .locator("pagefind-results a, dialog.pf-modal a")
-          .filter({ hasText: /Markdown快速上手语法/ })
+          .filter({ hasText: /视觉验收专用技术文章/ })
           .first();
         try {
           await result.waitFor({ state: "visible", timeout: 5_000 });

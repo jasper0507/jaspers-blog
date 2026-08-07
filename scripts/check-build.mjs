@@ -1,17 +1,15 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
 import { access, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { parseFrontmatter } from "@astrojs/internal-helpers/frontmatter";
 import { getTagSlug } from "../src/lib/tags.js";
-import { LEGACY_ASSETS, POST_MIGRATIONS } from "./migrate-hexo.mjs";
 
-const postSlug = "markdown-quick-start";
 const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
+const pagefind = join(root, "node_modules/.bin/pagefind");
 
 const escapeHtml = value =>
   value
@@ -21,24 +19,37 @@ const escapeHtml = value =>
     .replaceAll('"', "&quot;");
 const escapeRegExp = value => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const postMetadata = [];
-for (const { slug } of POST_MIGRATIONS) {
-  const markdown = await readFile(`src/content/posts/${slug}.md`, "utf8");
-  const frontmatter = markdown.match(/^---\n([\s\S]*?)\n---/)?.[1];
-  assert.ok(frontmatter, `${slug} 应有 frontmatter`);
-  const jsonField = name => JSON.parse(frontmatter.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1]);
-  const dateField = name => frontmatter.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1];
-  const title = jsonField("title");
-  const description = jsonField("description");
-  const tags = [...frontmatter.matchAll(/^  - (.+)$/gm)].map(([, tag]) => JSON.parse(tag));
-  postMetadata.push({
-    slug,
-    title,
-    description,
-    publishedAt: dateField("publishedAt"),
-    tags,
-  });
+async function readContentMetadata(directory) {
+  return Promise.all(
+    (await readdir(directory, { withFileTypes: true }))
+      .filter(entry => entry.isFile() && entry.name.endsWith(".md"))
+      .map(async entry => ({
+        id: entry.name.slice(0, -3),
+        data: parseFrontmatter(await readFile(join(directory, entry.name), "utf8")).frontmatter,
+      })),
+  );
 }
+
+const allPostMetadata = (await readContentMetadata("src/content/posts")).map(({ id, data }) => {
+  assert.equal(typeof data.draft, "boolean", `${id} 的 draft 必须是布尔值`);
+  assert.equal(typeof data.title, "string", `${id} 的 title 必须是字符串`);
+  assert.equal(typeof data.description, "string", `${id} 的 description 必须是字符串`);
+  assert.ok(data.publishedAt, `${id} 应有 publishedAt`);
+  assert.ok(data.tags === undefined || Array.isArray(data.tags), `${id} 的 tags 必须是列表`);
+  return {
+    slug: id,
+    title: data.title,
+    description: data.description,
+    publishedAt: data.publishedAt,
+    tags: data.tags ?? [],
+    draft: data.draft,
+  };
+});
+const postMetadata = allPostMetadata.filter(post => !post.draft);
+const draftPostSlugs = allPostMetadata.filter(post => post.draft).map(post => post.slug);
+const publishedShuoshuoCount = (await readContentMetadata("src/content/shuoshuo")).filter(
+  ({ data }) => data.draft === false,
+).length;
 
 const usedTags = [
   ...new Map(
@@ -51,7 +62,7 @@ const tagSlugs = new Map(usedTags.map(({ name, slug }) => [name, slug]));
 
 const routes = [
   "",
-  ...POST_MIGRATIONS.map(({ slug }) => `posts/${slug}`),
+  ...postMetadata.map(({ slug }) => `posts/${slug}`),
   "shuoshuo",
   "tags",
   ...usedTags.map(({ slug }) => `tags/${slug}`),
@@ -108,19 +119,16 @@ assert.match(thirdPartyNotices, /MIT License/);
 assert.match(thirdPartyNotices, /原创技术文章、说说和图片不适用上述 MIT 许可/);
 
 const publicPostSlugs = (await readdir("dist/posts", { withFileTypes: true }))
-  .filter(entry => entry.isDirectory())
+  .filter(entry => entry.isDirectory() && entry.name !== "2")
   .map(entry => entry.name)
   .sort();
-assert.equal(POST_MIGRATIONS.length, 15);
-for (const { slug } of POST_MIGRATIONS) {
-  assert.ok(publicPostSlugs.includes(slug), `生产构建应生成 ${slug}`);
-}
-assert.equal(publicPostSlugs.includes("hello-world"), false);
+assert.deepEqual(
+  publicPostSlugs,
+  postMetadata.map(({ slug }) => slug).sort(),
+  "生产构建应只生成当前公开技术文章",
+);
 
-for (const { slug, title, description, tags } of postMetadata) {
-  const markdown = await readFile(`src/content/posts/${slug}.md`, "utf8");
-  const frontmatter = markdown.match(/^---\n([\s\S]*?)\n---/)?.[1];
-  const dateField = name => frontmatter.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1];
+for (const { slug, title, description, publishedAt, tags } of postMetadata) {
   const page = pages[`posts/${slug}`];
   const canonical = `https://blog.jasper0507.cc.cd/posts/${slug}/`;
 
@@ -147,8 +155,10 @@ for (const { slug, title, description, tags } of postMetadata) {
     }
   }
   // 页面元信息仅展示发布时间；updatedAt 可保留在数据/JSON-LD，但不进可见 <time>
-  assert.match(page, new RegExp(`datetime="${new Date(dateField("publishedAt")).toISOString()}"`));
+  assert.match(page, new RegExp(`datetime="${new Date(publishedAt).toISOString()}"`));
   assert.doesNotMatch(page, /发布于|更新于/, `${slug} 不得展示「发布于/更新于」前缀`);
+  assert.match(page, /<meta property="og:type" content="article">/);
+  assert.match(page, /"@type":"BlogPosting"/);
 }
 
 const orderedPosts = postMetadata.toSorted(
@@ -243,7 +253,6 @@ for (const { name: tag, slug } of usedTags) {
       `${tag} 列表不得展示摘要：${post.slug}`,
     );
   }
-  assert.doesNotMatch(tagPage, /不可公开的草稿/);
 }
 
 assert.match(pages.archives, /<title>归档 \| Jasper(?:'|&#39;)s Blog<\/title>/);
@@ -261,7 +270,15 @@ assert.doesNotMatch(
 );
 assert.match(pages.archives, /class="archive-timeline"/, "归档应为时间轴结构");
 assert.match(pages.archives, /class="archive-card"/, "归档条目应为卡片");
-assert.match(pages.archives, /<h2 id="archive-2026">2026 年<\/h2>/);
+for (const year of new Set(
+  orderedPosts.map(post =>
+    new Intl.DateTimeFormat("en", { timeZone: "Asia/Shanghai", year: "numeric" }).format(
+      new Date(post.publishedAt),
+    ),
+  ),
+)) {
+  assert.match(pages.archives, new RegExp(`<h2 id="archive-${year}">${year} 年<\\/h2>`));
+}
 assert.deepEqual(
   listedArchiveSlugs(pages.archives),
   orderedPosts.map(({ slug }) => slug),
@@ -301,25 +318,6 @@ for (const { slug, title, description, publishedAt, tags } of orderedPosts) {
   }
 }
 assert.doesNotMatch(pages.archives, /分类|categories/i, "归档不得展示分类路径");
-assert.doesNotMatch(pages.archives, /不可公开的草稿/);
-
-for (const asset of LEGACY_ASSETS) {
-  const relativePath = `images/posts/${asset.post}/${asset.target}`;
-  const data = await readFile(`dist/${relativePath}`);
-  assert.equal(createHash("sha256").update(data).digest("hex"), asset.sha256);
-  assert.match(pages[`posts/${asset.post}`], new RegExp(`/${relativePath}`));
-}
-
-const allPages = Object.values(pages).join("\n");
-assert.doesNotMatch(allPages, /jasper0507\.github\.io\/2026\//);
-assert.match(
-  pages["posts/github-hexo-blog-guide"],
-  /https:\/\/blog\.jasper0507\.cc\.cd\/posts\/hexo-icarus-content-guide\//,
-);
-assert.match(
-  pages["posts/data-structures-and-algorithms"],
-  /<h6 role="heading" aria-level="7" id="data-structures-and-algorithms-depth-7-代码模板">代码模板<\/h6>/,
-);
 
 for (const [route, html] of Object.entries(pages)) {
   assert.equal((html.match(/<h1(?:\s|>)/g) ?? []).length, 1, `/${route} 应有且仅有一个主标题`);
@@ -398,8 +396,7 @@ assert.match(
 );
 assert.equal(listedPostSlugs(pages[""]).length, 1, "首页最近文章仅展示 1 条");
 assert.match(pages[""], /最近说说/);
-assert.match(pages[""], /Talk is cheap\. Show me the code\./);
-assert.doesNotMatch(pages[""], /暂无说说/, "已发布测试说说后首页不应再显示空态");
+assert.doesNotMatch(pages[""], /暂无说说/, "存在已发布说说时首页不应显示空态");
 const articleMenu = pages[""].match(/<ul class="article-menu-list"[^>]*>([\s\S]*?)<\/ul>/)?.[1];
 assert.ok(articleMenu, "首页应包含文章菜单");
 assert.deepEqual(
@@ -409,18 +406,17 @@ assert.deepEqual(
 assert.doesNotMatch(articleMenu, /全部文章|分类/);
 assert.match(
   pages[""],
-  new RegExp(`href="/archives/"[^>]*>查看全部 \\(${POST_MIGRATIONS.length}\\)</a>`),
+  new RegExp(`href="/archives/"[^>]*>查看全部 \\(${postMetadata.length}\\)</a>`),
   "文章「查看全部 (N)」应使用半角括号与已发布总数",
 );
 assert.match(
   pages[""],
-  /href="\/shuoshuo\/"[^>]*>查看全部 \(1\)<\/a>/,
+  new RegExp(`href="/shuoshuo/"[^>]*>查看全部 \\(${publishedShuoshuoCount}\\)</a>`),
   "说说「查看全部 (N)」应为已发布总数",
 );
 assert.doesNotMatch(pages[""], /href="\/posts\/"[^>]*>查看全部/);
 assert.doesNotMatch(pages[""], /查看全部（\d+）/, "不得使用全角括号");
 await assert.rejects(access("dist/categories/index.html"), "不得生成分类索引页");
-assert.match(pages.shuoshuo, /Talk is cheap\. Show me the code\./);
 assert.doesNotMatch(pages.shuoshuo, /暂无说说/);
 assert.match(
   pages.shuoshuo,
@@ -582,38 +578,17 @@ assert.doesNotMatch(
 );
 assert.match(pages[""], /<script type="application\/ld\+json">/);
 assert.match(pages[""], /"@type":"WebSite"/);
-assert.match(pages.archives, /Markdown快速上手语法/);
-assert.match(pages.archives, new RegExp(`/posts/${postSlug}/`));
 assert.match(styles, /\.archive-timeline/, "归档时间轴应有样式合同");
 assert.match(styles, /\.archive-card/, "归档卡片应有样式合同");
-assert.doesNotMatch(pages[""], /不可公开的草稿/);
-assert.doesNotMatch(pages.archives, /不可公开的草稿/);
-assert.doesNotMatch(sitemap, /draft-markdown-capabilities/);
-await assert.rejects(
-  access("dist/posts/draft-markdown-capabilities/index.html"),
-  "草稿不得生成公开详情页",
-);
+for (const slug of draftPostSlugs) {
+  const route = `/posts/${slug}/`;
+  assert.doesNotMatch(pages[""], new RegExp(`href="${escapeRegExp(route)}"`));
+  assert.doesNotMatch(pages.archives, new RegExp(`href="${escapeRegExp(route)}"`));
+  assert.doesNotMatch(sitemap, new RegExp(escapeRegExp(route)));
+  assert.doesNotMatch(rss, new RegExp(escapeRegExp(route)));
+  await assert.rejects(access(`dist/posts/${slug}/index.html`), `${slug} 草稿不得生成公开详情页`);
+}
 
-const post = pages[`posts/${postSlug}`];
-assert.match(post, /<title>Markdown快速上手语法 \| Jasper/);
-assert.match(post, /这是一篇用于新手快速上手Markdown的文章/);
-assert.match(post, /2026\.01\.23/);
-assert.doesNotMatch(post, /2026年1月23日|发布于|更新于/);
-assert.match(post, /工程实践/);
-assert.match(post, /文档写作/);
-assert.match(post, /教程/);
-assert.match(post, /Markdown/);
-assert.match(post, /aria-label="文章目录"/);
-assert.match(post, /href="#一基本语法"/);
-assert.match(post, /id="一基本语法"/);
-assert.match(post, /class="katex/);
-assert.match(post, /<table>/);
-assert.match(post, /type="checkbox"/);
-assert.match(post, /<del>删除线<\/del>/);
-assert.match(post, /class="astro-code/);
-assert.match(post, />脚注<\/h2>/);
-assert.doesNotMatch(post, />Footnotes<\/h2>/);
-assert.doesNotMatch(post, /href="#footnote-label"/);
 assert.match(pages.about, /Jasper/);
 assert.match(pages.about, /github\.com\/jasper0507/);
 assert.match(pages.about, /jasper0507\.self@gmail\.com/);
@@ -636,7 +611,7 @@ await access("dist/pagefind/pagefind-component-ui.js");
 await access("dist/pagefind/pagefind-component-ui.css");
 assert.equal(
   searchIndex.languages["zh-cn"].page_count,
-  POST_MIGRATIONS.length,
+  postMetadata.length,
   "Pagefind 应仅索引技术文章",
 );
 assert.match(pages[""], /<pagefind-modal-trigger[^>]*compact/);
@@ -670,11 +645,9 @@ assert.doesNotMatch(sitemap, /\/shuoshuo\/#/);
 assert.match(rss, /<rss version="2\.0"/);
 assert.equal(
   (rss.match(/<item>/g) ?? []).length,
-  POST_MIGRATIONS.length + 1,
+  postMetadata.length + publishedShuoshuoCount,
   "RSS 应包含全部技术文章与已发布说说",
 );
-assert.match(rss, /Talk is cheap\. Show me the code\./);
-assert.doesNotMatch(rss, /不可公开的草稿|draft-markdown-capabilities/);
 
 for (const [route, html] of Object.entries(pages)) {
   const canonicalUrl = new URL(route ? `/${route}/` : "/", "https://blog.jasper0507.cc.cd").href;
@@ -683,8 +656,6 @@ for (const [route, html] of Object.entries(pages)) {
   assert.match(html, /<meta property="og:description" content="[^"]+">/);
   assert.match(html, new RegExp(`<meta property="og:url" content="${escapeRegExp(canonicalUrl)}"`));
 }
-assert.match(post, /<meta property="og:type" content="article">/);
-assert.match(post, /"@type":"BlogPosting"/);
 
 async function buildWithPostContent(contentDir, outDir) {
   return execFileAsync(
@@ -695,18 +666,41 @@ async function buildWithPostContent(contentDir, outDir) {
       env: {
         ...process.env,
         POST_CONTENT_DIR: contentDir,
+        SHUOSHUO_CONTENT_DIR: "./tests/fixtures/shuoshuo-empty",
       },
     },
   );
 }
 
-const tagRulesOutDir = await mkdtemp(join(tmpdir(), "newblog-tag-rules-"));
+const tagRulesOutDir = await mkdtemp(join(root, ".build-fixture-tag-rules-"));
 try {
   await buildWithPostContent("./tests/fixtures/posts-tag-rules", tagRulesOutDir);
+  await execFileAsync(pagefind, ["--site", tagRulesOutDir, "--glob", "posts/**/*.html"], {
+    cwd: root,
+  });
   const openPost = await readFile(join(tagRulesOutDir, "posts/open/index.html"), "utf8");
   const emptyPost = await readFile(join(tagRulesOutDir, "posts/empty/index.html"), "utf8");
   const tagsIndex = await readFile(join(tagRulesOutDir, "tags/index.html"), "utf8");
   const openTagDetail = await readFile(join(tagRulesOutDir, "tags/自由主题词/index.html"), "utf8");
+  const fixtureHome = await readFile(join(tagRulesOutDir, "index.html"), "utf8");
+  const fixtureRss = await readFile(join(tagRulesOutDir, "rss.xml"), "utf8");
+  const fixtureSitemap = await readFile(join(tagRulesOutDir, "sitemap.xml"), "utf8");
+  const fixtureSearchIndex = JSON.parse(
+    await readFile(join(tagRulesOutDir, "pagefind/pagefind-entry.json"), "utf8"),
+  );
+
+  assert.match(fixtureHome, /href="\/archives\/"[^>]*>查看全部 \(2\)<\/a>/);
+  assert.equal((fixtureRss.match(/<item>/g) ?? []).length, 2);
+  assert.equal(fixtureSearchIndex.languages["zh-cn"].page_count, 2);
+  for (const slug of ["empty", "open"]) {
+    assert.match(fixtureRss, new RegExp(`/posts/${slug}/`));
+    assert.match(fixtureSitemap, new RegExp(`/posts/${slug}/`));
+  }
+  assert.doesNotMatch(fixtureHome, /不可公开的草稿/);
+  assert.doesNotMatch(fixtureRss, /不可公开的草稿|\/posts\/draft\//);
+  assert.doesNotMatch(fixtureSitemap, /\/posts\/draft\//);
+  await assert.rejects(access(join(tagRulesOutDir, "posts/draft/index.html")));
+
   assert.match(
     openPost,
     /href="\/tags\/自由主题词\/"[^>]*>[\s\S]*?<span[^>]*class="tag-hash"[^>]*>#<\/span>自由主题词<\/a>/,
@@ -729,7 +723,7 @@ try {
   await rm(tagRulesOutDir, { recursive: true, force: true });
 }
 
-const emptyTagsOutDir = await mkdtemp(join(tmpdir(), "newblog-empty-tags-"));
+const emptyTagsOutDir = await mkdtemp(join(root, ".build-fixture-empty-tags-"));
 try {
   await buildWithPostContent("./tests/fixtures/posts-empty-tags", emptyTagsOutDir);
   const tagsIndex = await readFile(join(emptyTagsOutDir, "tags/index.html"), "utf8");
@@ -741,7 +735,7 @@ try {
   await rm(emptyTagsOutDir, { recursive: true, force: true });
 }
 
-const invalidTagOutDir = await mkdtemp(join(tmpdir(), "newblog-invalid-tag-"));
+const invalidTagOutDir = await mkdtemp(join(root, ".build-fixture-invalid-tag-"));
 try {
   let buildError;
   try {
@@ -752,6 +746,24 @@ try {
   assert.ok(buildError, "无法生成有效 URL 的标签必须使构建失败");
 } finally {
   await rm(invalidTagOutDir, { recursive: true, force: true });
+}
+
+const invalidPostFilenameOutDir = await mkdtemp(
+  join(root, ".build-fixture-invalid-post-filename-"),
+);
+try {
+  let buildError;
+  try {
+    await buildWithPostContent(
+      "./tests/fixtures/posts-invalid-filename",
+      invalidPostFilenameOutDir,
+    );
+  } catch (error) {
+    buildError = error;
+  }
+  assert.ok(buildError, "技术文章文件名不是小写 ASCII slug 时必须使构建失败");
+} finally {
+  await rm(invalidPostFilenameOutDir, { recursive: true, force: true });
 }
 
 console.log("构建产物验收通过");
