@@ -660,7 +660,12 @@ for (const [route, html] of Object.entries(pages)) {
 async function buildWithPostContent(contentDir, outDir) {
   return execFileAsync(
     process.execPath,
-    [join(root, "node_modules/astro/bin/astro.mjs"), "build", "--force", "--outDir", outDir],
+    [
+      "--input-type=module",
+      "--eval",
+      'import { build } from "astro"; await build({ force: true, outDir: process.argv[1] });',
+      outDir,
+    ],
     {
       cwd: root,
       env: {
@@ -737,13 +742,11 @@ try {
 
 const invalidTagOutDir = await mkdtemp(join(root, ".build-fixture-invalid-tag-"));
 try {
-  let buildError;
-  try {
-    await buildWithPostContent("./tests/fixtures/posts-invalid-tag", invalidTagOutDir);
-  } catch (error) {
-    buildError = error;
-  }
-  assert.ok(buildError, "无法生成有效 URL 的标签必须使构建失败");
+  await assert.rejects(
+    buildWithPostContent("./tests/fixtures/posts-invalid-tag", invalidTagOutDir),
+    error => /标签无法生成有效 URL/.test(`${error.stdout}\n${error.stderr}`),
+    "无法生成有效 URL 的标签必须使构建失败",
+  );
 } finally {
   await rm(invalidTagOutDir, { recursive: true, force: true });
 }
@@ -752,16 +755,11 @@ const invalidPostFilenameOutDir = await mkdtemp(
   join(root, ".build-fixture-invalid-post-filename-"),
 );
 try {
-  let buildError;
-  try {
-    await buildWithPostContent(
-      "./tests/fixtures/posts-invalid-filename",
-      invalidPostFilenameOutDir,
-    );
-  } catch (error) {
-    buildError = error;
-  }
-  assert.ok(buildError, "技术文章文件名不是小写 ASCII slug 时必须使构建失败");
+  await assert.rejects(
+    buildWithPostContent("./tests/fixtures/posts-invalid-filename", invalidPostFilenameOutDir),
+    error => /技术文章文件名必须是小写 ASCII slug/.test(`${error.stdout}\n${error.stderr}`),
+    "技术文章文件名不是小写 ASCII slug 时必须使构建失败",
+  );
 } finally {
   await rm(invalidPostFilenameOutDir, { recursive: true, force: true });
 }
