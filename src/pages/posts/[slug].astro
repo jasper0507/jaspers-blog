@@ -1,7 +1,7 @@
 ---
 import type { CollectionEntry } from "astro:content";
 import { render } from "astro:content";
-import "katex/dist/katex.min.css";
+import MarkdownBody from "../../components/MarkdownBody.astro";
 import PostTags from "../../components/PostTags.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { formatPostDateCompact, getPublishedPosts } from "../../lib/posts";
@@ -54,9 +54,9 @@ const publishedLabel = formatPostDateCompact(post.data.publishedAt);
       </div>
     </header>
 
-    <div class="post-body">
+    <MarkdownBody>
       <Content />
-    </div>
+    </MarkdownBody>
   </article>
 
   {

@@ -1,5 +1,6 @@
 ---
 import { render } from "astro:content";
+import MarkdownBody from "../../components/MarkdownBody.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { formatShuoshuoDate, getPublishedShuoshuo, getShuoshuoLabel } from "../../lib/shuoshuo";
 
@@ -31,8 +32,10 @@ const shuoshuo = await Promise.all(
                     {formatShuoshuoDate(entry.data.publishedAt)}
                   </time>
                 </a>
-                <div class="post-body shuoshuo-body" id={bodyId}>
-                  <Content />
+                <div class="shuoshuo-body" id={bodyId}>
+                  <MarkdownBody>
+                    <Content />
+                  </MarkdownBody>
                 </div>
                 <button
                   class="shuoshuo-toggle"

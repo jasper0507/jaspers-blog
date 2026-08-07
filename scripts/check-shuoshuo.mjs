@@ -49,6 +49,13 @@ try {
   const home = await readFile(join(outDir, "index.html"), "utf8");
   const timeline = await readFile(join(outDir, "shuoshuo/index.html"), "utf8");
   const rss = await readFile(join(outDir, "rss.xml"), "utf8");
+  const timelineStyles = (
+    await Promise.all(
+      [...timeline.matchAll(/<link rel="stylesheet" href="([^"]+\.css)">/g)].map(([, href]) =>
+        readFile(join(outDir, href.slice(1)), "utf8"),
+      ),
+    )
+  ).join("\n");
   const searchIndex = JSON.parse(
     await readFile(join(outDir, "pagefind/pagefind-entry.json"), "utf8"),
   );
@@ -86,10 +93,16 @@ try {
   assert.match(timeline, /data-shuoshuo-toggle/);
   assert.doesNotMatch(
     timeline,
-    /class="post-body shuoshuo-body"[^>]*data-collapsed/,
+    /class="shuoshuo-body"[^>]*data-collapsed/,
     "无脚本时长说说应保持完整可读",
   );
   assert.match(timeline, /https:\/\/example\.com\/fixture-photo\.jpg/);
+  assert.match(timeline, /class="katex"/, "说说应渲染 KaTeX markup");
+  assert.match(
+    timelineStyles,
+    /font-family:KaTeX_Main/,
+    "说说页面实际加载的 CSS 应包含 KaTeX 基础规则",
+  );
   assert.doesNotMatch(timeline, new RegExp(draftId));
   assert.doesNotMatch(timeline, /这是一条不应公开的草稿/);
   assert.equal(
@@ -201,6 +214,18 @@ try {
         await page.evaluate(() => document.documentElement.scrollWidth),
         width,
         `${width}px 说说页不得横向溢出`,
+      );
+      const collapsedStyle = await body.evaluate(element => {
+        const content = element.querySelector(".post-body");
+        return {
+          contentFontSize: content ? getComputedStyle(content).fontSize : "",
+          overflow: getComputedStyle(element).overflow,
+        };
+      });
+      assert.deepEqual(
+        collapsedStyle,
+        { contentFontSize: "16px", overflow: "hidden" },
+        "说说正文应保持原有字号，折叠外壳应裁切溢出内容",
       );
       assert.equal(await toggle.getAttribute("aria-expanded"), "false");
       assert.equal(await body.getAttribute("inert"), "");
