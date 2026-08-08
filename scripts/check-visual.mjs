@@ -1433,7 +1433,11 @@ try {
         const searchInput = navigationPage.locator("pagefind-modal input");
         const waitModalOpen = async expected => {
           await navigationPage.waitForFunction(
-            open => document.querySelector("dialog.pf-modal")?.open === open,
+            open =>
+              document.querySelector("dialog.pf-modal")?.open === open &&
+              document
+                .querySelector("pagefind-modal-trigger .pf-trigger-btn")
+                ?.getAttribute("aria-expanded") === String(open),
             expected,
             { timeout: 5_000 },
           );
