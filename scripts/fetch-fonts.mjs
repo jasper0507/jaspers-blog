@@ -12,11 +12,92 @@ import { cp, mkdir, mkdtemp, readFile, writeFile, readdir, rename, rm } from "no
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+import { brotliDecompress } from "node:zlib";
 import { join } from "node:path";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const fontsDir = join(root, "public/fonts");
 const cssPath = join(root, "src/styles/fonts.css");
+const brotliDecompressAsync = promisify(brotliDecompress);
+const NOTO_FILE = /^noto-(serif|sans)-sc-.*\.woff2$/;
+const WOFF2_TAGS = [
+  "cmap",
+  "head",
+  "hhea",
+  "hmtx",
+  "maxp",
+  "name",
+  "OS/2",
+  "post",
+  "cvt ",
+  "fpgm",
+  "glyf",
+  "loca",
+  "prep",
+  "CFF ",
+  "VORG",
+  "EBDT",
+  "EBLC",
+  "gasp",
+  "hdmx",
+  "kern",
+  "LTSH",
+  "PCLT",
+  "VDMX",
+  "vhea",
+  "vmtx",
+  "BASE",
+  "GDEF",
+  "GPOS",
+  "GSUB",
+  "EBSC",
+  "JSTF",
+  "MATH",
+  "CBDT",
+  "CBLC",
+  "COLR",
+  "CPAL",
+  "SVG ",
+  "sbix",
+  "acnt",
+  "avar",
+  "bdat",
+  "bloc",
+  "bsln",
+  "cvar",
+  "fdsc",
+  "feat",
+  "fmtx",
+  "fvar",
+  "gvar",
+  "hsty",
+  "just",
+  "lcar",
+  "mort",
+  "morx",
+  "opbd",
+  "prop",
+  "trak",
+  "Zapf",
+  "Silf",
+  "Glat",
+  "Gloc",
+  "Feat",
+  "Sill",
+];
+const REQUIRED_WOFF2_TAGS = [
+  "cmap",
+  "head",
+  "hhea",
+  "hmtx",
+  "maxp",
+  "name",
+  "OS/2",
+  "post",
+  "glyf",
+  "loca",
+];
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -93,6 +174,117 @@ const download = async (url, dest) => {
   await pipeline(Readable.fromWeb(res.body), createWriteStream(dest));
 };
 
+const validateWoff2 = async (font, name) => {
+  const invalid = () => {
+    throw new Error(`下载内容不是 WOFF2 字体：${name}`);
+  };
+  if (
+    font.length < 48 ||
+    font.subarray(0, 4).toString("ascii") !== "wOF2" ||
+    font.readUInt32BE(4) === 0x74746366 ||
+    font.readUInt32BE(8) !== font.length ||
+    font.readUInt16BE(12) === 0 ||
+    font.readUInt32BE(20) === 0
+  ) {
+    invalid();
+  }
+
+  let offset = 48;
+  const readUIntBase128 = () => {
+    let value = 0;
+    for (let index = 0; index < 5; index += 1) {
+      if (offset >= font.length) invalid();
+      const byte = font[offset];
+      offset += 1;
+      if ((index === 0 && byte === 0x80) || value > 0x01ffffff) invalid();
+      value = value * 128 + (byte & 0x7f);
+      if ((byte & 0x80) === 0) return value;
+    }
+    invalid();
+  };
+
+  const tags = new Set();
+  let decompressedSize = 0;
+
+  for (let index = 0; index < font.readUInt16BE(12); index += 1) {
+    if (offset >= font.length) invalid();
+    const flags = font[offset];
+    offset += 1;
+    const tagIndex = flags & 0x3f;
+    if (tagIndex === 63 && offset + 4 > font.length) invalid();
+    let tag = WOFF2_TAGS[tagIndex];
+    if (tagIndex === 63) {
+      tag = font.subarray(offset, offset + 4).toString("ascii");
+      offset += 4;
+    }
+    if (tag && tags.has(tag)) invalid();
+    if (tag) tags.add(tag);
+
+    const transformVersion = flags >> 6;
+    const transformed =
+      tag === "glyf" || tag === "loca"
+        ? transformVersion === 0
+        : tag === "hmtx" && transformVersion === 1;
+    if (
+      ((tag === "glyf" || tag === "loca") && ![0, 3].includes(transformVersion)) ||
+      (tag === "hmtx" && ![0, 1].includes(transformVersion)) ||
+      (!["glyf", "loca", "hmtx"].includes(tag) && transformVersion !== 0)
+    ) {
+      invalid();
+    }
+
+    const originalLength = readUIntBase128();
+    const transformedLength = transformed ? readUIntBase128() : originalLength;
+    if (tag === "loca" && transformed && transformedLength !== 0) invalid();
+    decompressedSize += transformedLength;
+    if (decompressedSize > 0xffffffff) invalid();
+  }
+
+  for (const tag of REQUIRED_WOFF2_TAGS) {
+    if (!tags.has(tag)) invalid();
+  }
+
+  const compressedEnd = offset + font.readUInt32BE(20);
+  if (compressedEnd > font.length) invalid();
+  let decompressed;
+  try {
+    decompressed = await brotliDecompressAsync(font.subarray(offset, compressedEnd));
+  } catch {
+    invalid();
+  }
+  if (decompressed.length !== decompressedSize) invalid();
+
+  const metaOffset = font.readUInt32BE(28);
+  const metaLength = font.readUInt32BE(32);
+  const metaOriginalLength = font.readUInt32BE(36);
+  const privateOffset = font.readUInt32BE(40);
+  const privateLength = font.readUInt32BE(44);
+  const align = value => Math.ceil(value / 4) * 4;
+  if (
+    (metaOffset === 0 && (metaLength !== 0 || metaOriginalLength !== 0)) ||
+    (metaOffset !== 0 &&
+      (metaLength === 0 ||
+        metaOriginalLength === 0 ||
+        metaOffset !== align(compressedEnd) ||
+        metaOffset + metaLength > font.length))
+  ) {
+    invalid();
+  }
+  const contentEnd = metaOffset === 0 ? compressedEnd : metaOffset + metaLength;
+  const trailingPadding = font.subarray(contentEnd);
+  if (
+    (privateOffset === 0 && privateLength !== 0) ||
+    (privateOffset !== 0 &&
+      (privateLength === 0 ||
+        privateOffset !== align(contentEnd) ||
+        privateOffset + privateLength !== font.length)) ||
+    (privateOffset === 0 &&
+      (trailingPadding.length > 3 || trailingPadding.some(byte => byte !== 0)))
+  ) {
+    invalid();
+  }
+};
+
 const parseFaces = css => {
   const faces = [];
   for (const block of css.matchAll(/@font-face\s*\{([^}]+)\}/g)) {
@@ -133,11 +325,12 @@ const oldFontsDir = join(transactionDir, "old-fonts");
 const oldCssPath = join(transactionDir, "old-fonts.css");
 let committed = false;
 let failure;
+let preserveTransaction = false;
 
 try {
   await mkdir(nextFontsDir);
   for (const name of await readdir(fontsDir)) {
-    if (!/^noto-(serif|sans)-sc-.*\.woff2$/.test(name)) {
+    if (!NOTO_FILE.test(name)) {
       await cp(join(fontsDir, name), join(nextFontsDir, name), { recursive: true });
     }
   }
@@ -163,7 +356,12 @@ try {
 
     for (let i = 0; i < familyJobs.length; i += concurrency) {
       const batch = familyJobs.slice(i, i + concurrency);
-      await Promise.all(batch.map(job => download(job.url, job.dest)));
+      await Promise.all(
+        batch.map(async job => {
+          await download(job.url, job.dest);
+          await validateWoff2(await readFile(job.dest), job.localName);
+        }),
+      );
       process.stdout.write(
         `  downloaded ${Math.min(i + concurrency, familyJobs.length)}/${familyJobs.length}\r`,
       );
@@ -172,25 +370,7 @@ try {
     jobs.push(...familyJobs);
   }
 
-  await Promise.all(
-    jobs.map(async job => {
-      const font = await readFile(job.dest);
-      if (
-        font.length < 48 ||
-        font.subarray(0, 4).toString("ascii") !== "wOF2" ||
-        font.readUInt32BE(8) !== font.length ||
-        font.readUInt16BE(12) === 0 ||
-        font.readUInt32BE(16) === 0 ||
-        font.readUInt32BE(20) === 0
-      ) {
-        throw new Error(`下载内容不是 WOFF2 字体：${job.localName}`);
-      }
-    }),
-  );
-
-  const stagedNotoNames = (await readdir(nextFontsDir))
-    .filter(name => /^noto-(serif|sans)-sc-.*\.woff2$/.test(name))
-    .sort();
+  const stagedNotoNames = (await readdir(nextFontsDir)).filter(name => NOTO_FILE.test(name)).sort();
   const expectedNames = [...localNames].sort();
   if (
     stagedNotoNames.length !== expectedNames.length ||
@@ -243,7 +423,11 @@ try {
     if (fontsInstalled) await rollback(() => rename(fontsDir, nextFontsDir));
     if (fontsBackedUp) await rollback(() => rename(oldFontsDir, fontsDir));
     if (rollbackErrors.length > 0) {
-      throw new AggregateError([error, ...rollbackErrors], "字体替换失败且未能完整恢复旧文件");
+      preserveTransaction = true;
+      throw new AggregateError(
+        [error, ...rollbackErrors],
+        `字体替换失败且未能完整恢复旧文件；备份保留在 ${transactionDir}`,
+      );
     }
     throw error;
   }
@@ -255,10 +439,12 @@ try {
   failure = error;
   throw error;
 } finally {
-  try {
-    await rm(transactionDir, { recursive: true, force: true });
-  } catch (cleanupError) {
-    if (!failure && !committed) throw cleanupError;
-    console.warn(`未能清理临时目录 ${transactionDir}：${cleanupError.message}`);
+  if (!preserveTransaction) {
+    try {
+      await rm(transactionDir, { recursive: true, force: true });
+    } catch (cleanupError) {
+      if (!failure && !committed) throw cleanupError;
+      console.warn(`未能清理临时目录 ${transactionDir}：${cleanupError.message}`);
+    }
   }
 }
