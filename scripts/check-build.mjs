@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { parseFrontmatter } from "@astrojs/internal-helpers/frontmatter";
-import { getTagSlug } from "../src/lib/tags.js";
+import { getPublishedPostTags } from "../src/lib/tags.js";
 
 const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -51,14 +51,14 @@ const publishedShuoshuoCount = (await readContentMetadata("src/content/shuoshuo"
   ({ data }) => data.draft === false,
 ).length;
 
-const usedTags = [
-  ...new Map(
-    postMetadata.flatMap(({ tags }) =>
-      tags.map(tag => [tag, { name: tag, slug: getTagSlug(tag) }]),
-    ),
-  ).values(),
-];
+const usedTags = getPublishedPostTags(postMetadata.map(data => ({ data })));
 const tagSlugs = new Map(usedTags.map(({ name, slug }) => [name, slug]));
+
+assert.throws(
+  () => getPublishedPostTags([{ data: { tags: ["C++", "C#"] } }]),
+  /标签「C\+\+」与「C#」生成了相同的网址：\/tags\/c\//,
+  "标签网址冲突应点名两个标签并阻止发布",
+);
 
 const routes = [
   "",

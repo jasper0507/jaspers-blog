@@ -1,16 +1,18 @@
 ---
 import type { GetStaticPaths } from "astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { formatPostDateIso, getPublishedPostTags } from "../../lib/posts";
+import { formatPostDateIso, getPublishedPosts } from "../../lib/posts";
+import { getPublishedPostTags } from "../../lib/tags";
 
-type PublishedTag = Awaited<ReturnType<typeof getPublishedPostTags>>[number];
+type PublishedPost = Awaited<ReturnType<typeof getPublishedPosts>>[number];
+type PublishedTag = ReturnType<typeof getPublishedPostTags<PublishedPost>>[number];
 
 interface Props {
   tag: PublishedTag;
 }
 
 export const getStaticPaths = (async () =>
-  (await getPublishedPostTags()).map(tag => ({
+  getPublishedPostTags(await getPublishedPosts()).map(tag => ({
     params: { slug: tag.slug },
     props: { tag },
   }))) satisfies GetStaticPaths;

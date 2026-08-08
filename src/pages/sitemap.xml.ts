@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { getPublishedPosts } from "../lib/posts";
-import { getTagSlug } from "../lib/tags";
+import { getPublishedPostTags } from "../lib/tags";
 import { escapeXml } from "../lib/xml";
 
 const staticRoutes = ["/", "/shuoshuo/", "/tags/", "/archives/", "/about/"];
@@ -10,9 +10,7 @@ export const GET: APIRoute = async ({ site }) => {
 
   const posts = await getPublishedPosts();
   const postRoutes = posts.map(post => `/posts/${post.id}/`);
-  const tagRoutes = [...new Set(posts.flatMap(post => post.data.tags.map(getTagSlug)))].map(
-    slug => `/tags/${slug}/`,
-  );
+  const tagRoutes = getPublishedPostTags(posts).map(tag => tag.href);
   const routes = [...staticRoutes, ...postRoutes, ...tagRoutes];
   const urls = routes
     .map(route => `<url><loc>${escapeXml(new URL(route, site).href)}</loc></url>`)
