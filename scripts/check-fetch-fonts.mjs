@@ -8,6 +8,7 @@ import {
   readFile,
   readdir,
   rm,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -29,6 +30,12 @@ const validSerifBase64 = (
 const validSansBase64 = (
   await readFile(join(sourceRoot, "public/fonts/noto-sans-sc-97.woff2"))
 ).toString("base64");
+const cssResponseMock = `const cssResponse = url => {
+  const sans = url.includes("Noto+Sans+SC");
+  const family = sans ? "Noto Sans SC" : "Noto Serif SC";
+  const file = sans ? "sans.5.woff2" : "serif.4.woff2";
+  return new Response("@font-face { font-family: '" + family + "'; src: url(https://example.test/" + file + "); unicode-range: U+0000-00FF; }");
+};`;
 
 const snapshot = async () => {
   const names = (await readdir(fontsDirectory)).sort();
@@ -54,6 +61,11 @@ try {
   await mkdir(join(workingDirectory, "scripts"), { recursive: true });
   await mkdir(fontsDirectory, { recursive: true });
   await mkdir(join(workingDirectory, "src/styles"), { recursive: true });
+  await symlink(
+    join(sourceRoot, "node_modules"),
+    join(workingDirectory, "node_modules"),
+    process.platform === "win32" ? "junction" : "dir",
+  );
   await copyFile(sourceScript, join(workingDirectory, "scripts/fetch-fonts.mjs"));
   await writeFile(join(fontsDirectory, "noto-serif-sc-old.woff2"), "old serif");
   await writeFile(join(fontsDirectory, "noto-sans-sc-old.woff2"), "old sans");
@@ -79,12 +91,11 @@ try {
 
   await writeFile(
     mockPath,
-    `globalThis.fetch = async url => {
+    `${cssResponseMock}
+
+globalThis.fetch = async url => {
   if (url.includes("fonts.googleapis.com")) {
-    const sans = url.includes("Noto+Sans+SC");
-    const family = sans ? "Noto Sans SC" : "Noto Serif SC";
-    const file = sans ? "sans.5.woff2" : "serif.4.woff2";
-    return new Response("@font-face { font-family: '" + family + "'; src: url(https://example.test/" + file + "); unicode-range: U+0000-00FF; }");
+    return cssResponse(url);
   }
   return new Response("not a font");
 };
@@ -95,12 +106,26 @@ try {
 
   await writeFile(
     mockPath,
-    `globalThis.fetch = async url => {
+    `${cssResponseMock}
+
+globalThis.fetch = async url => {
   if (url.includes("fonts.googleapis.com")) {
-    const sans = url.includes("Noto+Sans+SC");
-    const family = sans ? "Noto Sans SC" : "Noto Serif SC";
-    const file = sans ? "sans.5.woff2" : "serif.4.woff2";
-    return new Response("@font-face { font-family: '" + family + "'; src: url(https://example.test/" + file + "); unicode-range: U+0000-00FF; }");
+    return cssResponse(url);
+  }
+  return new Response(Buffer.alloc(16 * 1024 * 1024 + 1));
+};
+`,
+  );
+  await assert.rejects(runCommand(), /字体响应过大/);
+  assert.deepEqual(await snapshot(), before, "字体响应过大时旧字体和 CSS 必须原样保留");
+
+  await writeFile(
+    mockPath,
+    `${cssResponseMock}
+
+globalThis.fetch = async url => {
+  if (url.includes("fonts.googleapis.com")) {
+    return cssResponse(url);
   }
   const font = new Uint8Array(48);
   font.set([0x77, 0x4f, 0x46, 0x32]);
@@ -120,34 +145,46 @@ try {
     mockPath,
     `import { brotliCompressSync } from "node:zlib";
 
-const tableDirectory = Buffer.from([
-  0, 16,
-  1, 54,
-  2, 36,
-  3, 4,
-  4, 6,
-  5, 18,
-  6, 68,
-  7, 32,
-  202, 4,
-  203, 4,
-]);
-const compressed = brotliCompressSync(Buffer.alloc(242));
+${cssResponseMock}
+
+const tables = [
+  [0, Buffer.alloc(14)],
+  [1, Buffer.alloc(54)],
+  [2, Buffer.alloc(36)],
+  [3, Buffer.alloc(4)],
+  [4, Buffer.alloc(32)],
+  [5, Buffer.alloc(18)],
+  [6, Buffer.alloc(78)],
+  [7, Buffer.alloc(32)],
+  [202, Buffer.alloc(1)],
+  [203, Buffer.alloc(4)],
+];
+tables[0][1].writeUInt16BE(1, 2);
+tables[0][1].writeUInt32BE(12, 8);
+tables[1][1].writeUInt32BE(0x00010000, 0);
+tables[1][1].writeUInt32BE(0x5f0f3cf5, 12);
+tables[1][1].writeUInt16BE(1000, 18);
+tables[2][1].writeUInt32BE(0x00010000, 0);
+tables[2][1].writeUInt16BE(1, 34);
+tables[4][1].writeUInt32BE(0x00010000, 0);
+tables[4][1].writeUInt16BE(1, 4);
+tables[5][1].writeUInt16BE(1, 2);
+tables[5][1].writeUInt16BE(18, 4);
+tables[7][1].writeUInt32BE(0x00030000, 0);
+const tableDirectory = Buffer.from(tables.flatMap(([flag, data]) => [flag, data.length]));
+const compressed = brotliCompressSync(Buffer.concat(tables.map(([, data]) => data)));
 const header = Buffer.alloc(48);
 header.write("wOF2");
 header.writeUInt32BE(0x00010000, 4);
 header.writeUInt16BE(10, 12);
-header.writeUInt32BE(414, 16);
+header.writeUInt32BE(500, 16);
 header.writeUInt32BE(compressed.length, 20);
 header.writeUInt32BE(48 + tableDirectory.length + compressed.length, 8);
 const fakeFont = Buffer.concat([header, tableDirectory, compressed]);
 
 globalThis.fetch = async url => {
   if (url.includes("fonts.googleapis.com")) {
-    const sans = url.includes("Noto+Sans+SC");
-    const family = sans ? "Noto Sans SC" : "Noto Serif SC";
-    const file = sans ? "sans.5.woff2" : "serif.4.woff2";
-    return new Response("@font-face { font-family: '" + family + "'; src: url(https://example.test/" + file + "); unicode-range: U+0000-00FF; }");
+    return cssResponse(url);
   }
   return new Response(fakeFont);
 };
@@ -158,12 +195,11 @@ globalThis.fetch = async url => {
 
   await writeFile(
     mockPath,
-    `globalThis.fetch = async url => {
+    `${cssResponseMock}
+
+globalThis.fetch = async url => {
   if (url.includes("fonts.googleapis.com")) {
-    const sans = url.includes("Noto+Sans+SC");
-    const family = sans ? "Noto Sans SC" : "Noto Serif SC";
-    const file = sans ? "sans.5.woff2" : "serif.4.woff2";
-    return new Response("@font-face { font-family: '" + family + "'; src: url(https://example.test/" + file + "); unicode-range: U+0000-00FF; }");
+    return cssResponse(url);
   }
   const font = url.includes("/sans.") ? ${JSON.stringify(validSansBase64)} : ${JSON.stringify(validSerifBase64)};
   return new Response(Buffer.from(font, "base64"));
@@ -211,6 +247,8 @@ globalThis.fetch = async url => {
       `import fsPromises from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 
+${cssResponseMock}
+
 const realRename = fsPromises.rename;
 let commitFailed = false;
 fsPromises.rename = async (source, destination) => {
@@ -227,10 +265,7 @@ syncBuiltinESMExports();
 
 globalThis.fetch = async url => {
   if (url.includes("fonts.googleapis.com")) {
-    const sans = url.includes("Noto+Sans+SC");
-    const family = sans ? "Noto Sans SC" : "Noto Serif SC";
-    const file = sans ? "sans.5.woff2" : "serif.4.woff2";
-    return new Response("@font-face { font-family: '" + family + "'; src: url(https://example.test/" + file + "); unicode-range: U+0000-00FF; }");
+    return cssResponse(url);
   }
   const font = url.includes("/sans.") ? ${JSON.stringify(validSansBase64)} : ${JSON.stringify(validSerifBase64)};
   return new Response(Buffer.from(font, "base64"));

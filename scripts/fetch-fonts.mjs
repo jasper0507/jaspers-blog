@@ -10,94 +10,23 @@
 import { createWriteStream } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, writeFile, readdir, rename, rm } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
-import { Readable } from "node:stream";
+import { Readable, Transform } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { brotliDecompress } from "node:zlib";
 import { join } from "node:path";
+import { create as decodeFont } from "fontkitten";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const fontsDir = join(root, "public/fonts");
 const cssPath = join(root, "src/styles/fonts.css");
 const brotliDecompressAsync = promisify(brotliDecompress);
 const NOTO_FILE = /^noto-(serif|sans)-sc-.*\.woff2$/;
-const WOFF2_TAGS = [
-  "cmap",
-  "head",
-  "hhea",
-  "hmtx",
-  "maxp",
-  "name",
-  "OS/2",
-  "post",
-  "cvt ",
-  "fpgm",
-  "glyf",
-  "loca",
-  "prep",
-  "CFF ",
-  "VORG",
-  "EBDT",
-  "EBLC",
-  "gasp",
-  "hdmx",
-  "kern",
-  "LTSH",
-  "PCLT",
-  "VDMX",
-  "vhea",
-  "vmtx",
-  "BASE",
-  "GDEF",
-  "GPOS",
-  "GSUB",
-  "EBSC",
-  "JSTF",
-  "MATH",
-  "CBDT",
-  "CBLC",
-  "COLR",
-  "CPAL",
-  "SVG ",
-  "sbix",
-  "acnt",
-  "avar",
-  "bdat",
-  "bloc",
-  "bsln",
-  "cvar",
-  "fdsc",
-  "feat",
-  "fmtx",
-  "fvar",
-  "gvar",
-  "hsty",
-  "just",
-  "lcar",
-  "mort",
-  "morx",
-  "opbd",
-  "prop",
-  "trak",
-  "Zapf",
-  "Silf",
-  "Glat",
-  "Gloc",
-  "Feat",
-  "Sill",
-];
-const REQUIRED_WOFF2_TAGS = [
-  "cmap",
-  "head",
-  "hhea",
-  "hmtx",
-  "maxp",
-  "name",
-  "OS/2",
-  "post",
-  "glyf",
-  "loca",
-];
+const MAX_CSS_BYTES = 1024 * 1024;
+const MAX_FONT_BYTES = 16 * 1024 * 1024;
+const MAX_FONT_DATA_BYTES = 64 * 1024 * 1024;
+const MAX_ALL_FONTS_BYTES = 256 * 1024 * 1024;
+let downloadedFontBytes = 0;
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -162,19 +91,51 @@ const localFileName = (prefix, url, unicodeRange) => {
   return `${prefix}-${latinExtraName(unicodeRange)}.woff2`;
 };
 
+const declaredResponseSize = (res, limit, label) => {
+  const header = res.headers.get("content-length");
+  if (!header) return;
+  const size = Number(header);
+  if (!Number.isSafeInteger(size) || size < 0 || size > limit) {
+    throw new Error(`${label}响应过大或长度无效`);
+  }
+};
+
 const fetchText = async url => {
   const res = await fetch(url, { headers: { "User-Agent": UA } });
   if (!res.ok) throw new Error(`GET ${url} → ${res.status}`);
-  return res.text();
+  if (!res.body) throw new Error(`GET ${url} → 响应为空`);
+  declaredResponseSize(res, MAX_CSS_BYTES, "字体样式");
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of Readable.fromWeb(res.body)) {
+    size += chunk.length;
+    if (size > MAX_CSS_BYTES) throw new Error("字体样式响应过大");
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks, size).toString("utf8");
 };
 
 const download = async (url, dest) => {
   const res = await fetch(url, { headers: { "User-Agent": UA } });
   if (!res.ok) throw new Error(`GET ${url} → ${res.status}`);
-  await pipeline(Readable.fromWeb(res.body), createWriteStream(dest));
+  if (!res.body) throw new Error(`GET ${url} → 响应为空`);
+  declaredResponseSize(res, MAX_FONT_BYTES, "字体");
+  let fileBytes = 0;
+  const limiter = new Transform({
+    transform(chunk, _encoding, callback) {
+      fileBytes += chunk.length;
+      downloadedFontBytes += chunk.length;
+      if (fileBytes > MAX_FONT_BYTES || downloadedFontBytes > MAX_ALL_FONTS_BYTES) {
+        callback(new Error("字体响应过大"));
+      } else {
+        callback(null, chunk);
+      }
+    },
+  });
+  await pipeline(Readable.fromWeb(res.body), limiter, createWriteStream(dest));
 };
 
-const validateWoff2 = async (font, name) => {
+const validateWoff2 = async (font, name, expectedFamily) => {
   const invalid = () => {
     throw new Error(`下载内容不是 WOFF2 字体：${name}`);
   };
@@ -184,6 +145,9 @@ const validateWoff2 = async (font, name) => {
     font.readUInt32BE(4) === 0x74746366 ||
     font.readUInt32BE(8) !== font.length ||
     font.readUInt16BE(12) === 0 ||
+    font.readUInt16BE(14) !== 0 ||
+    font.readUInt32BE(16) === 0 ||
+    font.readUInt32BE(16) > MAX_FONT_DATA_BYTES ||
     font.readUInt32BE(20) === 0
   ) {
     invalid();
@@ -203,8 +167,8 @@ const validateWoff2 = async (font, name) => {
     invalid();
   };
 
-  const tables = new Map();
-  let decompressedSize = 0;
+  const tags = new Set();
+  let expectedFontDataBytes = 0;
 
   for (let index = 0; index < font.readUInt16BE(12); index += 1) {
     if (offset >= font.length) invalid();
@@ -212,142 +176,42 @@ const validateWoff2 = async (font, name) => {
     offset += 1;
     const tagIndex = flags & 0x3f;
     if (tagIndex === 63 && offset + 4 > font.length) invalid();
-    let tag = WOFF2_TAGS[tagIndex];
+    let tag = tagIndex;
     if (tagIndex === 63) {
       tag = font.subarray(offset, offset + 4).toString("ascii");
       offset += 4;
     }
-    if (tables.has(tag)) invalid();
+    if (tags.has(tag)) invalid();
+    tags.add(tag);
 
     const transformVersion = flags >> 6;
-    const transformed =
-      tag === "glyf" || tag === "loca"
-        ? transformVersion === 0
-        : tag === "hmtx" && transformVersion === 1;
+    const glyfOrLoca = tagIndex === 10 || tagIndex === 11 || tag === "glyf" || tag === "loca";
+    const hmtx = tagIndex === 3 || tag === "hmtx";
+    const transformed = glyfOrLoca ? transformVersion === 0 : hmtx && transformVersion === 1;
     if (
-      ((tag === "glyf" || tag === "loca") && ![0, 3].includes(transformVersion)) ||
-      (tag === "hmtx" && ![0, 1].includes(transformVersion)) ||
-      (!["glyf", "loca", "hmtx"].includes(tag) && transformVersion !== 0)
+      (glyfOrLoca && ![0, 3].includes(transformVersion)) ||
+      (hmtx && ![0, 1].includes(transformVersion)) ||
+      (!glyfOrLoca && !hmtx && transformVersion !== 0)
     ) {
       invalid();
     }
 
     const originalLength = readUIntBase128();
-    const transformedLength = transformed ? readUIntBase128() : originalLength;
-    if (tag === "loca" && transformed && transformedLength !== 0) invalid();
-    tables.set(tag, {
-      offset: decompressedSize,
-      originalLength,
-      transformed,
-      transformedLength,
-    });
-    decompressedSize += transformedLength;
-    if (decompressedSize > 0xffffffff) invalid();
-  }
-
-  for (const tag of REQUIRED_WOFF2_TAGS) {
-    if (!tables.has(tag)) invalid();
+    const dataLength = transformed ? readUIntBase128() : originalLength;
+    if ((tagIndex === 11 || tag === "loca") && transformed && dataLength !== 0) invalid();
+    expectedFontDataBytes += dataLength;
+    if (expectedFontDataBytes > MAX_FONT_DATA_BYTES) invalid();
   }
 
   const compressedEnd = offset + font.readUInt32BE(20);
   if (compressedEnd > font.length) invalid();
-  let decompressed;
   try {
-    decompressed = await brotliDecompressAsync(font.subarray(offset, compressedEnd));
+    const decompressed = await brotliDecompressAsync(font.subarray(offset, compressedEnd), {
+      maxOutputLength: MAX_FONT_DATA_BYTES,
+    });
+    if (decompressed.length !== expectedFontDataBytes) invalid();
   } catch {
     invalid();
-  }
-  if (decompressed.length !== decompressedSize) invalid();
-
-  const tableData = (tag, minimumLength) => {
-    const table = tables.get(tag);
-    if (!table || table.transformed || table.transformedLength < minimumLength) invalid();
-    return decompressed.subarray(table.offset, table.offset + table.transformedLength);
-  };
-  const head = tableData("head", 54);
-  const maxp = tableData("maxp", 32);
-  const hhea = tableData("hhea", 36);
-  if (
-    head.readUInt32BE(0) !== 0x00010000 ||
-    head.readUInt32BE(12) !== 0x5f0f3cf5 ||
-    head.readUInt16BE(18) < 16 ||
-    head.readUInt16BE(18) > 16384 ||
-    ![0, 1].includes(head.readInt16BE(50)) ||
-    head.readInt16BE(52) !== 0 ||
-    maxp.readUInt32BE(0) !== 0x00010000 ||
-    maxp.readUInt16BE(4) === 0 ||
-    hhea.readUInt32BE(0) !== 0x00010000 ||
-    hhea.readUInt16BE(34) === 0 ||
-    hhea.readUInt16BE(34) > maxp.readUInt16BE(4)
-  ) {
-    invalid();
-  }
-
-  const cmap = tableData("cmap", 12);
-  const cmapRecordsEnd = 4 + cmap.readUInt16BE(2) * 8;
-  if (cmap.readUInt16BE(0) !== 0 || cmap.readUInt16BE(2) === 0 || cmapRecordsEnd > cmap.length) {
-    invalid();
-  }
-  for (let record = 4; record < cmapRecordsEnd; record += 8) {
-    const subtableOffset = cmap.readUInt32BE(record + 4);
-    if (subtableOffset < cmapRecordsEnd || subtableOffset + 2 > cmap.length) invalid();
-  }
-
-  const naming = tableData("name", 18);
-  const namingFormat = naming.readUInt16BE(0);
-  const namingCount = naming.readUInt16BE(2);
-  let namingRecordsEnd = 6 + namingCount * 12;
-  if (namingCount === 0 || namingRecordsEnd > naming.length || ![0, 1].includes(namingFormat)) {
-    invalid();
-  }
-  if (namingFormat === 1) {
-    if (namingRecordsEnd + 2 > naming.length) invalid();
-    namingRecordsEnd += 2 + naming.readUInt16BE(namingRecordsEnd) * 4;
-  }
-  const stringOffset = naming.readUInt16BE(4);
-  if (namingRecordsEnd > naming.length || stringOffset < namingRecordsEnd) invalid();
-  for (let record = 6; record < 6 + namingCount * 12; record += 12) {
-    if (
-      stringOffset + naming.readUInt16BE(record + 10) + naming.readUInt16BE(record + 8) >
-      naming.length
-    ) {
-      invalid();
-    }
-  }
-
-  tableData("OS/2", 78);
-  const postVersion = tableData("post", 32).readUInt32BE(0);
-  if (![0x00010000, 0x00020000, 0x00025000, 0x00030000, 0x00040000].includes(postVersion)) {
-    invalid();
-  }
-
-  const numGlyphs = maxp.readUInt16BE(4);
-  const loca = tables.get("loca");
-  const glyf = tables.get("glyf");
-  const expectedLocaLength = (numGlyphs + 1) * (head.readInt16BE(50) === 0 ? 2 : 4);
-  if (loca.originalLength !== expectedLocaLength || glyf.originalLength === 0) invalid();
-  if (glyf.transformed) {
-    const transformedGlyf = decompressed.subarray(
-      glyf.offset,
-      glyf.offset + glyf.transformedLength,
-    );
-    if (
-      transformedGlyf.length < 36 ||
-      transformedGlyf.readUInt16BE(0) !== 0 ||
-      (transformedGlyf.readUInt16BE(2) & 0xfffe) !== 0 ||
-      transformedGlyf.readUInt16BE(4) !== numGlyphs ||
-      transformedGlyf.readUInt16BE(6) !== head.readInt16BE(50)
-    ) {
-      invalid();
-    }
-    let transformedStreamsLength = 36;
-    for (let stream = 8; stream < 36; stream += 4) {
-      transformedStreamsLength += transformedGlyf.readUInt32BE(stream);
-    }
-    if ((transformedGlyf.readUInt16BE(2) & 1) !== 0) {
-      transformedStreamsLength += Math.ceil(numGlyphs / 8);
-    }
-    if (transformedStreamsLength !== transformedGlyf.length) invalid();
   }
 
   const metaOffset = font.readUInt32BE(28);
@@ -377,6 +241,33 @@ const validateWoff2 = async (font, name) => {
     (privateOffset === 0 &&
       (trailingPadding.length > 3 || trailingPadding.some(byte => byte !== 0)))
   ) {
+    invalid();
+  }
+
+  try {
+    const decoded = decodeFont(font);
+    const weight = decoded.variationAxes.wght;
+    if (
+      decoded.isCollection ||
+      decoded.type !== "WOFF2" ||
+      !decoded.familyName.startsWith(expectedFamily) ||
+      decoded.numGlyphs === 0 ||
+      decoded.characterSet.length === 0 ||
+      !weight ||
+      weight.min > 200 ||
+      weight.max < 900
+    ) {
+      invalid();
+    }
+    for (const codePoint of decoded.characterSet) {
+      if (!decoded.glyphForCodePoint(codePoint)) invalid();
+    }
+    for (let glyphId = 0; glyphId < decoded.numGlyphs; glyphId += 1) {
+      const glyph = decoded.getGlyph(glyphId);
+      if (!glyph || !Number.isFinite(glyph.advanceWidth)) invalid();
+      void glyph.path.commands.length;
+    }
+  } catch {
     invalid();
   }
 };
@@ -452,12 +343,10 @@ try {
 
     for (let i = 0; i < familyJobs.length; i += concurrency) {
       const batch = familyJobs.slice(i, i + concurrency);
-      await Promise.all(
-        batch.map(async job => {
-          await download(job.url, job.dest);
-          await validateWoff2(await readFile(job.dest), job.localName);
-        }),
-      );
+      await Promise.all(batch.map(job => download(job.url, job.dest)));
+      for (const job of batch) {
+        await validateWoff2(await readFile(job.dest), job.localName, job.family);
+      }
       process.stdout.write(
         `  downloaded ${Math.min(i + concurrency, familyJobs.length)}/${familyJobs.length}\r`,
       );
