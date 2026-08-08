@@ -118,6 +118,46 @@ try {
 
   await writeFile(
     mockPath,
+    `import { brotliCompressSync } from "node:zlib";
+
+const tableDirectory = Buffer.from([
+  0, 16,
+  1, 54,
+  2, 36,
+  3, 4,
+  4, 6,
+  5, 18,
+  6, 68,
+  7, 32,
+  202, 4,
+  203, 4,
+]);
+const compressed = brotliCompressSync(Buffer.alloc(242));
+const header = Buffer.alloc(48);
+header.write("wOF2");
+header.writeUInt32BE(0x00010000, 4);
+header.writeUInt16BE(10, 12);
+header.writeUInt32BE(414, 16);
+header.writeUInt32BE(compressed.length, 20);
+header.writeUInt32BE(48 + tableDirectory.length + compressed.length, 8);
+const fakeFont = Buffer.concat([header, tableDirectory, compressed]);
+
+globalThis.fetch = async url => {
+  if (url.includes("fonts.googleapis.com")) {
+    const sans = url.includes("Noto+Sans+SC");
+    const family = sans ? "Noto Sans SC" : "Noto Serif SC";
+    const file = sans ? "sans.5.woff2" : "serif.4.woff2";
+    return new Response("@font-face { font-family: '" + family + "'; src: url(https://example.test/" + file + "); unicode-range: U+0000-00FF; }");
+  }
+  return new Response(fakeFont);
+};
+`,
+  );
+  await assert.rejects(runCommand(), /下载内容不是 WOFF2 字体/);
+  assert.deepEqual(await snapshot(), before, "字体内部表无效时旧字体和 CSS 必须原样保留");
+
+  await writeFile(
+    mockPath,
     `globalThis.fetch = async url => {
   if (url.includes("fonts.googleapis.com")) {
     const sans = url.includes("Noto+Sans+SC");

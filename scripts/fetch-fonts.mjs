@@ -203,7 +203,7 @@ const validateWoff2 = async (font, name) => {
     invalid();
   };
 
-  const tags = new Set();
+  const tables = new Map();
   let decompressedSize = 0;
 
   for (let index = 0; index < font.readUInt16BE(12); index += 1) {
@@ -217,8 +217,7 @@ const validateWoff2 = async (font, name) => {
       tag = font.subarray(offset, offset + 4).toString("ascii");
       offset += 4;
     }
-    if (tag && tags.has(tag)) invalid();
-    if (tag) tags.add(tag);
+    if (tables.has(tag)) invalid();
 
     const transformVersion = flags >> 6;
     const transformed =
@@ -236,12 +235,18 @@ const validateWoff2 = async (font, name) => {
     const originalLength = readUIntBase128();
     const transformedLength = transformed ? readUIntBase128() : originalLength;
     if (tag === "loca" && transformed && transformedLength !== 0) invalid();
+    tables.set(tag, {
+      offset: decompressedSize,
+      originalLength,
+      transformed,
+      transformedLength,
+    });
     decompressedSize += transformedLength;
     if (decompressedSize > 0xffffffff) invalid();
   }
 
   for (const tag of REQUIRED_WOFF2_TAGS) {
-    if (!tags.has(tag)) invalid();
+    if (!tables.has(tag)) invalid();
   }
 
   const compressedEnd = offset + font.readUInt32BE(20);
@@ -253,6 +258,97 @@ const validateWoff2 = async (font, name) => {
     invalid();
   }
   if (decompressed.length !== decompressedSize) invalid();
+
+  const tableData = (tag, minimumLength) => {
+    const table = tables.get(tag);
+    if (!table || table.transformed || table.transformedLength < minimumLength) invalid();
+    return decompressed.subarray(table.offset, table.offset + table.transformedLength);
+  };
+  const head = tableData("head", 54);
+  const maxp = tableData("maxp", 32);
+  const hhea = tableData("hhea", 36);
+  if (
+    head.readUInt32BE(0) !== 0x00010000 ||
+    head.readUInt32BE(12) !== 0x5f0f3cf5 ||
+    head.readUInt16BE(18) < 16 ||
+    head.readUInt16BE(18) > 16384 ||
+    ![0, 1].includes(head.readInt16BE(50)) ||
+    head.readInt16BE(52) !== 0 ||
+    maxp.readUInt32BE(0) !== 0x00010000 ||
+    maxp.readUInt16BE(4) === 0 ||
+    hhea.readUInt32BE(0) !== 0x00010000 ||
+    hhea.readUInt16BE(34) === 0 ||
+    hhea.readUInt16BE(34) > maxp.readUInt16BE(4)
+  ) {
+    invalid();
+  }
+
+  const cmap = tableData("cmap", 12);
+  const cmapRecordsEnd = 4 + cmap.readUInt16BE(2) * 8;
+  if (cmap.readUInt16BE(0) !== 0 || cmap.readUInt16BE(2) === 0 || cmapRecordsEnd > cmap.length) {
+    invalid();
+  }
+  for (let record = 4; record < cmapRecordsEnd; record += 8) {
+    const subtableOffset = cmap.readUInt32BE(record + 4);
+    if (subtableOffset < cmapRecordsEnd || subtableOffset + 2 > cmap.length) invalid();
+  }
+
+  const naming = tableData("name", 18);
+  const namingFormat = naming.readUInt16BE(0);
+  const namingCount = naming.readUInt16BE(2);
+  let namingRecordsEnd = 6 + namingCount * 12;
+  if (namingCount === 0 || namingRecordsEnd > naming.length || ![0, 1].includes(namingFormat)) {
+    invalid();
+  }
+  if (namingFormat === 1) {
+    if (namingRecordsEnd + 2 > naming.length) invalid();
+    namingRecordsEnd += 2 + naming.readUInt16BE(namingRecordsEnd) * 4;
+  }
+  const stringOffset = naming.readUInt16BE(4);
+  if (namingRecordsEnd > naming.length || stringOffset < namingRecordsEnd) invalid();
+  for (let record = 6; record < 6 + namingCount * 12; record += 12) {
+    if (
+      stringOffset + naming.readUInt16BE(record + 10) + naming.readUInt16BE(record + 8) >
+      naming.length
+    ) {
+      invalid();
+    }
+  }
+
+  tableData("OS/2", 78);
+  const postVersion = tableData("post", 32).readUInt32BE(0);
+  if (![0x00010000, 0x00020000, 0x00025000, 0x00030000, 0x00040000].includes(postVersion)) {
+    invalid();
+  }
+
+  const numGlyphs = maxp.readUInt16BE(4);
+  const loca = tables.get("loca");
+  const glyf = tables.get("glyf");
+  const expectedLocaLength = (numGlyphs + 1) * (head.readInt16BE(50) === 0 ? 2 : 4);
+  if (loca.originalLength !== expectedLocaLength || glyf.originalLength === 0) invalid();
+  if (glyf.transformed) {
+    const transformedGlyf = decompressed.subarray(
+      glyf.offset,
+      glyf.offset + glyf.transformedLength,
+    );
+    if (
+      transformedGlyf.length < 36 ||
+      transformedGlyf.readUInt16BE(0) !== 0 ||
+      (transformedGlyf.readUInt16BE(2) & 0xfffe) !== 0 ||
+      transformedGlyf.readUInt16BE(4) !== numGlyphs ||
+      transformedGlyf.readUInt16BE(6) !== head.readInt16BE(50)
+    ) {
+      invalid();
+    }
+    let transformedStreamsLength = 36;
+    for (let stream = 8; stream < 36; stream += 4) {
+      transformedStreamsLength += transformedGlyf.readUInt32BE(stream);
+    }
+    if ((transformedGlyf.readUInt16BE(2) & 1) !== 0) {
+      transformedStreamsLength += Math.ceil(numGlyphs / 8);
+    }
+    if (transformedStreamsLength !== transformedGlyf.length) invalid();
+  }
 
   const metaOffset = font.readUInt32BE(28);
   const metaLength = font.readUInt32BE(32);
