@@ -8,7 +8,7 @@
  * 运行：node scripts/fetch-fonts.mjs
  */
 import { createWriteStream } from "node:fs";
-import { mkdir, readFile, writeFile, readdir, unlink } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, writeFile, readdir, rename, rm } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
@@ -73,7 +73,9 @@ const latinExtraName = unicodeRange => {
 };
 
 const localFileName = (prefix, url, unicodeRange) => {
-  const file = url.split("/").pop() ?? "font.woff2";
+  const remote = new URL(url);
+  if (remote.protocol !== "https:") throw new Error(`字体地址必须使用 HTTPS：${url}`);
+  const file = remote.pathname.split("/").pop() ?? "font.woff2";
   const numbered = file.match(/\.(\d+)\.woff2$/);
   if (numbered) return `${prefix}-${numbered[1]}.woff2`;
   return `${prefix}-${latinExtraName(unicodeRange)}.woff2`;
@@ -98,7 +100,7 @@ const parseFaces = css => {
     const family = body.match(/font-family:\s*['"]?([^;'"]+)/)?.[1]?.trim();
     const url = body.match(/url\(([^)]+)\)/)?.[1]?.replace(/['"]/g, "");
     const unicodeRange = body.match(/unicode-range:\s*([^;]+)/)?.[1]?.trim();
-    if (!family || !url || !unicodeRange) continue;
+    if (!family || !url || !unicodeRange) throw new Error("字体样式包含不完整的 @font-face");
     faces.push({ family, url, unicodeRange });
   }
   return faces;
@@ -124,57 +126,139 @@ const formatFace = (family, localName, unicodeRange) => `@font-face {
 `;
 
 await mkdir(fontsDir, { recursive: true });
+const transactionDir = await mkdtemp(join(root, ".font-refresh-"));
+const nextFontsDir = join(transactionDir, "fonts");
+const nextCssPath = join(transactionDir, "fonts.css");
+const oldFontsDir = join(transactionDir, "old-fonts");
+const oldCssPath = join(transactionDir, "old-fonts.css");
+let committed = false;
+let failure;
 
-// 清理旧 Noto 分包（保留 LICENSE 与拉丁 woff2）
-const existing = await readdir(fontsDir);
-for (const name of existing) {
-  if (/^noto-(serif|sans)-sc-.*\.woff2$/.test(name)) {
-    await unlink(join(fontsDir, name));
-  }
-}
-
-const generated = [];
-const concurrency = 12;
-
-for (const { cssFamily, query, filePrefix } of FAMILIES) {
-  const cssUrl = `https://fonts.googleapis.com/css2?${query}`;
-  console.log(`fetch CSS ${cssFamily}…`);
-  const css = await fetchText(cssUrl);
-  const faces = uniqueVariableFaces(parseFaces(css).filter(f => f.family === cssFamily));
-  console.log(`  ${faces.length} unique subsets`);
-
-  const jobs = faces.map(face => {
-    const name = localFileName(filePrefix, face.url, face.unicodeRange);
-    return { ...face, localName: name, dest: join(fontsDir, name) };
-  });
-
-  for (let i = 0; i < jobs.length; i += concurrency) {
-    const batch = jobs.slice(i, i + concurrency);
-    await Promise.all(batch.map(job => download(job.url, job.dest)));
-    process.stdout.write(`  downloaded ${Math.min(i + concurrency, jobs.length)}/${jobs.length}\r`);
-  }
-  process.stdout.write("\n");
-
-  for (const job of jobs) {
-    generated.push(formatFace(cssFamily, job.localName, job.unicodeRange));
-  }
-}
-
-const header = `/* 由 scripts/fetch-fonts.mjs 生成。拉丁资源手维；Noto 为可变字重 unicode-range 分包。 */\n\n`;
-await writeFile(cssPath, header + LATIN_FACES + "\n" + generated.join("\n"), "utf8");
-console.log(`wrote ${cssPath} (${generated.length} Noto faces)`);
-
-// 确保 LICENSE 存在（Noto Sans 若缺失则从 Serif 复制 OFL 并改名提示）
 try {
-  await readFile(join(fontsDir, "LICENSE-noto-sans-sc.txt"), "utf8");
-} catch {
-  const serifLicense = await readFile(join(fontsDir, "LICENSE-noto-serif-sc.txt"), "utf8");
-  await writeFile(
-    join(fontsDir, "LICENSE-noto-sans-sc.txt"),
-    serifLicense.replaceAll("Noto Serif SC", "Noto Sans SC"),
-    "utf8",
-  );
-  console.log("wrote LICENSE-noto-sans-sc.txt from serif OFL template");
-}
+  await mkdir(nextFontsDir);
+  for (const name of await readdir(fontsDir)) {
+    if (!/^noto-(serif|sans)-sc-.*\.woff2$/.test(name)) {
+      await cp(join(fontsDir, name), join(nextFontsDir, name), { recursive: true });
+    }
+  }
 
-console.log("done");
+  const jobs = [];
+  const localNames = new Set();
+  const concurrency = 12;
+
+  for (const { cssFamily, query, filePrefix } of FAMILIES) {
+    const cssUrl = `https://fonts.googleapis.com/css2?${query}`;
+    console.log(`fetch CSS ${cssFamily}…`);
+    const css = await fetchText(cssUrl);
+    const faces = uniqueVariableFaces(parseFaces(css).filter(f => f.family === cssFamily));
+    if (faces.length === 0) throw new Error(`${cssFamily} 没有可用的字体分包`);
+    console.log(`  ${faces.length} unique subsets`);
+
+    const familyJobs = faces.map(face => {
+      const localName = localFileName(filePrefix, face.url, face.unicodeRange);
+      if (localNames.has(localName)) throw new Error(`字体文件名重复：${localName}`);
+      localNames.add(localName);
+      return { ...face, family: cssFamily, localName, dest: join(nextFontsDir, localName) };
+    });
+
+    for (let i = 0; i < familyJobs.length; i += concurrency) {
+      const batch = familyJobs.slice(i, i + concurrency);
+      await Promise.all(batch.map(job => download(job.url, job.dest)));
+      process.stdout.write(
+        `  downloaded ${Math.min(i + concurrency, familyJobs.length)}/${familyJobs.length}\r`,
+      );
+    }
+    process.stdout.write("\n");
+    jobs.push(...familyJobs);
+  }
+
+  await Promise.all(
+    jobs.map(async job => {
+      const font = await readFile(job.dest);
+      if (
+        font.length < 48 ||
+        font.subarray(0, 4).toString("ascii") !== "wOF2" ||
+        font.readUInt32BE(8) !== font.length ||
+        font.readUInt16BE(12) === 0 ||
+        font.readUInt32BE(16) === 0 ||
+        font.readUInt32BE(20) === 0
+      ) {
+        throw new Error(`下载内容不是 WOFF2 字体：${job.localName}`);
+      }
+    }),
+  );
+
+  const stagedNotoNames = (await readdir(nextFontsDir))
+    .filter(name => /^noto-(serif|sans)-sc-.*\.woff2$/.test(name))
+    .sort();
+  const expectedNames = [...localNames].sort();
+  if (
+    stagedNotoNames.length !== expectedNames.length ||
+    stagedNotoNames.some((name, index) => name !== expectedNames[index])
+  ) {
+    throw new Error("字体样式清单与下载文件不一致");
+  }
+
+  const generated = jobs.map(job => formatFace(job.family, job.localName, job.unicodeRange));
+  const header = `/* 由 scripts/fetch-fonts.mjs 生成。拉丁资源手维；Noto 为可变字重 unicode-range 分包。 */\n\n`;
+  await writeFile(nextCssPath, header + LATIN_FACES + "\n" + generated.join("\n"), "utf8");
+
+  try {
+    await readFile(join(nextFontsDir, "LICENSE-noto-sans-sc.txt"), "utf8");
+  } catch {
+    const serifLicense = await readFile(join(nextFontsDir, "LICENSE-noto-serif-sc.txt"), "utf8");
+    await writeFile(
+      join(nextFontsDir, "LICENSE-noto-sans-sc.txt"),
+      serifLicense.replaceAll("Noto Serif SC", "Noto Sans SC"),
+      "utf8",
+    );
+    console.log("wrote LICENSE-noto-sans-sc.txt from serif OFL template");
+  }
+
+  let fontsBackedUp = false;
+  let fontsInstalled = false;
+  let cssBackedUp = false;
+  let cssInstalled = false;
+  try {
+    // ponytail: catchable errors roll back; add a journal only if crash recovery becomes required.
+    await rename(fontsDir, oldFontsDir);
+    fontsBackedUp = true;
+    await rename(nextFontsDir, fontsDir);
+    fontsInstalled = true;
+    await rename(cssPath, oldCssPath);
+    cssBackedUp = true;
+    await rename(nextCssPath, cssPath);
+    cssInstalled = true;
+  } catch (error) {
+    const rollbackErrors = [];
+    const rollback = async action => {
+      try {
+        await action();
+      } catch (rollbackError) {
+        rollbackErrors.push(rollbackError);
+      }
+    };
+    if (cssInstalled) await rollback(() => rename(cssPath, nextCssPath));
+    if (cssBackedUp) await rollback(() => rename(oldCssPath, cssPath));
+    if (fontsInstalled) await rollback(() => rename(fontsDir, nextFontsDir));
+    if (fontsBackedUp) await rollback(() => rename(oldFontsDir, fontsDir));
+    if (rollbackErrors.length > 0) {
+      throw new AggregateError([error, ...rollbackErrors], "字体替换失败且未能完整恢复旧文件");
+    }
+    throw error;
+  }
+
+  committed = true;
+  console.log(`wrote ${cssPath} (${generated.length} Noto faces)`);
+  console.log("done");
+} catch (error) {
+  failure = error;
+  throw error;
+} finally {
+  try {
+    await rm(transactionDir, { recursive: true, force: true });
+  } catch (cleanupError) {
+    if (!failure && !committed) throw cleanupError;
+    console.warn(`未能清理临时目录 ${transactionDir}：${cleanupError.message}`);
+  }
+}
