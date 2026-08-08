@@ -24,6 +24,18 @@ const toc = headings.filter(
   ({ depth, slug }) => (depth === 2 || depth === 3) && slug !== "footnote-label",
 );
 const publishedLabel = formatPostDateCompact(post.data.publishedAt);
+const structuredData = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  headline: post.data.title,
+  description: post.data.description,
+  url: postUrl.href,
+  mainEntityOfPage: postUrl.href,
+  datePublished: post.data.publishedAt.toISOString(),
+  dateModified: (post.data.updatedAt ?? post.data.publishedAt).toISOString(),
+  inLanguage: "zh-CN",
+  author: { "@type": "Person", name: "Jasper" },
+}).replaceAll("<", "\\u003c");
 ---
 
 <BaseLayout
@@ -31,19 +43,9 @@ const publishedLabel = formatPostDateCompact(post.data.publishedAt);
   description={post.data.description}
   pageClass="post-page"
   ogType="article"
-  structuredData={{
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: post.data.title,
-    description: post.data.description,
-    url: postUrl.href,
-    mainEntityOfPage: postUrl.href,
-    datePublished: post.data.publishedAt.toISOString(),
-    dateModified: (post.data.updatedAt ?? post.data.publishedAt).toISOString(),
-    inLanguage: "zh-CN",
-    author: { "@type": "Person", name: "Jasper" },
-  }}
 >
+  <script slot="head" type="application/ld+json" set:html={structuredData} is:inline />
+
   <article class="post-article" aria-labelledby="post-title" data-pagefind-body>
     <header class="post-header">
       <h1 id="post-title">{post.data.title}</h1>

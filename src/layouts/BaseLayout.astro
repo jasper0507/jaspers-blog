@@ -8,7 +8,6 @@ interface PageData {
   description?: string;
   pageClass?: string;
   ogType?: "website" | "article";
-  structuredData?: Record<string, unknown>;
 }
 
 interface Props extends PageData {
@@ -24,23 +23,22 @@ const path = Astro.url.pathname;
 const inArticles = ["/posts/", "/tags/", "/archives/"].some(prefix => path.startsWith(prefix));
 const year = new Date().getFullYear();
 const structuredData = JSON.stringify(
-  pageData.structuredData ??
-    (path === "/"
-      ? {
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          name: siteTitle,
-          url: canonical.href,
-          inLanguage: "zh-CN",
-        }
-      : {
-          "@context": "https://schema.org",
-          "@type": "WebPage",
-          name: pageData.title ?? siteTitle,
-          description,
-          url: canonical.href,
-          inLanguage: "zh-CN",
-        }),
+  path === "/"
+    ? {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: siteTitle,
+        url: canonical.href,
+        inLanguage: "zh-CN",
+      }
+    : {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: pageData.title ?? siteTitle,
+        description,
+        url: canonical.href,
+        inLanguage: "zh-CN",
+      },
 ).replaceAll("<", "\\u003c");
 ---
 
@@ -58,10 +56,11 @@ const structuredData = JSON.stringify(
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
-    <slot name="head" />
     <link rel="stylesheet" href="/pagefind/pagefind-component-ui.css" />
     <title>{title}</title>
-    <script type="application/ld+json" set:html={structuredData} is:inline />
+    <slot name="head">
+      <script type="application/ld+json" set:html={structuredData} is:inline />
+    </slot>
     <script is:inline type="module" src="/pagefind/pagefind-component-ui.js"></script>
     <script is:inline>
       (() => {

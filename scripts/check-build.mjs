@@ -41,6 +41,7 @@ const allPostMetadata = (await readContentMetadata("src/content/posts")).map(({ 
     title: data.title,
     description: data.description,
     publishedAt: data.publishedAt,
+    updatedAt: data.updatedAt,
     tags: data.tags ?? [],
     draft: data.draft,
   };
@@ -128,9 +129,12 @@ assert.deepEqual(
   "生产构建应只生成当前公开技术文章",
 );
 
-for (const { slug, title, description, publishedAt, tags } of postMetadata) {
+for (const { slug, title, description, publishedAt, updatedAt, tags } of postMetadata) {
   const page = pages[`posts/${slug}`];
   const canonical = `https://blog.jasper0507.cc.cd/posts/${slug}/`;
+  const structuredDataScripts = [
+    ...page.matchAll(/<script\b[^>]*type="application\/ld\+json"[^>]*>([^<]+)<\/script>/g),
+  ];
 
   assert.match(page, new RegExp(`<h1 id="post-title">${escapeRegExp(escapeHtml(title))}</h1>`));
   assert.match(page, new RegExp(`<link rel="canonical" href="${canonical}">`));
@@ -158,7 +162,19 @@ for (const { slug, title, description, publishedAt, tags } of postMetadata) {
   assert.match(page, new RegExp(`datetime="${new Date(publishedAt).toISOString()}"`));
   assert.doesNotMatch(page, /发布于|更新于/, `${slug} 不得展示「发布于/更新于」前缀`);
   assert.match(page, /<meta property="og:type" content="article">/);
-  assert.match(page, /"@type":"BlogPosting"/);
+  assert.equal(structuredDataScripts.length, 1, `${slug} 应只输出一段结构化数据`);
+  assert.deepEqual(JSON.parse(structuredDataScripts[0][1]), {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: title,
+    description,
+    url: canonical,
+    mainEntityOfPage: canonical,
+    datePublished: new Date(publishedAt).toISOString(),
+    dateModified: new Date(updatedAt ?? publishedAt).toISOString(),
+    inLanguage: "zh-CN",
+    author: { "@type": "Person", name: "Jasper" },
+  });
 }
 
 const orderedPosts = postMetadata.toSorted(
