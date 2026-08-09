@@ -1,9 +1,8 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { getPublishedPosts } from "../../lib/posts";
-import { getPublishedPostTags } from "../../lib/tags";
+import { getPublishedPostCatalog } from "../../lib/posts";
 
-const tags = getPublishedPostTags(await getPublishedPosts());
+const { tags } = await getPublishedPostCatalog();
 ---
 
 <BaseLayout title="标签" description="按标签浏览 Jasper 的技术文章。" pageClass="page-shell">

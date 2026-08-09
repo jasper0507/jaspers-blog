@@ -1,18 +1,16 @@
 ---
 import type { GetStaticPaths } from "astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { formatPostDateIso, getPublishedPosts } from "../../lib/posts";
-import { getPublishedPostTags } from "../../lib/tags";
+import { getPublishedPostCatalog } from "../../lib/posts";
 
-type PublishedPost = Awaited<ReturnType<typeof getPublishedPosts>>[number];
-type PublishedTag = ReturnType<typeof getPublishedPostTags<PublishedPost>>[number];
+type PublishedTag = Awaited<ReturnType<typeof getPublishedPostCatalog>>["tags"][number];
 
 interface Props {
   tag: PublishedTag;
 }
 
 export const getStaticPaths = (async () =>
-  getPublishedPostTags(await getPublishedPosts()).map(tag => ({
+  (await getPublishedPostCatalog()).tags.map(tag => ({
     params: { slug: tag.slug },
     props: { tag },
   }))) satisfies GetStaticPaths;
@@ -31,11 +29,9 @@ const { tag } = Astro.props;
       tag.posts.map(post => (
         <li>
           <article class="tag-post-item">
-            <time datetime={post.data.publishedAt.toISOString()}>
-              {formatPostDateIso(post.data.publishedAt)}
-            </time>
-            <a class="tag-post-title" href={`/posts/${post.id}/`}>
-              {post.data.title}
+            <time datetime={post.publishedAt.iso}>{post.publishedAt.date}</time>
+            <a class="tag-post-title" href={post.href}>
+              {post.title}
             </a>
           </article>
         </li>

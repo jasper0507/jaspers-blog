@@ -3,6 +3,7 @@ title: 用于验证长标题在不同屏幕尺寸下仍然完整可读的视觉�
 description: 验证技术文章的 Markdown 能力与页面布局。
 publishedAt: 2026-01-02T00:00:00+08:00
 tags:
+  - 共同
   - 数据结构与算法
 draft: false
 ---

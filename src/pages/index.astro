@@ -1,11 +1,18 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { formatPostDateCompact, getPublishedPosts } from "../lib/posts";
-import { getPublishedShuoshuo, getShuoshuoLabel, getShuoshuoPreviewLine } from "../lib/shuoshuo";
+import { getPublishedPostCatalog } from "../lib/posts";
+import {
+  formatShuoshuoDateCompact,
+  getPublishedShuoshuo,
+  getShuoshuoLabel,
+  getShuoshuoPreviewLine,
+} from "../lib/shuoshuo";
 import { siteConfig } from "../lib/site";
 
-const publishedPosts = await getPublishedPosts();
-const publishedShuoshuo = await getPublishedShuoshuo();
+const [{ posts: publishedPosts }, publishedShuoshuo] = await Promise.all([
+  getPublishedPostCatalog(),
+  getPublishedShuoshuo(),
+]);
 const [latestPost] = publishedPosts;
 const [latestShuoshuo] = publishedShuoshuo;
 const shuoshuoPreviewLine = latestShuoshuo ? getShuoshuoPreviewLine(latestShuoshuo.body ?? "") : "";
@@ -47,13 +54,11 @@ const shuoshuoCount = publishedShuoshuo.length;
         {
           latestPost ? (
             <article class="post-preview">
-              <time datetime={latestPost.data.publishedAt.toISOString()}>
-                {formatPostDateCompact(latestPost.data.publishedAt)}
-              </time>
+              <time datetime={latestPost.publishedAt.iso}>{latestPost.publishedAt.compact}</time>
               <h3>
-                <a href={`/posts/${latestPost.id}/`}>{latestPost.data.title}</a>
+                <a href={latestPost.href}>{latestPost.title}</a>
               </h3>
-              <p class="post-preview-description">{latestPost.data.description}</p>
+              <p class="post-preview-description">{latestPost.description}</p>
             </article>
           ) : (
             <p class="empty-state">技术文章尚未发布。</p>
@@ -73,7 +78,7 @@ const shuoshuoCount = publishedShuoshuo.length;
               aria-label={getShuoshuoLabel(latestShuoshuo.data.publishedAt)}
             >
               <time datetime={latestShuoshuo.data.publishedAt.toISOString()}>
-                {formatPostDateCompact(latestShuoshuo.data.publishedAt)}
+                {formatShuoshuoDateCompact(latestShuoshuo.data.publishedAt)}
               </time>
               <h3>
                 <a href={`/shuoshuo/#${latestShuoshuo.id}`}>{shuoshuoPreviewLine}</a>

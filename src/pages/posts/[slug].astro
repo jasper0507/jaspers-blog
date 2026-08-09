@@ -1,46 +1,43 @@
 ---
-import type { CollectionEntry } from "astro:content";
-import { render } from "astro:content";
 import MarkdownBody from "../../components/MarkdownBody.astro";
 import PostTags from "../../components/PostTags.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { formatPostDateCompact, getPublishedPosts } from "../../lib/posts";
+import { getPublishedPostCatalog, type PublishedPost } from "../../lib/posts";
 
 interface Props {
-  post: CollectionEntry<"posts">;
+  post: PublishedPost;
 }
 
 export async function getStaticPaths() {
-  return (await getPublishedPosts()).map(post => ({
-    params: { slug: post.id },
+  return (await getPublishedPostCatalog()).posts.map(post => ({
+    params: { slug: post.slug },
     props: { post },
   }));
 }
 
 const { post } = Astro.props;
-const { Content, headings } = await render(post);
-const postUrl = new URL(`/posts/${post.id}/`, Astro.site);
+const { Content, headings } = await post.render();
+const postUrl = new URL(post.href, Astro.site);
 const toc = headings.filter(
   ({ depth, slug }) => (depth === 2 || depth === 3) && slug !== "footnote-label",
 );
-const publishedLabel = formatPostDateCompact(post.data.publishedAt);
 const structuredData = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "BlogPosting",
-  headline: post.data.title,
-  description: post.data.description,
+  headline: post.title,
+  description: post.description,
   url: postUrl.href,
   mainEntityOfPage: postUrl.href,
-  datePublished: post.data.publishedAt.toISOString(),
-  dateModified: (post.data.updatedAt ?? post.data.publishedAt).toISOString(),
+  datePublished: post.publishedAt.iso,
+  dateModified: post.modifiedAtIso,
   inLanguage: "zh-CN",
   author: { "@type": "Person", name: "Jasper" },
 }).replaceAll("<", "\\u003c");
 ---
 
 <BaseLayout
-  title={post.data.title}
-  description={post.data.description}
+  title={post.title}
+  description={post.description}
   pageClass="post-page"
   ogType="article"
 >
@@ -48,11 +45,11 @@ const structuredData = JSON.stringify({
 
   <article class="post-article" aria-labelledby="post-title" data-pagefind-body>
     <header class="post-header">
-      <h1 id="post-title">{post.data.title}</h1>
-      <p class="post-description">{post.data.description}</p>
+      <h1 id="post-title">{post.title}</h1>
+      <p class="post-description">{post.description}</p>
       <div class="post-meta">
-        <time datetime={post.data.publishedAt.toISOString()}>{publishedLabel}</time>
-        <PostTags tags={post.data.tags} />
+        <time datetime={post.publishedAt.iso}>{post.publishedAt.compact}</time>
+        <PostTags tags={post.tags} />
       </div>
     </header>
 

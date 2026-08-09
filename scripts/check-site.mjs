@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { chromium } from "playwright-core";
-import { getPublishedPostTags } from "../src/lib/tags.js";
 
 const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -23,6 +22,11 @@ const fixtureEnvironment = {
   POST_CONTENT_DIR: "./tests/fixtures/posts-visual",
   SHUOSHUO_CONTENT_DIR: "./tests/fixtures/shuoshuo",
 };
+const tagCollisionEnvironment = {
+  ...process.env,
+  POST_CONTENT_DIR: "./tests/fixtures/posts-tag-collision",
+  SHUOSHUO_CONTENT_DIR: "./tests/fixtures/shuoshuo-empty",
+};
 
 async function build(environment) {
   await execFileAsync(process.execPath, [astro, "build", "--force"], {
@@ -30,6 +34,17 @@ async function build(environment) {
     env: environment,
   });
   await execFileAsync(pagefind, ["--site", "dist", "--glob", "posts/**/*.html"], { cwd: root });
+}
+
+async function checkBuildFailure(environment, expected) {
+  let error;
+  try {
+    await build(environment);
+  } catch (caught) {
+    error = caught;
+  }
+  assert.ok(error, "无效技术文章应使构建失败");
+  assert.match(`${error.stdout ?? ""}${error.stderr ?? ""}`, expected);
 }
 
 async function waitForServer(server) {
@@ -50,19 +65,34 @@ async function waitForServer(server) {
 async function checkFixture(browser) {
   const home = await readFile("dist/index.html", "utf8");
   const timeline = await readFile("dist/shuoshuo/index.html", "utf8");
+  const archive = await readFile("dist/archives/index.html", "utf8");
+  const tags = await readFile("dist/tags/index.html", "utf8");
   const rss = await readFile("dist/rss.xml", "utf8");
+  const sitemap = await readFile("dist/sitemap.xml", "utf8");
   const searchIndex = JSON.parse(await readFile("dist/pagefind/pagefind-entry.json", "utf8"));
 
+  assert.match(home, /同时发布的 Alpha 技术文章/);
   assert.match(home, /这是发布时间最新的公开说说/);
-  assert.doesNotMatch(home, /这是一条不应公开的草稿/);
+  assert.doesNotMatch(home, /不应公开的技术文章草稿|这是一条不应公开的草稿/);
   assert.match(timeline, /id="20250101-000001"/);
   assert.doesNotMatch(timeline, /20260103-080000|这是一条不应公开的草稿/);
-  assert.equal((rss.match(/<item>/g) ?? []).length, 3);
-  assert.equal(searchIndex.languages["zh-cn"].page_count, 1);
-  assert.throws(
-    () => getPublishedPostTags([{ data: { tags: ["C++", "C#"] } }]),
-    /生成了相同的网址/,
+  assert.ok(
+    archive.indexOf("/posts/alpha/") < archive.indexOf("/posts/visual/") &&
+      archive.indexOf("/posts/visual/") < archive.indexOf("/posts/older/"),
+    "归档应按发布时间降序、同时间按 slug 升序",
   );
+  assert.match(archive, /datetime="2026-01-01T16:00:00.000Z">\s*2026-01-02/);
+  assert.ok(
+    tags.indexOf('href="/tags/共同/"') < tags.indexOf('href="/tags/astro/"'),
+    "同数量标签应按 zh-CN 排序",
+  );
+  assert.match(tags, /href="\/tags\/astro\/"/);
+  assert.equal((rss.match(/<item>/g) ?? []).length, 5);
+  assert.ok(rss.indexOf("同时发布的 Alpha 技术文章") < rss.indexOf("视觉验收专用技术文章"));
+  assert.match(sitemap, /\/posts\/alpha\//);
+  assert.match(sitemap, /\/tags\/astro\//);
+  assert.doesNotMatch(`${archive}${tags}${rss}${sitemap}`, /不应公开的技术文章草稿|草稿标签/);
+  assert.equal(searchIndex.languages["zh-cn"].page_count, 3);
 
   for (const width of [1440, 320]) {
     const context = await browser.newContext({ viewport: { width, height: 960 } });
@@ -211,6 +241,7 @@ try {
   }
 } finally {
   server.kill("SIGTERM");
+  await checkBuildFailure(tagCollisionEnvironment, /生成了相同的网址/);
   await build(productionEnvironment);
 }
 

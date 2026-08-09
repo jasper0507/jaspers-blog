@@ -1,8 +1,8 @@
 ---
-import { getTagHref } from "../lib/tags";
+import type { PublishedTag } from "../lib/posts";
 
 interface Props {
-  tags: string[];
+  tags: PublishedTag[];
 }
 
 const { tags } = Astro.props;
@@ -11,13 +11,13 @@ const { tags } = Astro.props;
 {
   tags.length > 0 && (
     <ul class="post-tags" aria-label="标签">
-      {tags.map(tag => (
+      {tags.map(({ href, name }) => (
         <li>
-          <a href={getTagHref(tag)}>
+          <a href={href}>
             <span class="tag-hash" aria-hidden="true">
               #
             </span>
-            {tag}
+            {name}
           </a>
         </li>
       ))}
