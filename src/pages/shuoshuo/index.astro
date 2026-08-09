@@ -2,6 +2,7 @@
 import MarkdownBody from "../../components/MarkdownBody.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getPublishedShuoshuo } from "../../lib/shuoshuo";
+import "../../styles/shuoshuo-card.css";
 
 const shuoshuo = await Promise.all(
   (await getPublishedShuoshuo()).map(async item => ({
@@ -76,3 +77,61 @@ const shuoshuo = await Promise.all(
     });
   });
 </script>
+
+<style>
+  .shuoshuo-body {
+    overflow: hidden;
+  }
+
+  .shuoshuo-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .shuoshuo-list > li {
+    min-width: 0;
+    scroll-margin-top: 1.5rem;
+  }
+
+  .shuoshuo-list > li:has(h2:target) .shuoshuo-card {
+    border-color: var(--accent);
+  }
+
+  .shuoshuo-list h2 {
+    scroll-margin-top: 1.5rem;
+  }
+
+  .shuoshuo-anchor {
+    display: inline-block;
+    margin-bottom: 0.8rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+
+  .shuoshuo-body[data-collapsed] {
+    max-height: 12rem;
+    mask-image: linear-gradient(to bottom, #000 75%, transparent);
+  }
+
+  .shuoshuo-toggle {
+    margin-top: 0.75rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.22em;
+  }
+</style>
+
+<style is:global>
+  .shuoshuo-body .post-body {
+    font-size: 1rem;
+  }
+</style>
