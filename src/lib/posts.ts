@@ -1,9 +1,14 @@
 import { getCollection, render } from "astro:content";
 import type { RenderResult } from "astro:content";
 import { isPublished } from "./content";
-import { projectSiteDate } from "./site";
 import { getTag } from "./tags";
 
+const isoDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 const yearFormatter = new Intl.DateTimeFormat("en", {
   year: "numeric",
   timeZone: "Asia/Shanghai",
@@ -56,7 +61,7 @@ export async function getPublishedPostCatalog() {
         left.id.localeCompare(right.id),
     )
     .map(entry => {
-      const date = projectSiteDate(entry.data.publishedAt);
+      const date = isoDateFormatter.format(entry.data.publishedAt);
       return {
         slug: entry.id,
         href: `/posts/${entry.id}/`,
@@ -65,7 +70,8 @@ export async function getPublishedPostCatalog() {
         publishedAt: {
           value: entry.data.publishedAt,
           iso: entry.data.publishedAt.toISOString(),
-          ...date,
+          date,
+          compact: date.replaceAll("-", "."),
           year: yearFormatter.format(entry.data.publishedAt),
         },
         modifiedAtIso: (entry.data.updatedAt ?? entry.data.publishedAt).toISOString(),

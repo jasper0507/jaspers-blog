@@ -1,6 +1,5 @@
 import { getCollection } from "astro:content";
 import { isPublished } from "./content";
-import { projectSiteDate } from "./site";
 
 const stableIdPattern = /^\d{8}-\d{6}$/;
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
@@ -8,6 +7,12 @@ const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   timeStyle: "short",
   hour12: false,
   timeZone: "Asia/Shanghai",
+});
+const compactDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
 });
 
 export async function getPublishedShuoshuo() {
@@ -30,7 +35,7 @@ export function formatShuoshuoDate(date: Date) {
 }
 
 export function formatShuoshuoDateCompact(date: Date) {
-  return projectSiteDate(date).compact;
+  return compactDateFormatter.format(date).replaceAll("-", ".");
 }
 
 export function getShuoshuoLabel(date: Date) {
