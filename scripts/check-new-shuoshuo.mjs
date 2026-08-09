@@ -67,7 +67,7 @@ try {
   const rss = await readFile(join(root, "dist/rss.xml"), "utf8");
   const publishedAtIso = new Date(publishedAt).toISOString();
   const publishedAtRss = new Date(publishedAt).toUTCString();
-  assert.match(home, new RegExp(`href="/shuoshuo/#${id}">2 Images</a>`));
+  assert.match(home, new RegExp(`href="/shuoshuo/#${id}"[^>]*>2 Images</a>`));
   assert.match(home, new RegExp(`datetime="${publishedAtIso}"`));
   assert.match(timeline, new RegExp(`id="${id}"`));
   assert.match(timeline, new RegExp(`href="/shuoshuo/#${id}"`));
