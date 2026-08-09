@@ -504,7 +504,6 @@ html[data-theme="dark"] .hero-image-dark {
 
 .post-preview time,
 .post-meta,
-.post-tags,
 .shuoshuo-preview time,
 .shuoshuo-anchor {
   color: var(--muted);
@@ -570,39 +569,6 @@ html[data-theme="dark"] .hero-image-dark {
   text-decoration: underline;
   text-decoration-thickness: 0.08em;
   text-underline-offset: 0.22em;
-}
-
-/* 挂在技术文章上的标签：弱化 #tag 文本链（非 pill/chip） */
-.post-tags {
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.15rem 0.85rem;
-  list-style: none;
-}
-
-.post-tags a {
-  display: inline-block;
-  /* 扩大可点区域，视觉仍保持文本链 */
-  padding: 0.25rem 0;
-  color: var(--muted);
-  text-decoration: none;
-  transition: color 0.15s ease;
-}
-
-.post-tags a:hover {
-  color: var(--accent);
-}
-
-.post-tags .tag-hash {
-  color: color-mix(in srgb, var(--accent) 72%, var(--muted));
-  font-weight: 500;
-}
-
-.post-tags a:hover .tag-hash {
-  color: var(--accent);
 }
 
 .archive-page .archive-year {
@@ -702,12 +668,6 @@ html[data-theme="dark"] .hero-image-dark {
   color: var(--accent);
 }
 
-.archive-card .post-tags {
-  margin: 0.15rem 0 0;
-  justify-content: flex-start;
-  margin-inline-start: 0;
-}
-
 .page-shell {
   max-width: 48rem;
   padding-top: clamp(4rem, 8vw, 6.5rem);
@@ -757,11 +717,6 @@ html[data-theme="dark"] .hero-image-dark {
   justify-content: space-between;
   gap: 0.5rem 1.25rem;
   margin-top: 1.75rem;
-}
-
-.post-meta .post-tags {
-  justify-content: flex-end;
-  margin-inline-start: auto;
 }
 
 .site-footer {
