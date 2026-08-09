@@ -1,3 +1,15 @@
+const dateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+export function projectSiteDate(date: Date) {
+  const value = dateFormatter.format(date);
+  return { date: value, compact: value.replaceAll("-", ".") };
+}
+
 /** 站点级配置：作者改这里并替换资源后重新构建即可。 */
 export const siteConfig = {
   title: "Jasper's Blog",

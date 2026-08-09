@@ -1,6 +1,7 @@
 import { getCollection, render } from "astro:content";
 import type { RenderResult } from "astro:content";
-import { isPublished, projectContentDate } from "./content";
+import { isPublished } from "./content";
+import { projectSiteDate } from "./site";
 import { getTag } from "./tags";
 
 const yearFormatter = new Intl.DateTimeFormat("en", {
@@ -55,7 +56,7 @@ export async function getPublishedPostCatalog() {
         left.id.localeCompare(right.id),
     )
     .map(entry => {
-      const date = projectContentDate(entry.data.publishedAt);
+      const date = projectSiteDate(entry.data.publishedAt);
       return {
         slug: entry.id,
         href: `/posts/${entry.id}/`,
