@@ -16,9 +16,8 @@
   --code-function: light-dark(#476f68, #92c3b8);
   --code-parameter: light-dark(#886c32, #d3b46f);
   --shell-width: 70rem;
-  /* 编辑长文阅读栏（JacksBlog --reading ≈ 760px）与宽屏目录 */
+  /* 编辑长文阅读栏（JacksBlog --reading ≈ 760px） */
   --reading-width: 47.5rem;
-  --toc-width: 11.25rem;
   --gutter: 2rem;
   --font-serif:
     "Source Serif 4", "Noto Serif SC", Georgia, "Songti SC", "Source Han Serif SC", serif;
@@ -905,82 +904,6 @@ html[data-theme="dark"] .hero-image-dark {
 .post-meta .post-tags {
   justify-content: flex-end;
   margin-inline-start: auto;
-}
-
-/* 宽屏 fixed 目录：落在阅读栏右侧外侧；默认隐藏，≥1280px 显示 */
-.post-toc {
-  display: none;
-  width: var(--toc-width);
-  max-height: 60vh;
-  padding-left: 1.125rem;
-  position: fixed;
-  z-index: 5;
-  top: 50%;
-  left: calc(50% + var(--reading-width) / 2 + 2.5rem);
-  overflow-x: hidden;
-  overflow-y: auto;
-  border-left: 1px solid var(--line);
-  transform: translateY(-50%);
-}
-
-.post-toc > p {
-  margin: 0 0 0.65rem;
-  color: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-
-.post-toc ol {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.post-toc li {
-  margin-bottom: 0.15rem;
-  line-height: 1.35;
-}
-
-.post-toc .toc-depth-3 {
-  padding-left: 0.65rem;
-}
-
-.post-toc a {
-  display: block;
-  margin-left: -0.65rem;
-  padding: 0.28rem 0.35rem 0.28rem 0.55rem;
-  border-left: 2px solid transparent;
-  color: var(--muted);
-  font-size: 0.78rem;
-  line-height: 1.4;
-  text-decoration: none;
-  transition:
-    color 160ms ease,
-    border-color 160ms ease;
-}
-
-.post-toc a:hover {
-  color: var(--accent);
-}
-
-.post-toc a[aria-current="true"] {
-  border-left-color: var(--accent);
-  color: var(--accent);
-  font-weight: 500;
-}
-
-@media (min-width: 80rem) {
-  .post-toc {
-    display: block;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .post-toc a {
-    transition: none;
-  }
 }
 
 .site-footer {

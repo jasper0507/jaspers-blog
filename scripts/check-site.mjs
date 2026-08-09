@@ -193,7 +193,47 @@ async function checkFixture(browser) {
   await shuoshuoToggle.click();
   assert.equal(await shuoshuoToggle.getAttribute("aria-expanded"), "false");
 
+  await page.goto(`${host}/posts/alpha/`);
+  assert.equal(await page.locator(".post-toc").count(), 0, "无 h2/h3 时不应渲染目录");
+
   await page.goto(`${host}/posts/visual/`);
+  const toc = page.locator(".post-toc");
+  const tocLinks = toc.locator('a[href^="#"]');
+  assert.deepEqual(
+    await tocLinks.evaluateAll(links => links.map(link => link.getAttribute("href"))),
+    ["#第一节", "#第一节子节", "#第二节"],
+    "目录应按正文顺序包含 h2/h3 并排除脚注标题",
+  );
+  assert.deepEqual(
+    await tocLinks.evaluateAll(links =>
+      links.map(link => document.getElementById(link.getAttribute("href").slice(1)) !== null),
+    ),
+    [true, true, true],
+    "每个目录链接都应对应真实标题 ID",
+  );
+  assert.equal(await toc.locator('a[aria-current="true"]').count(), 1, "目录初始应有一个当前项");
+  assert.equal(await toc.locator('[aria-current="true"]').getAttribute("href"), "#第一节");
+
+  await page.setViewportSize({ width: 1279, height: 960 });
+  assert.equal(await toc.evaluate(element => getComputedStyle(element).display), "none");
+  await page.setViewportSize({ width: 1280, height: 960 });
+  assert.equal(await toc.evaluate(element => getComputedStyle(element).display), "block");
+
+  const subsection = page.locator(".post-body h3[id]").first();
+  const subsectionId = await subsection.getAttribute("id");
+  assert.ok(subsectionId);
+  await subsection.evaluate(element =>
+    scrollTo({
+      top: element.getBoundingClientRect().top + scrollY - innerHeight * 0.4,
+      behavior: "instant",
+    }),
+  );
+  await page.waitForTimeout(400);
+  assert.equal(
+    await page.locator('.post-toc a[aria-current="true"]').getAttribute("href"),
+    `#${subsectionId}`,
+  );
+
   const secondHeading = page.locator(".post-body h2[id]").nth(1);
   const secondHeadingId = await secondHeading.getAttribute("id");
   assert.ok(secondHeadingId);
@@ -204,6 +244,13 @@ async function checkFixture(browser) {
   assert.equal(
     await page.locator('.post-toc a[aria-current="true"]').getAttribute("href"),
     `#${secondHeadingId}`,
+  );
+  await page.evaluate(() => scrollTo({ top: document.documentElement.scrollHeight }));
+  await page.waitForTimeout(400);
+  assert.equal(
+    await page.locator('.post-toc a[aria-current="true"]').getAttribute("href"),
+    `#${secondHeadingId}`,
+    "滚到页尾后应保持末节为当前项",
   );
 
   await page.goto(host);

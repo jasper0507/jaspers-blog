@@ -1,6 +1,7 @@
 ---
 import MarkdownBody from "../../components/MarkdownBody.astro";
 import PostTags from "../../components/PostTags.astro";
+import PostToc from "../../components/PostToc.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getPublishedPostCatalog, type PublishedPost } from "../../lib/posts";
 
@@ -18,9 +19,6 @@ export async function getStaticPaths() {
 const { post } = Astro.props;
 const { Content, headings } = await post.render();
 const postUrl = new URL(post.href, Astro.site);
-const toc = headings.filter(
-  ({ depth, slug }) => (depth === 2 || depth === 3) && slug !== "footnote-label",
-);
 const structuredData = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -58,73 +56,5 @@ const structuredData = JSON.stringify({
     </MarkdownBody>
   </article>
 
-  {
-    toc.length > 0 && (
-      <nav class="post-toc" aria-label="文章目录">
-        <p>目录</p>
-        <ol>
-          {toc.map(heading => (
-            <li class:list={[`toc-depth-${heading.depth}`]}>
-              <a href={`#${heading.slug}`}>{heading.text}</a>
-            </li>
-          ))}
-        </ol>
-      </nav>
-    )
-  }
-
-  <script is:inline>
-    (() => {
-      const tocNav = document.querySelector(".post-toc");
-      if (!(tocNav instanceof HTMLElement)) return;
-
-      const items = [...tocNav.querySelectorAll('a[href^="#"]')]
-        .map(link => {
-          if (!(link instanceof HTMLAnchorElement)) return null;
-          const id = decodeURIComponent(link.getAttribute("href")?.slice(1) ?? "");
-          const heading = id ? document.getElementById(id) : null;
-          return heading ? { link, heading } : null;
-        })
-        .filter(Boolean);
-
-      if (!items.length) return;
-
-      let activeId = "";
-      const setActive = id => {
-        if (!id || id === activeId) return;
-        activeId = id;
-        for (const { link, heading } of items) {
-          if (heading.id === id) link.setAttribute("aria-current", "true");
-          else link.removeAttribute("aria-current");
-        }
-      };
-
-      // 初始：靠近视口顶部的第一节
-      setActive(items[0].heading.id);
-
-      if (!("IntersectionObserver" in window)) return;
-
-      const visible = new Map();
-      const observer = new IntersectionObserver(
-        entries => {
-          for (const entry of entries) {
-            if (entry.isIntersecting) visible.set(entry.target.id, entry);
-            else visible.delete(entry.target.id);
-          }
-          if (!visible.size) return;
-          const topmost = [...visible.values()].sort(
-            (a, b) => a.boundingClientRect.top - b.boundingClientRect.top,
-          )[0];
-          if (topmost?.target?.id) setActive(topmost.target.id);
-        },
-        {
-          // 上半屏进入即视为当前节（成熟 TOC scroll-spy 惯例）
-          rootMargin: "0px 0px -55% 0px",
-          threshold: [0, 0.25, 1],
-        },
-      );
-
-      for (const { heading } of items) observer.observe(heading);
-    })();
-  </script>
+  <PostToc headings={headings} />
 </BaseLayout>
