@@ -1,12 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getPublishedPostCatalog } from "../lib/posts";
-import {
-  formatShuoshuoDateCompact,
-  getPublishedShuoshuo,
-  getShuoshuoLabel,
-  getShuoshuoPreviewLine,
-} from "../lib/shuoshuo";
+import { getPublishedShuoshuo } from "../lib/shuoshuo";
 import { siteConfig } from "../lib/site";
 
 const [{ posts: publishedPosts }, publishedShuoshuo] = await Promise.all([
@@ -15,7 +10,6 @@ const [{ posts: publishedPosts }, publishedShuoshuo] = await Promise.all([
 ]);
 const [latestPost] = publishedPosts;
 const [latestShuoshuo] = publishedShuoshuo;
-const shuoshuoPreviewLine = latestShuoshuo ? getShuoshuoPreviewLine(latestShuoshuo.body ?? "") : "";
 const { hero } = siteConfig;
 const postCount = publishedPosts.length;
 const shuoshuoCount = publishedShuoshuo.length;
@@ -72,16 +66,13 @@ const shuoshuoCount = publishedShuoshuo.length;
           <a href="/shuoshuo/">查看全部 ({shuoshuoCount})</a>
         </div>
         {
-          latestShuoshuo && shuoshuoPreviewLine ? (
-            <article
-              class="post-preview shuoshuo-preview"
-              aria-label={getShuoshuoLabel(latestShuoshuo.data.publishedAt)}
-            >
-              <time datetime={latestShuoshuo.data.publishedAt.toISOString()}>
-                {formatShuoshuoDateCompact(latestShuoshuo.data.publishedAt)}
+          latestShuoshuo ? (
+            <article class="post-preview shuoshuo-preview" aria-label={latestShuoshuo.label}>
+              <time datetime={latestShuoshuo.publishedAt.iso}>
+                {latestShuoshuo.publishedAt.compact}
               </time>
               <h3>
-                <a href={`/shuoshuo/#${latestShuoshuo.id}`}>{shuoshuoPreviewLine}</a>
+                <a href={latestShuoshuo.href}>{latestShuoshuo.summary}</a>
               </h3>
             </article>
           ) : (

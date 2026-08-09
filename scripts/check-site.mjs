@@ -86,6 +86,11 @@ async function checkFixture(browser) {
   assert.match(timeline, /id="20250101-000001"/);
   assert.doesNotMatch(timeline, /20260103-080000|这是一条不应公开的草稿/);
   assertInOrder(
+    timeline,
+    ['id="20260102-080000"', 'id="20250102-000000"'],
+    "说说发布时间相同时应按稳定 ID 降序排列",
+  );
+  assertInOrder(
     archive,
     ["/posts/alpha/", "/posts/visual/", "/posts/older/"],
     "归档应按发布时间降序、同时间按 slug 升序",
@@ -93,12 +98,14 @@ async function checkFixture(browser) {
   assert.match(archive, /datetime="2026-01-01T16:00:00.000Z">\s*2026-01-02/);
   assertInOrder(tags, ['href="/tags/共同/"', 'href="/tags/astro/"'], "同数量标签应按 zh-CN 排序");
   assert.match(tags, /href="\/tags\/astro\/"/);
-  assert.equal((rss.match(/<item>/g) ?? []).length, 5);
+  assert.equal((rss.match(/<item>/g) ?? []).length, 6);
   assertInOrder(
     rss,
     ["同时发布的 Alpha 技术文章", "视觉验收专用技术文章"],
     "RSS 应保持技术文章顺序",
   );
+  assert.match(rss, /<description>这是发布时间最新的公开说说。[^<]+<\/description>/);
+  assert.doesNotMatch(rss, /这里继续放入足够长的正文/);
   assert.match(sitemap, /\/posts\/alpha\//);
   assert.match(sitemap, /\/tags\/astro\//);
   assert.doesNotMatch(`${archive}${tags}${rss}${sitemap}`, /不应公开的技术文章草稿|草稿标签/);

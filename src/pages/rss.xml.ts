@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { getPublishedPostCatalog } from "../lib/posts";
-import { getPublishedShuoshuo, getShuoshuoLabel } from "../lib/shuoshuo";
+import { getPublishedShuoshuo } from "../lib/shuoshuo";
 import { escapeXml } from "../lib/xml";
 
 export const GET: APIRoute = async ({ site }) => {
@@ -17,11 +17,11 @@ export const GET: APIRoute = async ({ site }) => {
       publishedAt: post.publishedAt.value,
       path: post.href,
     })),
-    ...shuoshuo.map(entry => ({
-      title: getShuoshuoLabel(entry.data.publishedAt),
-      description: entry.body!,
-      publishedAt: entry.data.publishedAt,
-      path: `/shuoshuo/#${entry.id}`,
+    ...shuoshuo.map(item => ({
+      title: item.label,
+      description: item.summary,
+      publishedAt: item.publishedAt.value,
+      path: item.href,
     })),
   ].sort((left, right) => right.publishedAt.getTime() - left.publishedAt.getTime());
 

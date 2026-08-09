@@ -1,13 +1,12 @@
 ---
-import { render } from "astro:content";
 import MarkdownBody from "../../components/MarkdownBody.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { formatShuoshuoDate, getPublishedShuoshuo, getShuoshuoLabel } from "../../lib/shuoshuo";
+import { getPublishedShuoshuo } from "../../lib/shuoshuo";
 
 const shuoshuo = await Promise.all(
-  (await getPublishedShuoshuo()).map(async entry => ({
-    entry,
-    Content: (await render(entry)).Content,
+  (await getPublishedShuoshuo()).map(async item => ({
+    item,
+    Content: (await item.render()).Content,
   })),
 );
 ---
@@ -17,20 +16,17 @@ const shuoshuo = await Promise.all(
   {
     shuoshuo.length > 0 ? (
       <ol class="shuoshuo-list">
-        {shuoshuo.map(({ entry, Content }) => {
-          const bodyId = `shuoshuo-body-${entry.id}`;
-          const label = getShuoshuoLabel(entry.data.publishedAt);
+        {shuoshuo.map(({ item, Content }) => {
+          const bodyId = `shuoshuo-body-${item.id}`;
 
           return (
             <li>
-              <article class="shuoshuo-card" aria-label={label}>
-                <h2 class="sr-only" id={entry.id}>
-                  {label}
+              <article class="shuoshuo-card" aria-label={item.label}>
+                <h2 class="sr-only" id={item.id}>
+                  {item.label}
                 </h2>
-                <a class="shuoshuo-anchor" href={`#${entry.id}`} aria-label={`${label}的永久链接`}>
-                  <time datetime={entry.data.publishedAt.toISOString()}>
-                    {formatShuoshuoDate(entry.data.publishedAt)}
-                  </time>
+                <a class="shuoshuo-anchor" href={item.href} aria-label={item.permalinkLabel}>
+                  <time datetime={item.publishedAt.iso}>{item.publishedAt.long}</time>
                 </a>
                 <div class="shuoshuo-body" id={bodyId}>
                   <MarkdownBody>
@@ -42,7 +38,7 @@ const shuoshuo = await Promise.all(
                   type="button"
                   aria-expanded="false"
                   aria-controls={bodyId}
-                  data-shuoshuo-toggle={entry.id}
+                  data-shuoshuo-toggle={item.id}
                   hidden
                 >
                   展开

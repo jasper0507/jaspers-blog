@@ -1,15 +1,18 @@
-import { getCollection } from "astro:content";
+import { getCollection, render } from "astro:content";
 import { isPublished } from "./content";
+import { SHUOSHUO_TIME_ZONE } from "./shuoshuo-rules.js";
 
-const stableIdPattern = /^\d{8}-\d{6}$/;
+// ponytail: cover inline/reference Markdown images; use an AST if nested URLs or raw HTML images become authoring needs.
+const markdownImagePattern = /!\[[^\]]*\](?:\((?:\\.|[^)])*\)|\[[^\]]*\])?/g;
+const markdownReferenceDefinitionPattern = /^\[[^\]]+\]:\s*\S+/;
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "long",
   timeStyle: "short",
   hour12: false,
-  timeZone: "Asia/Shanghai",
+  timeZone: SHUOSHUO_TIME_ZONE,
 });
 const compactDateFormatter = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Asia/Shanghai",
+  timeZone: SHUOSHUO_TIME_ZONE,
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
@@ -19,45 +22,57 @@ export async function getPublishedShuoshuo() {
   const entries = await getCollection("shuoshuo");
 
   for (const entry of entries) {
-    if (!stableIdPattern.test(entry.id)) {
-      throw new Error(`说说 ${entry.id} 的文件名必须是 YYYYMMDD-HHmmss`);
-    }
     if (!entry.body?.trim()) throw new Error(`说说 ${entry.id} 的正文不能为空`);
   }
 
   return entries
     .filter(isPublished)
-    .sort((left, right) => right.data.publishedAt.getTime() - left.data.publishedAt.getTime());
+    .sort(
+      (left, right) =>
+        right.data.publishedAt.getTime() - left.data.publishedAt.getTime() ||
+        right.id.localeCompare(left.id),
+    )
+    .map(entry => {
+      const publishedAt = entry.data.publishedAt;
+      const long = dateTimeFormatter.format(publishedAt);
+      const label = `说说 · ${long}`;
+      return {
+        id: entry.id,
+        href: `/shuoshuo/#${entry.id}`,
+        label,
+        permalinkLabel: `${label}的永久链接`,
+        summary: getShuoshuoSummary(entry.body!),
+        publishedAt: {
+          value: publishedAt,
+          iso: publishedAt.toISOString(),
+          compact: compactDateFormatter.format(publishedAt).replaceAll("-", "."),
+          long,
+        },
+        render: async () => {
+          const { Content } = await render(entry);
+          return { Content };
+        },
+      };
+    });
 }
 
-export function formatShuoshuoDate(date: Date) {
-  return dateTimeFormatter.format(date);
-}
-
-export function formatShuoshuoDateCompact(date: Date) {
-  return compactDateFormatter.format(date).replaceAll("-", ".");
-}
-
-export function getShuoshuoLabel(date: Date) {
-  return `说说 · ${formatShuoshuoDate(date)}`;
-}
-
-/** 首页预览：取正文首行纯文本（说说无标题字段） */
-export function getShuoshuoPreviewLine(body: string): string {
+function getShuoshuoSummary(body: string) {
+  const imageCount = body.match(markdownImagePattern)?.length ?? 0;
   const line = body
     .replaceAll("\r\n", "\n")
     .split("\n")
-    .map(raw =>
-      raw
-        .trim()
+    .map(raw => {
+      const text = raw.trim();
+      if (markdownReferenceDefinitionPattern.test(text)) return "";
+      return text
         .replace(/^#{1,6}\s+/, "")
         .replace(/^[-*+]\s+/, "")
         .replace(/\*\*(.+?)\*\*/g, "$1")
         .replace(/\*(.+?)\*/g, "$1")
         .replace(/`([^`]+)`/g, "$1")
-        .replace(/!\[.*?\]\(.*?\)/g, "")
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1"),
-    )
+        .replace(markdownImagePattern, "")
+        .replace(/\[([^\]]*)\]\([^)]+\)/g, "$1");
+    })
     .find(text => text.length > 0);
-  return line ?? "";
+  return line ?? `${imageCount} Image${imageCount === 1 ? "" : "s"}`;
 }
