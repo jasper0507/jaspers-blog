@@ -112,7 +112,7 @@ async function checkFixture(browser) {
     ["/posts/alpha/", "/posts/visual/", "/posts/older/"],
     "归档应按发布时间降序、同时间按 slug 升序",
   );
-  assert.match(archive, /datetime="2026-01-01T16:00:00.000Z">\s*2026-01-02/);
+  assert.match(archive, /datetime="2026-01-01T16:00:00.000Z"[^>]*>\s*2026-01-02/);
   assertInOrder(tags, ['href="/tags/共同/"', 'href="/tags/astro/"'], "同数量标签应按 zh-CN 排序");
   assert.match(tags, /href="\/tags\/astro\/"/);
   assert.equal((rss.match(/<item>/g) ?? []).length, 6);
