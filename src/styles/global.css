@@ -7,17 +7,7 @@
   --line: light-dark(#d7d4cc, #3e3b36);
   --accent: light-dark(#b05c3f, #d97757);
   --focus: light-dark(#8f3f2d, #f39a79);
-  --code-background: light-dark(#eeece6, #24231f);
-  --code-foreground: light-dark(#3b3934, #e8e6de);
-  --code-comment: light-dark(#77736b, #9e9a90);
-  --code-string: light-dark(#8c4b35, #e6a181);
-  --code-constant: light-dark(#76558a, #c9a7df);
-  --code-keyword: light-dark(#9a5139, #e08a6b);
-  --code-function: light-dark(#476f68, #92c3b8);
-  --code-parameter: light-dark(#886c32, #d3b46f);
   --shell-width: 70rem;
-  /* 编辑长文阅读栏（JacksBlog --reading ≈ 760px） */
-  --reading-width: 47.5rem;
   --gutter: 2rem;
   --font-serif:
     "Source Serif 4", "Noto Serif SC", Georgia, "Songti SC", "Source Han Serif SC", serif;
@@ -503,7 +493,6 @@ html[data-theme="dark"] .hero-image-dark {
 }
 
 .post-preview time,
-.post-meta,
 .shuoshuo-preview time,
 .shuoshuo-anchor {
   color: var(--muted);
@@ -577,51 +566,6 @@ html[data-theme="dark"] .hero-image-dark {
   padding-bottom: clamp(5rem, 9vw, 7.5rem);
 }
 
-.post-page {
-  max-width: var(--shell-width);
-  padding: clamp(4rem, 8vw, 6.5rem) 0 clamp(5rem, 9vw, 7.5rem);
-}
-
-/* 编辑长文壳：居中阅读栏，无纸面卡片 */
-.post-article {
-  max-width: var(--reading-width);
-  margin-inline: auto;
-  min-width: 0;
-}
-
-.post-header {
-  margin-bottom: 2.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--line);
-}
-
-.post-header h1 {
-  margin: 0;
-  font-family: var(--font-serif);
-  font-size: 2.25rem;
-  font-weight: 600;
-  letter-spacing: -0.035em;
-  line-height: 1.15;
-}
-
-.post-description {
-  max-width: 42rem;
-  margin: 1.2rem 0 0;
-  color: var(--muted);
-  font-family: var(--font-sans);
-  font-size: 1.05rem;
-  line-height: 1.65;
-}
-
-.post-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem 1.25rem;
-  margin-top: 1.75rem;
-}
-
 .site-footer {
   border-top: 0;
 }
@@ -648,12 +592,6 @@ html[data-theme="dark"] .hero-image-dark {
 .site-footer ul {
   display: flex;
   gap: 1.25rem;
-}
-
-@media (max-width: 70rem) {
-  .post-page {
-    padding-inline: var(--gutter);
-  }
 }
 
 @media (max-width: 52rem) {
@@ -696,19 +634,6 @@ html[data-theme="dark"] .hero-image-dark {
 
   .hero-media {
     max-width: 28rem;
-  }
-
-  .post-header {
-    margin-bottom: 2rem;
-    padding-bottom: 1.25rem;
-  }
-
-  .post-header h1 {
-    font-size: 1.875rem;
-  }
-
-  .post-meta {
-    margin-top: 1.35rem;
   }
 }
 
