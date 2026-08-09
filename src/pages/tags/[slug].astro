@@ -39,3 +39,56 @@ const { tag } = Astro.props;
     }
   </ol>
 </BaseLayout>
+
+<style>
+  .tag-post-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0;
+  }
+
+  .tag-post-list > li {
+    padding-block: 0.95rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .tag-post-list > li:last-child {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .tag-post-item {
+    display: grid;
+    grid-template-columns: 7.25rem minmax(0, 1fr);
+    gap: 0.85rem 1.1rem;
+    align-items: baseline;
+  }
+
+  .tag-post-item time {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .tag-post-title {
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    text-decoration: none;
+  }
+
+  .tag-post-title:hover {
+    color: var(--accent);
+  }
+
+  @media (max-width: 40rem) {
+    .tag-post-item {
+      grid-template-columns: 1fr;
+      gap: 0.25rem;
+    }
+  }
+</style>
