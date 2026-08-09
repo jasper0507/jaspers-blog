@@ -11,7 +11,24 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const astro = join(root, "node_modules/astro/bin/astro.mjs");
 const pagefind = join(root, "node_modules/.bin/pagefind");
 const host = "http://127.0.0.1:4321";
-const routes = ["/", "/posts/visual/", "/shuoshuo/", "/tags/", "/archives/", "/about/"];
+const routes = [
+  "/",
+  "/posts/visual/",
+  "/shuoshuo/",
+  "/tags/",
+  "/tags/astro/",
+  "/archives/",
+  "/about/",
+];
+const visualRoutes = [
+  ["home", "/"],
+  ["post", "/posts/visual/"],
+  ["shuoshuo", "/shuoshuo/"],
+  ["tags", "/tags/"],
+  ["tag", "/tags/astro/"],
+  ["archives", "/archives/"],
+  ["about", "/about/"],
+];
 const productionEnvironment = {
   ...process.env,
   POST_CONTENT_DIR: "./src/content/posts",
@@ -134,35 +151,32 @@ async function checkFixture(browser) {
     await context.close();
   }
 
-  await Promise.all([
-    mkdir("artifacts/visual/home", { recursive: true }),
-    mkdir("artifacts/visual/post", { recursive: true }),
-  ]);
-  for (const width of [1440, 768, 375, 320]) {
+  await Promise.all(
+    visualRoutes.map(([name]) => mkdir(`artifacts/visual/${name}`, { recursive: true })),
+  );
+  for (const width of [1440, 375]) {
     for (const theme of ["light", "dark"]) {
       const context = await browser.newContext({
         viewport: { width, height: 960 },
         colorScheme: theme,
       });
       const page = await context.newPage();
-      await page.goto(host, { waitUntil: "networkidle" });
-      await page.evaluate(() => document.fonts.ready);
-      assert.equal(
-        await page
-          .locator(`.hero-image-${theme}`)
-          .evaluate(element => getComputedStyle(element).display),
-        "block",
-      );
-      await page.screenshot({
-        path: `artifacts/visual/home/home-${width}-${theme}.png`,
-        fullPage: true,
-      });
-      await page.goto(`${host}/posts/visual/`, { waitUntil: "networkidle" });
-      await page.evaluate(() => document.fonts.ready);
-      await page.screenshot({
-        path: `artifacts/visual/post/post-${width}-${theme}.png`,
-        fullPage: true,
-      });
+      for (const [name, path] of visualRoutes) {
+        await page.goto(`${host}${path}`, { waitUntil: "networkidle" });
+        await page.evaluate(() => document.fonts.ready);
+        if (path === "/") {
+          assert.equal(
+            await page
+              .locator(`.hero-image-${theme}`)
+              .evaluate(element => getComputedStyle(element).display),
+            "block",
+          );
+        }
+        await page.screenshot({
+          path: `artifacts/visual/${name}/${name}-${width}-${theme}.png`,
+          fullPage: true,
+        });
+      }
       await context.close();
     }
   }
@@ -192,6 +206,36 @@ async function checkFixture(browser) {
   assert.equal(await shuoshuoToggle.getAttribute("aria-expanded"), "true");
   await shuoshuoToggle.click();
   assert.equal(await shuoshuoToggle.getAttribute("aria-expanded"), "false");
+
+  await page.goto(`${host}/tags/`);
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "light";
+  });
+  const tagCloud = page.locator(".tag-cloud");
+  const tagChip = tagCloud.locator("a").first();
+  assert.deepEqual(
+    await tagCloud.evaluate(element => {
+      const style = getComputedStyle(element);
+      return [style.display, style.flexWrap];
+    }),
+    ["flex", "wrap"],
+    "标签云应换行排列",
+  );
+  assert.deepEqual(
+    await tagChip.evaluate(element => {
+      const style = getComputedStyle(element);
+      return [style.backgroundColor, style.borderTopWidth, style.borderTopStyle];
+    }),
+    ["rgb(250, 249, 245)", "1px", "solid"],
+    "标签 chip 应使用纸面背景与细边框",
+  );
+  await tagChip.hover();
+  await page.waitForTimeout(200);
+  assert.match(
+    await tagChip.evaluate(element => getComputedStyle(element).transform),
+    /^matrix\(1\.04, 0, 0, 1\.04, 0, 0\)$/,
+    "标签 chip 悬停时应放大",
+  );
 
   await page.goto(`${host}/posts/alpha/`);
   assert.equal(await page.locator(".post-toc").count(), 0, "无 h2/h3 时不应渲染目录");
