@@ -8,12 +8,6 @@ const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   hour12: false,
   timeZone: "Asia/Shanghai",
 });
-const compactDateFormatter = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Asia/Shanghai",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
 
 export async function getPublishedShuoshuo() {
   const entries = await getCollection("shuoshuo");
@@ -32,10 +26,6 @@ export async function getPublishedShuoshuo() {
 
 export function formatShuoshuoDate(date: Date) {
   return dateTimeFormatter.format(date);
-}
-
-export function formatShuoshuoDateCompact(date: Date) {
-  return compactDateFormatter.format(date).replaceAll("-", ".");
 }
 
 export function getShuoshuoLabel(date: Date) {

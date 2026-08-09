@@ -47,6 +47,15 @@ async function checkBuildFailure(environment, expected) {
   assert.match(`${error.stdout ?? ""}${error.stderr ?? ""}`, expected);
 }
 
+function assertInOrder(source, needles, message) {
+  let previous = -1;
+  for (const needle of needles) {
+    const index = source.indexOf(needle);
+    assert.ok(index > previous, `${message}：${needle}`);
+    previous = index;
+  }
+}
+
 async function waitForServer(server) {
   let lastError;
   for (let attempt = 0; attempt < 100; attempt += 1) {
@@ -76,19 +85,20 @@ async function checkFixture(browser) {
   assert.doesNotMatch(home, /不应公开的技术文章草稿|这是一条不应公开的草稿/);
   assert.match(timeline, /id="20250101-000001"/);
   assert.doesNotMatch(timeline, /20260103-080000|这是一条不应公开的草稿/);
-  assert.ok(
-    archive.indexOf("/posts/alpha/") < archive.indexOf("/posts/visual/") &&
-      archive.indexOf("/posts/visual/") < archive.indexOf("/posts/older/"),
+  assertInOrder(
+    archive,
+    ["/posts/alpha/", "/posts/visual/", "/posts/older/"],
     "归档应按发布时间降序、同时间按 slug 升序",
   );
   assert.match(archive, /datetime="2026-01-01T16:00:00.000Z">\s*2026-01-02/);
-  assert.ok(
-    tags.indexOf('href="/tags/共同/"') < tags.indexOf('href="/tags/astro/"'),
-    "同数量标签应按 zh-CN 排序",
-  );
+  assertInOrder(tags, ['href="/tags/共同/"', 'href="/tags/astro/"'], "同数量标签应按 zh-CN 排序");
   assert.match(tags, /href="\/tags\/astro\/"/);
   assert.equal((rss.match(/<item>/g) ?? []).length, 5);
-  assert.ok(rss.indexOf("同时发布的 Alpha 技术文章") < rss.indexOf("视觉验收专用技术文章"));
+  assertInOrder(
+    rss,
+    ["同时发布的 Alpha 技术文章", "视觉验收专用技术文章"],
+    "RSS 应保持技术文章顺序",
+  );
   assert.match(sitemap, /\/posts\/alpha\//);
   assert.match(sitemap, /\/tags\/astro\//);
   assert.doesNotMatch(`${archive}${tags}${rss}${sitemap}`, /不应公开的技术文章草稿|草稿标签/);

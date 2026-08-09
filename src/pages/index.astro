@@ -1,12 +1,8 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { projectContentDate } from "../lib/content";
 import { getPublishedPostCatalog } from "../lib/posts";
-import {
-  formatShuoshuoDateCompact,
-  getPublishedShuoshuo,
-  getShuoshuoLabel,
-  getShuoshuoPreviewLine,
-} from "../lib/shuoshuo";
+import { getPublishedShuoshuo, getShuoshuoLabel, getShuoshuoPreviewLine } from "../lib/shuoshuo";
 import { siteConfig } from "../lib/site";
 
 const [{ posts: publishedPosts }, publishedShuoshuo] = await Promise.all([
@@ -15,6 +11,9 @@ const [{ posts: publishedPosts }, publishedShuoshuo] = await Promise.all([
 ]);
 const [latestPost] = publishedPosts;
 const [latestShuoshuo] = publishedShuoshuo;
+const latestShuoshuoDate = latestShuoshuo
+  ? projectContentDate(latestShuoshuo.data.publishedAt).compact
+  : "";
 const shuoshuoPreviewLine = latestShuoshuo ? getShuoshuoPreviewLine(latestShuoshuo.body ?? "") : "";
 const { hero } = siteConfig;
 const postCount = publishedPosts.length;
@@ -78,7 +77,7 @@ const shuoshuoCount = publishedShuoshuo.length;
               aria-label={getShuoshuoLabel(latestShuoshuo.data.publishedAt)}
             >
               <time datetime={latestShuoshuo.data.publishedAt.toISOString()}>
-                {formatShuoshuoDateCompact(latestShuoshuo.data.publishedAt)}
+                {latestShuoshuoDate}
               </time>
               <h3>
                 <a href={`/shuoshuo/#${latestShuoshuo.id}`}>{shuoshuoPreviewLine}</a>
