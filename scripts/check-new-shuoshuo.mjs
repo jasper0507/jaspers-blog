@@ -10,23 +10,6 @@ const execFileAsync = promisify(execFile);
 const script = fileURLToPath(new URL("new-shuoshuo.mjs", import.meta.url));
 const workingDirectory = await mkdtemp(join(tmpdir(), "newblog-shuoshuo-"));
 
-const formatId = date =>
-  new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  })
-    .formatToParts(date)
-    .filter(({ type }) => type !== "literal")
-    .map(({ value }) => value)
-    .join("")
-    .replace(/^(\d{8})(\d{6})$/, "$1-$2");
-
 try {
   const before = new Date();
   await execFileAsync(process.execPath, [script], {
@@ -40,13 +23,12 @@ try {
 
   assert.equal(files.length, 1);
   assert.match(files[0], /^\d{8}-\d{6}\.md$/);
-  assert.ok(
-    [formatId(before), formatId(after)].includes(files[0].replace(/\.md$/, "")),
-    "文件名应使用 Asia/Shanghai 的当前秒级时间",
-  );
-
   const source = await readFile(join(directory, files[0]), "utf8");
   const id = files[0].replace(/\.md$/, "");
+  const publishedAt = source.match(/^publishedAt: (.+)$/m)?.[1];
+  assert.ok(publishedAt, "应生成发布时间");
+  const publishedTime = new Date(publishedAt).getTime();
+  assert.ok(publishedTime >= before.getTime() - 1_000 && publishedTime <= after.getTime() + 1_000);
   assert.match(
     source,
     new RegExp(

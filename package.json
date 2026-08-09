@@ -15,11 +15,9 @@
     "build": "astro build && pagefind --site dist --glob \"posts/**/*.html\"",
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
-    "test:dist": "node scripts/check-build.mjs",
     "test:shuoshuo:command": "node scripts/check-new-shuoshuo.mjs",
-    "test:shuoshuo": "node scripts/check-shuoshuo.mjs",
-    "test:visual": "POST_CONTENT_DIR=./tests/fixtures/posts-visual npm run build && node scripts/check-visual.mjs && npm run build",
-    "test": "npm run format:check && npm run check && node scripts/check-fetch-fonts.mjs && npm run test:shuoshuo:command && npm run build && npm run test:dist && npm run test:visual && npm run test:shuoshuo"
+    "test:site": "node scripts/check-site.mjs",
+    "test": "npm run format:check && npm run check && node scripts/check-fetch-fonts.mjs && npm run test:shuoshuo:command && npm run test:site"
   },
   "dependencies": {
     "astro": "7.1.6"

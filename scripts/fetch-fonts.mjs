@@ -12,15 +12,12 @@ import { cp, mkdir, mkdtemp, readFile, writeFile, readdir, rename, rm } from "no
 import { pipeline } from "node:stream/promises";
 import { Readable, Transform } from "node:stream";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
-import { brotliDecompress } from "node:zlib";
 import { join } from "node:path";
 import { create as decodeFont } from "fontkitten";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const fontsDir = join(root, "public/fonts");
 const cssPath = join(root, "src/styles/fonts.css");
-const brotliDecompressAsync = promisify(brotliDecompress);
 const NOTO_FILE = /^noto-(serif|sans)-sc-.*\.woff2$/;
 const MAX_CSS_BYTES = 1024 * 1024;
 const MAX_FONT_BYTES = 16 * 1024 * 1024;
@@ -135,116 +132,17 @@ const download = async (url, dest) => {
   await pipeline(Readable.fromWeb(res.body), limiter, createWriteStream(dest));
 };
 
-const validateWoff2 = async (font, name, expectedFamily) => {
-  const invalid = () => {
-    throw new Error(`下载内容不是 WOFF2 字体：${name}`);
-  };
-  if (
-    font.length < 48 ||
-    font.subarray(0, 4).toString("ascii") !== "wOF2" ||
-    font.readUInt32BE(4) === 0x74746366 ||
-    font.readUInt32BE(8) !== font.length ||
-    font.readUInt16BE(12) === 0 ||
-    font.readUInt16BE(14) !== 0 ||
-    font.readUInt32BE(16) === 0 ||
-    font.readUInt32BE(16) > MAX_FONT_DATA_BYTES ||
-    font.readUInt32BE(20) === 0
-  ) {
-    invalid();
-  }
-
-  let offset = 48;
-  const readUIntBase128 = () => {
-    let value = 0;
-    for (let index = 0; index < 5; index += 1) {
-      if (offset >= font.length) invalid();
-      const byte = font[offset];
-      offset += 1;
-      if ((index === 0 && byte === 0x80) || value > 0x01ffffff) invalid();
-      value = value * 128 + (byte & 0x7f);
-      if ((byte & 0x80) === 0) return value;
-    }
-    invalid();
-  };
-
-  const tags = new Set();
-  let expectedFontDataBytes = 0;
-
-  for (let index = 0; index < font.readUInt16BE(12); index += 1) {
-    if (offset >= font.length) invalid();
-    const flags = font[offset];
-    offset += 1;
-    const tagIndex = flags & 0x3f;
-    if (tagIndex === 63 && offset + 4 > font.length) invalid();
-    let tag = tagIndex;
-    if (tagIndex === 63) {
-      tag = font.subarray(offset, offset + 4).toString("ascii");
-      offset += 4;
-    }
-    if (tags.has(tag)) invalid();
-    tags.add(tag);
-
-    const transformVersion = flags >> 6;
-    const glyfOrLoca = tagIndex === 10 || tagIndex === 11 || tag === "glyf" || tag === "loca";
-    const hmtx = tagIndex === 3 || tag === "hmtx";
-    const transformed = glyfOrLoca ? transformVersion === 0 : hmtx && transformVersion === 1;
+const validateWoff2 = (font, name, expectedFamily) => {
+  try {
     if (
-      (glyfOrLoca && ![0, 3].includes(transformVersion)) ||
-      (hmtx && ![0, 1].includes(transformVersion)) ||
-      (!glyfOrLoca && !hmtx && transformVersion !== 0)
+      font.length < 48 ||
+      font.subarray(0, 4).toString("ascii") !== "wOF2" ||
+      font.readUInt32BE(8) !== font.length ||
+      font.readUInt32BE(16) === 0 ||
+      font.readUInt32BE(16) > MAX_FONT_DATA_BYTES
     ) {
-      invalid();
+      throw new Error();
     }
-
-    const originalLength = readUIntBase128();
-    const dataLength = transformed ? readUIntBase128() : originalLength;
-    if ((tagIndex === 11 || tag === "loca") && transformed && dataLength !== 0) invalid();
-    expectedFontDataBytes += dataLength;
-    if (expectedFontDataBytes > MAX_FONT_DATA_BYTES) invalid();
-  }
-
-  const compressedEnd = offset + font.readUInt32BE(20);
-  if (compressedEnd > font.length) invalid();
-  try {
-    const decompressed = await brotliDecompressAsync(font.subarray(offset, compressedEnd), {
-      maxOutputLength: MAX_FONT_DATA_BYTES,
-    });
-    if (decompressed.length !== expectedFontDataBytes) invalid();
-  } catch {
-    invalid();
-  }
-
-  const metaOffset = font.readUInt32BE(28);
-  const metaLength = font.readUInt32BE(32);
-  const metaOriginalLength = font.readUInt32BE(36);
-  const privateOffset = font.readUInt32BE(40);
-  const privateLength = font.readUInt32BE(44);
-  const align = value => Math.ceil(value / 4) * 4;
-  if (
-    (metaOffset === 0 && (metaLength !== 0 || metaOriginalLength !== 0)) ||
-    (metaOffset !== 0 &&
-      (metaLength === 0 ||
-        metaOriginalLength === 0 ||
-        metaOffset !== align(compressedEnd) ||
-        metaOffset + metaLength > font.length))
-  ) {
-    invalid();
-  }
-  const contentEnd = metaOffset === 0 ? compressedEnd : metaOffset + metaLength;
-  const trailingPadding = font.subarray(contentEnd);
-  if (
-    (privateOffset === 0 && privateLength !== 0) ||
-    (privateOffset !== 0 &&
-      (privateLength === 0 ||
-        privateOffset !== align(contentEnd) ||
-        privateOffset + privateLength !== font.length)) ||
-    (privateOffset === 0 &&
-      (trailingPadding.length > 3 || trailingPadding.some(byte => byte !== 0)))
-  ) {
-    invalid();
-  }
-
-  try {
     const decoded = decodeFont(font);
     const weight = decoded.variationAxes.wght;
     if (
@@ -257,18 +155,18 @@ const validateWoff2 = async (font, name, expectedFamily) => {
       weight.min > 200 ||
       weight.max < 900
     ) {
-      invalid();
+      throw new Error();
     }
     for (const codePoint of decoded.characterSet) {
-      if (!decoded.glyphForCodePoint(codePoint)) invalid();
+      if (!decoded.glyphForCodePoint(codePoint)) throw new Error();
     }
     for (let glyphId = 0; glyphId < decoded.numGlyphs; glyphId += 1) {
       const glyph = decoded.getGlyph(glyphId);
-      if (!glyph || !Number.isFinite(glyph.advanceWidth)) invalid();
+      if (!glyph || !Number.isFinite(glyph.advanceWidth)) throw new Error();
       void glyph.path.commands.length;
     }
   } catch {
-    invalid();
+    throw new Error(`下载内容不是 WOFF2 字体：${name}`);
   }
 };
 
@@ -345,7 +243,7 @@ try {
       const batch = familyJobs.slice(i, i + concurrency);
       await Promise.all(batch.map(job => download(job.url, job.dest)));
       for (const job of batch) {
-        await validateWoff2(await readFile(job.dest), job.localName, job.family);
+        validateWoff2(await readFile(job.dest), job.localName, job.family);
       }
       process.stdout.write(
         `  downloaded ${Math.min(i + concurrency, familyJobs.length)}/${familyJobs.length}\r`,

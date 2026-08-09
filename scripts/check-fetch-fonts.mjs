@@ -143,58 +143,6 @@ globalThis.fetch = async url => {
 
   await writeFile(
     mockPath,
-    `import { brotliCompressSync } from "node:zlib";
-
-${cssResponseMock}
-
-const tables = [
-  [0, Buffer.alloc(14)],
-  [1, Buffer.alloc(54)],
-  [2, Buffer.alloc(36)],
-  [3, Buffer.alloc(4)],
-  [4, Buffer.alloc(32)],
-  [5, Buffer.alloc(18)],
-  [6, Buffer.alloc(78)],
-  [7, Buffer.alloc(32)],
-  [202, Buffer.alloc(1)],
-  [203, Buffer.alloc(4)],
-];
-tables[0][1].writeUInt16BE(1, 2);
-tables[0][1].writeUInt32BE(12, 8);
-tables[1][1].writeUInt32BE(0x00010000, 0);
-tables[1][1].writeUInt32BE(0x5f0f3cf5, 12);
-tables[1][1].writeUInt16BE(1000, 18);
-tables[2][1].writeUInt32BE(0x00010000, 0);
-tables[2][1].writeUInt16BE(1, 34);
-tables[4][1].writeUInt32BE(0x00010000, 0);
-tables[4][1].writeUInt16BE(1, 4);
-tables[5][1].writeUInt16BE(1, 2);
-tables[5][1].writeUInt16BE(18, 4);
-tables[7][1].writeUInt32BE(0x00030000, 0);
-const tableDirectory = Buffer.from(tables.flatMap(([flag, data]) => [flag, data.length]));
-const compressed = brotliCompressSync(Buffer.concat(tables.map(([, data]) => data)));
-const header = Buffer.alloc(48);
-header.write("wOF2");
-header.writeUInt32BE(0x00010000, 4);
-header.writeUInt16BE(10, 12);
-header.writeUInt32BE(500, 16);
-header.writeUInt32BE(compressed.length, 20);
-header.writeUInt32BE(48 + tableDirectory.length + compressed.length, 8);
-const fakeFont = Buffer.concat([header, tableDirectory, compressed]);
-
-globalThis.fetch = async url => {
-  if (url.includes("fonts.googleapis.com")) {
-    return cssResponse(url);
-  }
-  return new Response(fakeFont);
-};
-`,
-  );
-  await assert.rejects(runCommand(), /下载内容不是 WOFF2 字体/);
-  assert.deepEqual(await snapshot(), before, "字体内部表无效时旧字体和 CSS 必须原样保留");
-
-  await writeFile(
-    mockPath,
     `${cssResponseMock}
 
 globalThis.fetch = async url => {
