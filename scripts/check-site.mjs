@@ -133,9 +133,10 @@ async function checkFooterFixture(browser, fixture, hasContent) {
       assert.equal(await page.locator(".footer-content").count(), hasContent ? 1 : 0);
       assert.deepEqual(await footerLinks(page), expectedFooterLinks(fixtureSettings.author));
       await assertFooterLayout(page, width);
-      assert.equal(
-        await page.evaluate(() => document.documentElement.scrollWidth),
-        width,
+      assert.ok(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
         `${width}px ${theme} 页脚不得横向溢出`,
       );
       assert.equal(
@@ -352,9 +353,10 @@ async function checkFixture(browser, footerFixtures) {
       const response = await page.goto(`${host}${path}`, { waitUntil: "networkidle" });
       assert.equal(response?.ok(), true, `${path} 应可访问`);
       assert.equal(await page.locator("h1").count(), 1, `${path} 应有一个 h1`);
-      assert.equal(
-        await page.evaluate(() => document.documentElement.scrollWidth),
-        width,
+      assert.ok(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
         `${width}px ${path} 不得横向溢出`,
       );
       assert.deepEqual(errors, [], `${path} 不得有页面错误`);
