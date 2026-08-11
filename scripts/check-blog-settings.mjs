@@ -167,7 +167,11 @@ try {
 
 const invalidSettings = [
   [{ ...validSettings, extra: true }, /博客设置.*未知设置.*extra/],
-  [{ ...validSettings, site: { ...validSettings.site, extra: true } }, /博客身份.*未知设置.*extra/],
+  [{ ...validSettings, site: undefined }, /博客身份中的站点信息.*缺失/],
+  [
+    { ...validSettings, site: { ...validSettings.site, extra: true } },
+    /博客身份中的站点信息.*未知设置.*extra/,
+  ],
   [{ ...validSettings, author: undefined }, /作者设置.*缺失/],
   [{ ...validSettings, author: { ...validSettings.author, extra: true } }, /作者设置.*未知设置/],
   [{ ...validSettings, author: { ...validSettings.author, name: undefined } }, /作者显示名.*缺失/],
@@ -265,9 +269,22 @@ const invalidSettings = [
   ],
   [{ ...validSettings, home: undefined }, /首页设置.*缺失/],
   [{ ...validSettings, home: { ...validSettings.home, extra: true } }, /首页设置.*未知设置/],
+  [{ ...validSettings, home: { hero: undefined } }, /首页主视觉.*缺失/],
+  [
+    { ...validSettings, home: { hero: { ...validSettings.home.hero, extra: true } } },
+    /首页主视觉.*未知设置/,
+  ],
+  [
+    { ...validSettings, home: { hero: { ...validSettings.home.hero, caption: undefined } } },
+    /首页 caption.*缺失/,
+  ],
   [
     { ...validSettings, home: { hero: { ...validSettings.home.hero, caption: " " } } },
     /首页 caption.*不能为空/,
+  ],
+  [
+    { ...validSettings, home: { hero: { ...validSettings.home.hero, lightImage: undefined } } },
+    /亮色主视觉.*缺失/,
   ],
   [
     { ...validSettings, home: { hero: { ...validSettings.home.hero, alt: undefined } } },

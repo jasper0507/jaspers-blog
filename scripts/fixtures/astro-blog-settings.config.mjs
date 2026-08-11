@@ -1,8 +1,7 @@
 import { defineConfig } from "astro/config";
-import baseConfig from "../../astro.config.mjs";
 import { fileURLToPath } from "node:url";
-
-export const fixtureFavicon = "/images/hero-light.svg";
+import rawSettings from "../../blog.config.ts";
+import { fixtureSettings } from "./blog-settings.mjs";
 
 const rawSettingsPath = fileURLToPath(new URL("../../blog.config.ts", import.meta.url));
 const virtualSettings = "\0blog-settings-fixture";
@@ -13,6 +12,11 @@ const outDirs = {
 };
 if (!(fixture in outDirs)) throw new Error("未知博客设置 fixture。");
 const footerContent = process.env.BLOG_SETTINGS_FOOTER_CONTENT;
+Object.assign(rawSettings, fixtureSettings, { footer: { content: footerContent } });
+const { default: baseConfig } = await import("../../astro.config.mjs");
+if (baseConfig.site !== fixtureSettings.site.url) {
+  throw new Error("Astro site 未从已校验博客设置读取。");
+}
 
 export default defineConfig({
   ...baseConfig,
@@ -35,10 +39,12 @@ export default defineConfig({
         load(id) {
           if (id === virtualSettings) {
             return `import settings from ${JSON.stringify(rawSettingsPath)};
+const fixtureSettings = ${JSON.stringify(fixtureSettings)};
 export default {
   ...settings,
-  site: { ...settings.site, favicon: ${JSON.stringify(fixtureFavicon)} },
-  home: { ...settings.home, hero: { ...settings.home.hero, darkImage: undefined, alt: "" } },
+  site: fixtureSettings.site,
+  author: fixtureSettings.author,
+  home: fixtureSettings.home,
   footer: { content: ${JSON.stringify(footerContent)} },
 };`;
           }

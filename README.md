@@ -42,6 +42,7 @@
 │   ├── styles/             # 全局、文章与说说样式
 │   └── content.config.ts   # Content Collections 数据结构
 ├── tests/fixtures/         # 构建验收用内容
+├── blog.config.ts          # 博客设置的唯一日常入口
 ├── astro.config.mjs        # Astro、Markdown 与代码高亮配置
 ├── package.json            # 依赖与命令
 └── tsconfig.json           # TypeScript 严格模式
@@ -51,20 +52,14 @@
 
 ### 配置
 
-项目没有额外的配置层，修改下列文件后重新构建即可：
+个性化博客先打开根目录 [`blog.config.ts`](blog.config.ts)。它按博客身份中的站点信息、作者（作者显示名补全博客身份）、首页主视觉和页脚列出全部支持的博客设置、当前可运行值、可选值与中文说明；页面、RSS、Canonical URL、Open Graph、结构化数据和站点地图共用这份设置，不需要再修改页面源码。
 
-| 配置项                     | 文件                           | 说明                                                  |
-| :------------------------- | :----------------------------- | :---------------------------------------------------- |
-| 正式站点地址               | `astro.config.mjs`             | 修改 `site`；Canonical URL、RSS 与 Sitemap 都依赖该值 |
-| 站点标题与首页主视觉       | `src/lib/site.ts`              | 修改 `title`、caption、亮暗主题图片、尺寸及替代文本   |
-| 品牌、默认描述、导航与页脚 | `src/layouts/BaseLayout.astro` | 替换站点品牌、作者、GitHub 与邮箱等公开信息           |
-| 作者介绍与联系方式         | `src/pages/about.astro`        | 修改“关于”页内容                                      |
-| 文章作者结构化数据         | `src/pages/posts/[slug].astro` | 修改 `BlogPosting.author`                             |
-| RSS 标题与描述             | `src/pages/rss.xml.ts`         | 修改订阅源中的站点文案                                |
-| 颜色、字体与内容宽度       | `src/styles/global.css`        | 调整 `:root` 中的设计变量                             |
-| 首页图片                   | `public/images/`               | 替换资源后同步更新 `src/lib/site.ts` 中的路径和尺寸   |
+不适合放进设置文件的内容使用固定位置：
 
-生产环境使用 Node.js `22.16.0`、npm、构建命令 `npm run build` 和输出目录 `dist`。完整上线步骤见 [Cloudflare Pages 部署与日常发布](docs/deployment.md)。第三方资源声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+- “关于我”正文：[`src/content/about.md`](src/content/about.md)，可以留空但不能删除。
+- 本地主视觉和浏览器图标：[`public/images/`](public/images/)，在设置文件中填写以 `/images/` 开头的路径。
+
+修改后运行 `npm run dev` 预览；发布前运行 `npm test`、`npm run build` 和 `npm run preview`。Git 提交与推送方式不变，Cloudflare Pages 仍使用 `npm run build` 和 `dist`，完整操作见 [Cloudflare Pages 部署与日常发布](docs/deployment.md)。第三方资源声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ### 添加文章
 

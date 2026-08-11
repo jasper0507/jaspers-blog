@@ -339,7 +339,7 @@ const blogSettingsSchema = z
 export type BlogSettings = z.input<typeof blogSettingsSchema>;
 
 const settingNames = new Map([
-  ["site", "博客身份"],
+  ["site", "博客身份中的站点信息"],
   ["site.title", "博客名称"],
   ["site.headerTitle", "页头短名称"],
   ["site.url", "正式网址"],

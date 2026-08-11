@@ -1,6 +1,7 @@
 import type { BlogSettings } from "./src/lib/site.ts";
 
 export default {
+  /** 博客身份中的站点信息：名称、正式网址和默认简介；另列可选浏览器图标。 */
   site: {
     /** 博客名称：用于页面标题、Open Graph 和 RSS。 */
     title: "Jasper's Blog",
@@ -13,6 +14,7 @@ export default {
     /** 可选浏览器图标；支持 public/images/ 中的 SVG、PNG 或 ICO。 */
     favicon: undefined,
   },
+  /** 作者：显示名补全博客身份，并与固定公开联系方式集中填写。 */
   author: {
     /** 作者显示名：用于页脚、关于页元信息和文章结构化数据。 */
     name: "Jasper",
@@ -21,6 +23,7 @@ export default {
     /** 公开邮箱：用于页脚联系链接。 */
     email: "jasper0507.self@gmail.com",
   },
+  /** 首页主视觉：一句话与 public/images/ 中的亮暗主题图片。 */
   home: {
     hero: {
       /** 首页主视觉上方的一句话。 */
@@ -33,6 +36,7 @@ export default {
       alt: "Jasper 的博客主视觉",
     },
   },
+  /** 页脚：左侧自定义内容；右侧 RSS、GitHub 与邮箱保持固定。 */
   footer: {
     /** 必填但可留空；支持文字、链接、粗体、斜体、换行、{year} 和 {author}。 */
     /** 链接只接受 HTTPS、mailto: 和以 / 开头的本站地址；不支持其他 Markdown。 */
