@@ -1,18 +1,14 @@
 ---
+import { Content } from "../content/about.md";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { blogSettings } from "../lib/site";
+
+const description = `关于 ${blogSettings.author.name} 与 ${blogSettings.site.title}。`;
 ---
 
-<BaseLayout title="关于" description="关于 Jasper 与 Jasper's Blog。" pageClass="prose">
+<BaseLayout title="关于" description={description} pageClass="prose">
   <h1 class="sr-only">关于</h1>
-
-  <p>我是 Jasper。</p>
-
-  <p>这里是我的个人网站，以技术文章为核心，也用说说记录轻量的想法。</p>
-
-  <ul>
-    <li><a href="https://github.com/jasper0507">GitHub</a></li>
-    <li><a href="mailto:jasper0507.self@gmail.com">公开邮箱</a></li>
-  </ul>
+  <Content />
 </BaseLayout>
 
 <style>
@@ -22,7 +18,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     padding-bottom: clamp(5rem, 9vw, 7.5rem);
   }
 
-  h1 {
+  :global(.prose h1) {
     margin: 0 0 1.5rem;
     font-family: var(--font-serif);
     font-size: clamp(2.5rem, 5vw, 3.5rem);
@@ -31,28 +27,28 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     line-height: 1.1;
   }
 
-  p,
-  li {
+  :global(.prose p),
+  :global(.prose li) {
     color: var(--text);
     font-family: var(--font-serif);
     font-size: clamp(1rem, 1.5vw, 1.12rem);
   }
 
-  strong,
-  b {
+  :global(.prose strong),
+  :global(.prose b) {
     font-weight: 700;
   }
 
-  p,
-  ul {
+  :global(.prose p),
+  :global(.prose ul) {
     max-width: 42rem;
   }
 
-  p {
+  :global(.prose p) {
     margin-block: 0 1.25rem;
   }
 
-  ul {
+  :global(.prose ul) {
     padding-left: 1.25rem;
   }
 </style>

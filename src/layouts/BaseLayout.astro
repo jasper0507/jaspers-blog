@@ -1,7 +1,7 @@
 ---
 import "../styles/fonts.css";
 import "../styles/global.css";
-import { siteConfig } from "../lib/site";
+import { blogSettings } from "../lib/site";
 
 interface PageData {
   title?: string;
@@ -14,14 +14,21 @@ interface Props extends PageData {
   frontmatter?: PageData;
 }
 
-const siteTitle = siteConfig.title;
+const {
+  title: siteTitle,
+  headerTitle,
+  description: defaultDescription,
+  url,
+  favicon,
+} = blogSettings.site;
+const { github, email } = blogSettings.author;
+const footerHtml = blogSettings.footer.html;
 const pageData = Astro.props.frontmatter ?? Astro.props;
 const title = pageData.title ? `${pageData.title} | ${siteTitle}` : siteTitle;
-const description = pageData.description ?? "Jasper 的个人技术博客，记录技术文章与说说。";
-const canonical = new URL(Astro.url.pathname, Astro.site);
+const description = pageData.description ?? defaultDescription;
+const canonical = new URL(Astro.url.pathname, url);
 const path = Astro.url.pathname;
 const inArticles = ["/posts/", "/tags/", "/archives/"].some(prefix => path.startsWith(prefix));
-const year = new Date().getFullYear();
 const structuredData = JSON.stringify(
   path === "/"
     ? {
@@ -49,6 +56,7 @@ const structuredData = JSON.stringify(
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
+    {favicon && <link rel="icon" href={favicon} />}
     <link rel="canonical" href={canonical} />
     <meta property="og:type" content={pageData.ogType ?? "website"} />
     <meta property="og:locale" content="zh_CN" />
@@ -111,7 +119,7 @@ const structuredData = JSON.stringify(
     <a class="skip-link" href="#main-content">跳到主要内容</a>
     <header class="site-header">
       <div class="header-inner">
-        <a class="brand" href="/" aria-label="JaspersBlog 首页">JaspersBlog</a>
+        <a class="brand" href="/" aria-label={`${headerTitle} 首页`}>{headerTitle}</a>
         <nav aria-label="主导航">
           <ul class="nav-list">
             <li>
@@ -171,12 +179,12 @@ const structuredData = JSON.stringify(
     </main>
     <footer class="site-footer">
       <div class="footer-inner">
-        <p>© {year} Jasper. 保留所有权利。</p>
+        {footerHtml && <div class="footer-content" set:html={footerHtml} />}
         <ul aria-label="联系方式">
           <li><a href="/rss.xml">RSS</a></li>
-          <li><a href="https://github.com/jasper0507">GitHub</a></li>
+          <li><a href={github}>GitHub</a></li>
           <li>
-            <a href="mailto:jasper0507.self@gmail.com">邮箱</a>
+            <a href={`mailto:${email}`}>邮箱</a>
           </li>
         </ul>
       </div>

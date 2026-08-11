@@ -8,6 +8,7 @@ import {
 import rehypeKatex from "rehype-katex";
 import { remarkAlert } from "remark-github-blockquote-alert";
 import remarkMath from "remark-math";
+import { blogSettings } from "./src/lib/site.ts";
 
 const kraftPaperTheme = {
   name: "kraft-paper",
@@ -59,7 +60,7 @@ const transformerCodeTitle = {
 };
 
 export default defineConfig({
-  site: "https://blog.jasper0507.cc.cd",
+  site: blogSettings.site.url,
   trailingSlash: "always",
   redirects: {
     "/posts": "/archives",

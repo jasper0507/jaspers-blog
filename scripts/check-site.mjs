@@ -1,16 +1,31 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
-import { access, mkdir, readFile, readdir } from "node:fs/promises";
+import { access, mkdir, readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { chromium } from "playwright-core";
+import { fixtureSettings } from "./fixtures/blog-settings.mjs";
+import { blogSettings } from "../src/lib/site.ts";
+import { escapeXml } from "../src/lib/xml.ts";
 
 const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
 const astro = join(root, "node_modules/astro/bin/astro.mjs");
 const pagefind = join(root, "node_modules/.bin/pagefind");
 const host = "http://127.0.0.1:4321";
+const {
+  site: expectedSite,
+  author: expectedAuthor,
+  home: expectedHome,
+  footer: expectedFooter,
+} = blogSettings;
+const hasDarkHero = expectedHome.hero.darkImage !== expectedHome.hero.lightImage;
+const expectedFooterLinks = author => [
+  ["RSS", "/rss.xml"],
+  ["GitHub", author.github],
+  ["邮箱", `mailto:${author.email}`],
+];
 const routes = [
   "/",
   "/posts/visual/",
@@ -53,6 +68,196 @@ async function build(environment) {
   await execFileAsync(pagefind, ["--site", "dist", "--glob", "posts/**/*.html"], { cwd: root });
 }
 
+async function buildSettingsFixture(name, content) {
+  const output = fileURLToPath(new URL(`../dist-${name}/`, import.meta.url));
+  try {
+    await execFileAsync(
+      process.execPath,
+      [astro, "build", "--force", "--config", "scripts/fixtures/astro-blog-settings.config.mjs"],
+      {
+        cwd: root,
+        env: {
+          ...fixtureEnvironment,
+          BLOG_SETTINGS_FIXTURE: name,
+          BLOG_SETTINGS_FOOTER_CONTENT: content,
+        },
+      },
+    );
+    const assets = join(output, "_astro");
+    const css = await Promise.all(
+      (await readdir(assets))
+        .filter(file => file.endsWith(".css"))
+        .map(file => readFile(join(assets, file), "utf8")),
+    );
+    return {
+      home: await readFile(join(output, "index.html"), "utf8"),
+      about: await readFile(join(output, "about/index.html"), "utf8"),
+      shuoshuo: await readFile(join(output, "shuoshuo/index.html"), "utf8"),
+      tags: await readFile(join(output, "tags/index.html"), "utf8"),
+      archives: await readFile(join(output, "archives/index.html"), "utf8"),
+      post: await readFile(join(output, "posts/visual/index.html"), "utf8"),
+      rss: await readFile(join(output, "rss.xml"), "utf8"),
+      sitemap: await readFile(join(output, "sitemap.xml"), "utf8"),
+      css: css.join("\n"),
+    };
+  } finally {
+    await rm(output, { recursive: true, force: true });
+  }
+}
+
+async function footerLinks(page) {
+  return page
+    .locator(".site-footer ul a")
+    .evaluateAll(links => links.map(link => [link.textContent?.trim(), link.getAttribute("href")]));
+}
+
+async function assertFooterLayout(page, width) {
+  assert.equal(
+    await page
+      .locator(".footer-inner")
+      .evaluate(element => getComputedStyle(element).flexDirection),
+    width <= 480 ? "column" : "row",
+  );
+}
+
+async function checkFooterFixture(browser, fixture, hasContent) {
+  for (const width of [1440, 375]) {
+    for (const theme of ["light", "dark"]) {
+      const context = await browser.newContext({ viewport: { width, height: 960 } });
+      const page = await context.newPage();
+      await page.setContent(fixture.home);
+      await page.addStyleTag({ content: fixture.css });
+      await page.evaluate(theme => {
+        document.documentElement.dataset.theme = theme;
+      }, theme);
+      assert.equal(await page.locator(".footer-content").count(), hasContent ? 1 : 0);
+      assert.deepEqual(await footerLinks(page), expectedFooterLinks(fixtureSettings.author));
+      await assertFooterLayout(page, width);
+      assert.ok(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+        `${width}px ${theme} 页脚不得横向溢出`,
+      );
+      assert.equal(
+        await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme),
+        theme,
+      );
+      await context.close();
+    }
+  }
+}
+
+async function checkSettingsFixture(browser, fixture) {
+  const page = await browser.newPage();
+  await page.setContent(fixture.home);
+  assert.equal(await page.title(), fixtureSettings.site.title);
+  assert.equal(await page.locator(".brand").textContent(), fixtureSettings.site.headerTitle);
+  assert.equal(
+    await page.locator('meta[name="description"]').getAttribute("content"),
+    fixtureSettings.site.description,
+  );
+  assert.equal(
+    await page.locator('link[rel="canonical"]').getAttribute("href"),
+    fixtureSettings.site.url,
+  );
+  assert.equal(
+    await page.locator('meta[property="og:site_name"]').getAttribute("content"),
+    fixtureSettings.site.title,
+  );
+  assert.equal(
+    await page.locator('meta[property="og:title"]').getAttribute("content"),
+    fixtureSettings.site.title,
+  );
+  assert.equal(
+    await page.locator('meta[property="og:description"]').getAttribute("content"),
+    fixtureSettings.site.description,
+  );
+  assert.equal(
+    await page.locator('meta[property="og:url"]').getAttribute("content"),
+    fixtureSettings.site.url,
+  );
+  assert.equal(
+    await page.locator(".hero-caption").textContent(),
+    fixtureSettings.home.hero.caption,
+  );
+  assert.equal(
+    await page.locator(".hero-image").getAttribute("src"),
+    fixtureSettings.home.hero.lightImage,
+  );
+  assert.equal(
+    await page.locator(".hero-image").getAttribute("alt"),
+    fixtureSettings.home.hero.alt,
+  );
+  assert.equal(
+    await page.locator('link[rel="icon"]').getAttribute("href"),
+    fixtureSettings.site.favicon,
+  );
+  assert.equal(await page.locator(".hero-image").count(), 1, "暗图缺省时不应重复输出亮色资源");
+  assert.match(await page.locator(".footer-content").textContent(), /^超长页脚/);
+  assert.deepEqual(
+    JSON.parse(await page.locator('script[type="application/ld+json"]').textContent()),
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: fixtureSettings.site.title,
+      url: fixtureSettings.site.url,
+      inLanguage: "zh-CN",
+    },
+  );
+
+  await page.setContent(fixture.about);
+  assert.equal(
+    await page.locator('meta[name="description"]').getAttribute("content"),
+    `关于 ${fixtureSettings.author.name} 与 ${fixtureSettings.site.title}。`,
+  );
+  assert.equal(
+    await page.locator('link[rel="canonical"]').getAttribute("href"),
+    new URL("/about/", fixtureSettings.site.url).href,
+  );
+
+  for (const [html, description] of [
+    [fixture.shuoshuo, `${fixtureSettings.author.name} 发布的轻量文字与照片内容。`],
+    [fixture.tags, `按标签浏览 ${fixtureSettings.author.name} 的技术文章。`],
+    [fixture.archives, `按时间浏览 ${fixtureSettings.author.name} 的技术文章。`],
+  ]) {
+    await page.setContent(html);
+    assert.equal(
+      await page.locator('meta[name="description"]').getAttribute("content"),
+      description,
+    );
+  }
+
+  await page.setContent(fixture.post);
+  const structuredData = JSON.parse(
+    await page.locator('script[type="application/ld+json"]').textContent(),
+  );
+  assert.equal(structuredData.author.name, fixtureSettings.author.name);
+  assert.equal(
+    await page.locator('link[rel="canonical"]').getAttribute("href"),
+    new URL("/posts/visual/", fixtureSettings.site.url).href,
+  );
+  await page.close();
+
+  assert.ok(fixture.rss.includes(`<title>${escapeXml(fixtureSettings.site.title)}</title>`));
+  assert.ok(fixture.rss.includes(`<link>${escapeXml(fixtureSettings.site.url)}</link>`));
+  assert.ok(
+    fixture.rss.includes(
+      `<description>${escapeXml(fixtureSettings.site.description)}</description>`,
+    ),
+  );
+  const rssLinks = [...fixture.rss.matchAll(/<link>([^<]+)<\/link>/g)].map(match => match[1]);
+  assert.ok(rssLinks.every(link => link.startsWith(fixtureSettings.site.url)));
+  const sitemapUrls = [...fixture.sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
+  assert.ok(sitemapUrls.length > 1);
+  assert.ok(sitemapUrls.every(url => url.startsWith(fixtureSettings.site.url)));
+  assert.equal(
+    Object.values(fixture).join("").includes(expectedSite.url),
+    false,
+    "自定义设置 fixture 不得泄漏当前博客正式网址",
+  );
+}
+
 async function checkBuildFailure(environment, expected) {
   let error;
   try {
@@ -88,7 +293,7 @@ async function waitForServer(server) {
   throw new Error(`Astro 预览服务器未启动：${lastError?.message ?? "未知错误"}`);
 }
 
-async function checkFixture(browser) {
+async function checkFixture(browser, footerFixtures) {
   const home = await readFile("dist/index.html", "utf8");
   const timeline = await readFile("dist/shuoshuo/index.html", "utf8");
   const archive = await readFile("dist/archives/index.html", "utf8");
@@ -97,6 +302,10 @@ async function checkFixture(browser) {
   const sitemap = await readFile("dist/sitemap.xml", "utf8");
   const searchIndex = JSON.parse(await readFile("dist/pagefind/pagefind-entry.json", "utf8"));
 
+  assert.ok(rss.includes(`<title>${escapeXml(expectedSite.title)}</title>`));
+  assert.ok(rss.includes(`<link>${escapeXml(expectedSite.url)}</link>`));
+  assert.ok(rss.includes(`<description>${escapeXml(expectedSite.description)}</description>`));
+  assert.ok(sitemap.includes(`<loc>${escapeXml(expectedSite.url)}</loc>`));
   assert.match(home, /同时发布的 Alpha 技术文章/);
   assert.match(home, /这是发布时间最新的公开说说/);
   assert.doesNotMatch(home, /不应公开的技术文章草稿|这是一条不应公开的草稿/);
@@ -128,6 +337,10 @@ async function checkFixture(browser) {
   assert.doesNotMatch(`${archive}${tags}${rss}${sitemap}`, /不应公开的技术文章草稿|草稿标签/);
   assert.equal(searchIndex.languages["zh-cn"].page_count, 3);
 
+  await checkSettingsFixture(browser, footerFixtures.long);
+  await checkFooterFixture(browser, footerFixtures.long, true);
+  await checkFooterFixture(browser, footerFixtures.empty, false);
+
   for (const width of [1440, 320]) {
     const context = await browser.newContext({ viewport: { width, height: 960 } });
     for (const path of routes) {
@@ -140,9 +353,10 @@ async function checkFixture(browser) {
       const response = await page.goto(`${host}${path}`, { waitUntil: "networkidle" });
       assert.equal(response?.ok(), true, `${path} 应可访问`);
       assert.equal(await page.locator("h1").count(), 1, `${path} 应有一个 h1`);
-      assert.equal(
-        await page.evaluate(() => document.documentElement.scrollWidth),
-        width,
+      assert.ok(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
         `${width}px ${path} 不得横向溢出`,
       );
       assert.deepEqual(errors, [], `${path} 不得有页面错误`);
@@ -165,12 +379,12 @@ async function checkFixture(browser) {
         await page.goto(`${host}${path}`, { waitUntil: "networkidle" });
         await page.evaluate(() => document.fonts.ready);
         if (path === "/") {
+          const visibleHero = hasDarkHero ? `.hero-image-${theme}` : ".hero-image";
           assert.equal(
-            await page
-              .locator(`.hero-image-${theme}`)
-              .evaluate(element => getComputedStyle(element).display),
+            await page.locator(visibleHero).evaluate(element => getComputedStyle(element).display),
             "block",
           );
+          await assertFooterLayout(page, width);
         }
         await page.screenshot({
           path: `artifacts/visual/${name}/${name}-${width}-${theme}.png`,
@@ -185,6 +399,71 @@ async function checkFixture(browser) {
   const page = await context.newPage();
   await page.goto(host, { waitUntil: "networkidle" });
 
+  const heroFrame = page.locator(".hero-media");
+  const heroImages = page.locator(".hero-image");
+  const heroImage = heroImages.first();
+  assert.equal(await page.locator(".hero-caption").textContent(), expectedHome.hero.caption);
+  assert.equal(await heroImages.count(), hasDarkHero ? 2 : 1);
+  assert.deepEqual(
+    await heroImages.evaluateAll(images => images.map(image => image.getAttribute("src"))),
+    [expectedHome.hero.lightImage, ...(hasDarkHero ? [expectedHome.hero.darkImage] : [])],
+  );
+  assert.equal(await heroImage.getAttribute("alt"), expectedHome.hero.alt);
+  const favicon = page.locator('link[rel="icon"]');
+  assert.equal(await favicon.count(), expectedSite.favicon ? 1 : 0);
+  if (expectedSite.favicon) assert.equal(await favicon.getAttribute("href"), expectedSite.favicon);
+  await heroImage.evaluate(image => {
+    image.src = "/images/posts/transformer-paper-notes/attention-mechanism.png";
+  });
+  await heroImage.evaluate(image => image.decode());
+  const crop = await heroImage.evaluate(image => {
+    const frame = image.parentElement.getBoundingClientRect();
+    const bounds = image.getBoundingClientRect();
+    const style = getComputedStyle(image);
+    return {
+      frameRatio: frame.width / frame.height,
+      imageRatio: bounds.width / bounds.height,
+      naturalRatio: image.naturalWidth / image.naturalHeight,
+      objectFit: style.objectFit,
+      objectPosition: style.objectPosition,
+    };
+  });
+  assert.ok(Math.abs(crop.naturalRatio - 1.5) > 0.1, "裁切检查应使用非 3:2 图片");
+  assert.ok(Math.abs(crop.frameRatio - 1.5) < 0.01, "主视觉区域应固定为 3:2");
+  assert.ok(Math.abs(crop.imageRatio - 1.5) < 0.01, "主视觉图片应填满 3:2 区域");
+  assert.deepEqual([crop.objectFit, crop.objectPosition], ["cover", "50% 50%"]);
+  assert.equal(await heroFrame.evaluate(element => getComputedStyle(element).overflow), "hidden");
+
+  assert.equal(await page.title(), expectedSite.title);
+  assert.equal(
+    await page.locator('meta[name="description"]').getAttribute("content"),
+    expectedSite.description,
+  );
+  assert.equal(await page.locator('link[rel="canonical"]').getAttribute("href"), expectedSite.url);
+  assert.equal(
+    await page.locator('meta[property="og:site_name"]').getAttribute("content"),
+    expectedSite.title,
+  );
+  assert.equal(
+    await page.locator('meta[property="og:title"]').getAttribute("content"),
+    expectedSite.title,
+  );
+  assert.equal(
+    await page.locator('meta[property="og:description"]').getAttribute("content"),
+    expectedSite.description,
+  );
+  assert.equal(
+    await page.locator('meta[property="og:url"]').getAttribute("content"),
+    expectedSite.url,
+  );
+  assert.equal(await page.locator(".brand").textContent(), expectedSite.headerTitle);
+  assert.equal(
+    await page.locator(".brand").getAttribute("aria-label"),
+    `${expectedSite.headerTitle} 首页`,
+  );
+  assert.deepEqual(await footerLinks(page), expectedFooterLinks(expectedAuthor));
+  assert.equal(await page.locator(".footer-content").innerHTML(), expectedFooter.html);
+
   const menuTrigger = page.locator("#article-menu-trigger");
   const menu = page.locator("#article-menu-list");
   await menuTrigger.click();
@@ -198,6 +477,17 @@ async function checkFixture(browser) {
   await themeToggle.click();
   await page.reload();
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
+
+  await page.goto(`${host}/about/`);
+  assert.equal(
+    await page.locator('meta[name="description"]').getAttribute("content"),
+    `关于 ${expectedAuthor.name} 与 ${expectedSite.title}。`,
+  );
+  assert.deepEqual(await page.locator("main p").allTextContents(), [
+    "我是 Jasper。",
+    "这里是我的个人网站，以技术文章为核心，也用说说记录轻量的想法。",
+  ]);
+  assert.equal(await page.locator("main a").count(), 0, "关于正文不应自动追加联系方式");
 
   await page.goto(`${host}/shuoshuo/`);
   const shuoshuoToggle = page.locator('[data-shuoshuo-toggle="20250101-000001"]');
@@ -241,6 +531,13 @@ async function checkFixture(browser) {
   assert.equal(await page.locator(".post-toc").count(), 0, "无 h2/h3 时不应渲染目录");
 
   await page.goto(`${host}/posts/visual/`);
+  const postStructuredData = JSON.parse(
+    await page.locator('script[type="application/ld+json"]').textContent(),
+  );
+  assert.deepEqual(postStructuredData.author, {
+    "@type": "Person",
+    name: expectedAuthor.name,
+  });
   const toc = page.locator(".post-toc");
   const tocLinks = toc.locator('a[href^="#"]');
   assert.deepEqual(
@@ -332,6 +629,13 @@ async function checkProduction() {
   await assert.rejects(access("dist/categories/index.html"));
 }
 
+const footerFixtures = {
+  long: await buildSettingsFixture(
+    "footer-long",
+    `超长页脚 ${"不换行文字".repeat(80)} [${"超长链接".repeat(120)}](https://example.com/)`,
+  ),
+  empty: await buildSettingsFixture("footer-empty", ""),
+};
 await build(fixtureEnvironment);
 const server = spawn(
   process.execPath,
@@ -343,7 +647,7 @@ try {
   await waitForServer(server);
   const browser = await chromium.launch({ headless: true });
   try {
-    await checkFixture(browser);
+    await checkFixture(browser, footerFixtures);
   } finally {
     await browser.close();
   }

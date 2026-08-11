@@ -1,6 +1,7 @@
 ---
 import MarkdownBody from "../../components/MarkdownBody.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { blogSettings } from "../../lib/site";
 import { getPublishedShuoshuo } from "../../lib/shuoshuo";
 import "../../styles/shuoshuo-card.css";
 
@@ -12,7 +13,11 @@ const shuoshuo = await Promise.all(
 );
 ---
 
-<BaseLayout title="说说" description="Jasper 发布的轻量文字与照片内容。" pageClass="page-shell">
+<BaseLayout
+  title="说说"
+  description={`${blogSettings.author.name} 发布的轻量文字与照片内容。`}
+  pageClass="page-shell"
+>
   <h1 id="shuoshuo-title" class="sr-only">说说</h1>
   {
     shuoshuo.length > 0 ? (
