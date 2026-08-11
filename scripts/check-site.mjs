@@ -5,12 +5,15 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { chromium } from "playwright-core";
+import { blogSettings } from "../src/lib/site.ts";
+import { escapeXml } from "../src/lib/xml.ts";
 
 const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
 const astro = join(root, "node_modules/astro/bin/astro.mjs");
 const pagefind = join(root, "node_modules/.bin/pagefind");
 const host = "http://127.0.0.1:4321";
+const { site: expectedSite } = blogSettings;
 const routes = [
   "/",
   "/posts/visual/",
@@ -97,6 +100,10 @@ async function checkFixture(browser) {
   const sitemap = await readFile("dist/sitemap.xml", "utf8");
   const searchIndex = JSON.parse(await readFile("dist/pagefind/pagefind-entry.json", "utf8"));
 
+  assert.ok(rss.includes(`<title>${escapeXml(expectedSite.title)}</title>`));
+  assert.ok(rss.includes(`<link>${escapeXml(expectedSite.url)}</link>`));
+  assert.ok(rss.includes(`<description>${escapeXml(expectedSite.description)}</description>`));
+  assert.ok(sitemap.includes(`<loc>${escapeXml(expectedSite.url)}</loc>`));
   assert.match(home, /同时发布的 Alpha 技术文章/);
   assert.match(home, /这是发布时间最新的公开说说/);
   assert.doesNotMatch(home, /不应公开的技术文章草稿|这是一条不应公开的草稿/);
@@ -184,6 +191,34 @@ async function checkFixture(browser) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 960 } });
   const page = await context.newPage();
   await page.goto(host, { waitUntil: "networkidle" });
+
+  assert.equal(await page.title(), expectedSite.title);
+  assert.equal(
+    await page.locator('meta[name="description"]').getAttribute("content"),
+    expectedSite.description,
+  );
+  assert.equal(await page.locator('link[rel="canonical"]').getAttribute("href"), expectedSite.url);
+  assert.equal(
+    await page.locator('meta[property="og:site_name"]').getAttribute("content"),
+    expectedSite.title,
+  );
+  assert.equal(
+    await page.locator('meta[property="og:title"]').getAttribute("content"),
+    expectedSite.title,
+  );
+  assert.equal(
+    await page.locator('meta[property="og:description"]').getAttribute("content"),
+    expectedSite.description,
+  );
+  assert.equal(
+    await page.locator('meta[property="og:url"]').getAttribute("content"),
+    expectedSite.url,
+  );
+  assert.equal(await page.locator(".brand").textContent(), expectedSite.headerTitle);
+  assert.equal(
+    await page.locator(".brand").getAttribute("aria-label"),
+    `${expectedSite.headerTitle} 首页`,
+  );
 
   const menuTrigger = page.locator("#article-menu-trigger");
   const menu = page.locator("#article-menu-list");

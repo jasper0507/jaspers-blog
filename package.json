@@ -15,9 +15,10 @@
     "build": "astro build && pagefind --site dist --glob \"posts/**/*.html\"",
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
+    "test:settings": "node --experimental-strip-types scripts/check-blog-settings.mjs",
     "test:shuoshuo:command": "node scripts/check-new-shuoshuo.mjs",
-    "test:site": "node scripts/check-site.mjs",
-    "test": "npm run format:check && npm run check && node scripts/check-fetch-fonts.mjs && npm run test:shuoshuo:command && npm run test:site"
+    "test:site": "node --experimental-strip-types scripts/check-site.mjs",
+    "test": "npm run format:check && npm run check && npm run test:settings && node scripts/check-fetch-fonts.mjs && npm run test:shuoshuo:command && npm run test:site"
   },
   "dependencies": {
     "astro": "7.1.6"

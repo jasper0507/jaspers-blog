@@ -1,7 +1,7 @@
 ---
 import "../styles/fonts.css";
 import "../styles/global.css";
-import { siteConfig } from "../lib/site";
+import { blogSettings } from "../lib/site";
 
 interface PageData {
   title?: string;
@@ -14,11 +14,11 @@ interface Props extends PageData {
   frontmatter?: PageData;
 }
 
-const siteTitle = siteConfig.title;
+const { title: siteTitle, headerTitle, description: defaultDescription, url } = blogSettings.site;
 const pageData = Astro.props.frontmatter ?? Astro.props;
 const title = pageData.title ? `${pageData.title} | ${siteTitle}` : siteTitle;
-const description = pageData.description ?? "Jasper 的个人技术博客，记录技术文章与说说。";
-const canonical = new URL(Astro.url.pathname, Astro.site);
+const description = pageData.description ?? defaultDescription;
+const canonical = new URL(Astro.url.pathname, url);
 const path = Astro.url.pathname;
 const inArticles = ["/posts/", "/tags/", "/archives/"].some(prefix => path.startsWith(prefix));
 const year = new Date().getFullYear();
@@ -111,7 +111,7 @@ const structuredData = JSON.stringify(
     <a class="skip-link" href="#main-content">跳到主要内容</a>
     <header class="site-header">
       <div class="header-inner">
-        <a class="brand" href="/" aria-label="JaspersBlog 首页">JaspersBlog</a>
+        <a class="brand" href="/" aria-label={`${headerTitle} 首页`}>{headerTitle}</a>
         <nav aria-label="主导航">
           <ul class="nav-list">
             <li>
