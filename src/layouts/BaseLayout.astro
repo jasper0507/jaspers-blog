@@ -15,6 +15,7 @@ interface Props extends PageData {
 }
 
 const { title: siteTitle, headerTitle, description: defaultDescription, url } = blogSettings.site;
+const { name: authorName, github, email } = blogSettings.author;
 const pageData = Astro.props.frontmatter ?? Astro.props;
 const title = pageData.title ? `${pageData.title} | ${siteTitle}` : siteTitle;
 const description = pageData.description ?? defaultDescription;
@@ -171,12 +172,12 @@ const structuredData = JSON.stringify(
     </main>
     <footer class="site-footer">
       <div class="footer-inner">
-        <p>© {year} Jasper. 保留所有权利。</p>
+        <p>© {year} {authorName}. 保留所有权利。</p>
         <ul aria-label="联系方式">
           <li><a href="/rss.xml">RSS</a></li>
-          <li><a href="https://github.com/jasper0507">GitHub</a></li>
+          <li><a href={github}>GitHub</a></li>
           <li>
-            <a href="mailto:jasper0507.self@gmail.com">邮箱</a>
+            <a href={`mailto:${email}`}>邮箱</a>
           </li>
         </ul>
       </div>

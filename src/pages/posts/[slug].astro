@@ -30,7 +30,7 @@ const structuredData = JSON.stringify({
   datePublished: post.publishedAt.iso,
   dateModified: post.modifiedAtIso,
   inLanguage: "zh-CN",
-  author: { "@type": "Person", name: "Jasper" },
+  author: { "@type": "Person", name: blogSettings.author.name },
 }).replaceAll("<", "\\u003c");
 ---
 

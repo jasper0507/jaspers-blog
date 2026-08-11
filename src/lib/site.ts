@@ -1,6 +1,26 @@
 import { z } from "astro/zod";
 import rawSettings from "../../blog.config.ts";
 
+declare const process: {
+  getBuiltinModule(name: "fs"): {
+    readFileSync(path: string | URL, encoding: "utf8"): string;
+  };
+};
+
+const { readFileSync } = process.getBuiltinModule("fs");
+const aboutMarkdownPath = "src/content/about.md";
+
+export function assertAboutMarkdownExists(path: string | URL = aboutMarkdownPath) {
+  try {
+    readFileSync(path, "utf8");
+  } catch (error) {
+    if ((error as { code?: string }).code === "ENOENT") {
+      throw new Error("“关于我” Markdown 文件缺失；请恢复固定文件 src/content/about.md。");
+    }
+    throw error;
+  }
+}
+
 const requiredText = (label: string) =>
   z.string().superRefine((value, context) => {
     if (!value.trim()) {
@@ -33,6 +53,27 @@ function getUrlError(value: string) {
   if (url.hash) return "正式网址不能包含锚点。";
 }
 
+function getGitHubError(value: string) {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return "GitHub 地址必须是完整的 HTTPS 个人主页，例如 https://github.com/example。";
+  }
+
+  if (url.protocol !== "https:") return "GitHub 地址必须使用 HTTPS。";
+  if (url.hostname !== "github.com") return "GitHub 地址必须使用 github.com。";
+  if (url.username || url.password || url.port || url.search || url.hash) {
+    return "GitHub 地址不能包含凭据、端口、查询参数或锚点。";
+  }
+
+  const path = url.pathname.split("/").filter(Boolean);
+  if (path.length !== 1) return "GitHub 地址必须指向个人主页，不能指向仓库或其他页面。";
+  if (!/^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(path[0]) || path[0].includes("--")) {
+    return "GitHub 地址中的用户名无效；请填写有效的个人主页地址。";
+  }
+}
+
 const blogSettingsSchema = z
   .strictObject({
     site: z
@@ -54,6 +95,16 @@ const blogSettingsSchema = z
           });
         }
       }),
+    author: z.strictObject({
+      name: requiredText("作者显示名"),
+      github: requiredText("GitHub 地址").superRefine((value, context) => {
+        const error = getGitHubError(value);
+        if (error) context.addIssue({ code: "custom", message: error });
+      }),
+      email: requiredText("邮箱地址").pipe(
+        z.email({ message: "邮箱地址必须是有效邮箱，例如 name@example.com。" }),
+      ),
+    }),
   })
   .transform(settings =>
     Object.freeze({
@@ -62,6 +113,7 @@ const blogSettingsSchema = z
         headerTitle: settings.site.headerTitle ?? settings.site.title,
         url: new URL(settings.site.url).href,
       }),
+      author: Object.freeze(settings.author),
     }),
   );
 
@@ -73,6 +125,10 @@ const settingNames = new Map([
   ["site.headerTitle", "页头短名称"],
   ["site.url", "正式网址"],
   ["site.description", "默认简介"],
+  ["author", "作者设置"],
+  ["author.name", "作者显示名"],
+  ["author.github", "GitHub 地址"],
+  ["author.email", "邮箱地址"],
 ]);
 
 function formatIssue(issue: z.core.$ZodIssue) {
@@ -99,6 +155,7 @@ export function validateBlogSettings(input: unknown) {
 }
 
 /** 所有消费者只读取这一份已校验博客设置。 */
+assertAboutMarkdownExists();
 export const blogSettings = validateBlogSettings(rawSettings);
 
 /** 首页主视觉的现有配置。 */
@@ -114,6 +171,6 @@ export const siteConfig = {
     width: 960,
     height: 640,
     /** 共用 alt */
-    alt: "Jasper 的博客主视觉",
+    alt: `${blogSettings.author.name} 的博客主视觉`,
   },
 } as const;

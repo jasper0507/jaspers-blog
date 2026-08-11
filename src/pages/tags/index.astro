@@ -1,11 +1,16 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getPublishedPostCatalog } from "../../lib/posts";
+import { blogSettings } from "../../lib/site";
 
 const { tags } = await getPublishedPostCatalog();
 ---
 
-<BaseLayout title="标签" description="按标签浏览 Jasper 的技术文章。" pageClass="page-shell">
+<BaseLayout
+  title="标签"
+  description={`按标签浏览 ${blogSettings.author.name} 的技术文章。`}
+  pageClass="page-shell"
+>
   <h1 id="tags-title" class="sr-only">标签</h1>
   {
     tags.length > 0 ? (

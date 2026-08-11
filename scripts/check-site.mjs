@@ -13,7 +13,7 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const astro = join(root, "node_modules/astro/bin/astro.mjs");
 const pagefind = join(root, "node_modules/.bin/pagefind");
 const host = "http://127.0.0.1:4321";
-const { site: expectedSite } = blogSettings;
+const { site: expectedSite, author: expectedAuthor } = blogSettings;
 const routes = [
   "/",
   "/posts/visual/",
@@ -219,6 +219,22 @@ async function checkFixture(browser) {
     await page.locator(".brand").getAttribute("aria-label"),
     `${expectedSite.headerTitle} 首页`,
   );
+  assert.deepEqual(
+    await page
+      .locator(".site-footer a")
+      .evaluateAll(links =>
+        links.map(link => [link.textContent?.trim(), link.getAttribute("href")]),
+      ),
+    [
+      ["RSS", "/rss.xml"],
+      ["GitHub", expectedAuthor.github],
+      ["邮箱", `mailto:${expectedAuthor.email}`],
+    ],
+  );
+  assert.ok(
+    (await page.locator(".footer-inner p").textContent())?.includes(expectedAuthor.name),
+    "页脚版权信息应使用作者显示名",
+  );
 
   const menuTrigger = page.locator("#article-menu-trigger");
   const menu = page.locator("#article-menu-list");
@@ -233,6 +249,17 @@ async function checkFixture(browser) {
   await themeToggle.click();
   await page.reload();
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
+
+  await page.goto(`${host}/about/`);
+  assert.equal(
+    await page.locator('meta[name="description"]').getAttribute("content"),
+    `关于 ${expectedAuthor.name} 与 ${expectedSite.title}。`,
+  );
+  assert.deepEqual(await page.locator("main p").allTextContents(), [
+    "我是 Jasper。",
+    "这里是我的个人网站，以技术文章为核心，也用说说记录轻量的想法。",
+  ]);
+  assert.equal(await page.locator("main a").count(), 0, "关于正文不应自动追加联系方式");
 
   await page.goto(`${host}/shuoshuo/`);
   const shuoshuoToggle = page.locator('[data-shuoshuo-toggle="20250101-000001"]');
@@ -276,6 +303,13 @@ async function checkFixture(browser) {
   assert.equal(await page.locator(".post-toc").count(), 0, "无 h2/h3 时不应渲染目录");
 
   await page.goto(`${host}/posts/visual/`);
+  const postStructuredData = JSON.parse(
+    await page.locator('script[type="application/ld+json"]').textContent(),
+  );
+  assert.deepEqual(postStructuredData.author, {
+    "@type": "Person",
+    name: expectedAuthor.name,
+  });
   const toc = page.locator(".post-toc");
   const tocLinks = toc.locator('a[href^="#"]');
   assert.deepEqual(

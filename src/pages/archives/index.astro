@@ -2,13 +2,14 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import PostTags from "../../components/PostTags.astro";
 import { getPublishedPostCatalog } from "../../lib/posts";
+import { blogSettings } from "../../lib/site";
 
 const { archive } = await getPublishedPostCatalog();
 ---
 
 <BaseLayout
   title="归档"
-  description="按时间浏览 Jasper 的技术文章。"
+  description={`按时间浏览 ${blogSettings.author.name} 的技术文章。`}
   pageClass="page-shell archive-page"
 >
   <h1 id="archives-title" class="sr-only">归档</h1>
