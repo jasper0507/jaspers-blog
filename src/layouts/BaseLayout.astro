@@ -21,14 +21,14 @@ const {
   url,
   favicon,
 } = blogSettings.site;
-const { name: authorName, github, email } = blogSettings.author;
+const { github, email } = blogSettings.author;
+const footerHtml = blogSettings.footer.html;
 const pageData = Astro.props.frontmatter ?? Astro.props;
 const title = pageData.title ? `${pageData.title} | ${siteTitle}` : siteTitle;
 const description = pageData.description ?? defaultDescription;
 const canonical = new URL(Astro.url.pathname, url);
 const path = Astro.url.pathname;
 const inArticles = ["/posts/", "/tags/", "/archives/"].some(prefix => path.startsWith(prefix));
-const year = new Date().getFullYear();
 const structuredData = JSON.stringify(
   path === "/"
     ? {
@@ -179,7 +179,7 @@ const structuredData = JSON.stringify(
     </main>
     <footer class="site-footer">
       <div class="footer-inner">
-        <p>© {year} {authorName}. 保留所有权利。</p>
+        {footerHtml && <div class="footer-content" set:html={footerHtml} />}
         <ul aria-label="联系方式">
           <li><a href="/rss.xml">RSS</a></li>
           <li><a href={github}>GitHub</a></li>

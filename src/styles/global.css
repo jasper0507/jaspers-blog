@@ -373,13 +373,24 @@ main {
   font-size: 0.86rem;
 }
 
-.footer-inner p {
+.footer-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.footer-content p {
   margin: 0;
+}
+
+.footer-content p + p {
+  margin-top: 0.5rem;
 }
 
 .site-footer ul {
   display: flex;
+  flex-shrink: 0;
   gap: 1.25rem;
+  margin-left: auto;
 }
 
 @media (max-width: 52rem) {
@@ -418,6 +429,10 @@ main {
   .footer-inner {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .site-footer ul {
+    margin-left: 0;
   }
 }
 

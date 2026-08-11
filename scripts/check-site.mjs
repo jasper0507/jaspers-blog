@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { chromium } from "playwright-core";
-import { fixtureFavicon } from "./fixtures/astro-favicon.config.mjs";
+import { fixtureFavicon } from "./fixtures/astro-blog-settings.config.mjs";
 import { blogSettings } from "../src/lib/site.ts";
 import { escapeXml } from "../src/lib/xml.ts";
 
@@ -13,10 +13,19 @@ const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
 const astro = join(root, "node_modules/astro/bin/astro.mjs");
 const pagefind = join(root, "node_modules/.bin/pagefind");
-const faviconOutput = fileURLToPath(new URL("../dist-favicon/", import.meta.url));
 const host = "http://127.0.0.1:4321";
-const { site: expectedSite, author: expectedAuthor, home: expectedHome } = blogSettings;
+const {
+  site: expectedSite,
+  author: expectedAuthor,
+  home: expectedHome,
+  footer: expectedFooter,
+} = blogSettings;
 const hasDarkHero = expectedHome.hero.darkImage !== expectedHome.hero.lightImage;
+const expectedFooterLinks = [
+  ["RSS", "/rss.xml"],
+  ["GitHub", expectedAuthor.github],
+  ["邮箱", `mailto:${expectedAuthor.email}`],
+];
 const routes = [
   "/",
   "/posts/visual/",
@@ -59,19 +68,72 @@ async function build(environment) {
   await execFileAsync(pagefind, ["--site", "dist", "--glob", "posts/**/*.html"], { cwd: root });
 }
 
-async function buildFaviconFixture() {
+async function buildSettingsFixture(name, content) {
+  const output = fileURLToPath(new URL(`../dist-${name}/`, import.meta.url));
   try {
     await execFileAsync(
       process.execPath,
-      [astro, "build", "--force", "--config", "scripts/fixtures/astro-favicon.config.mjs"],
+      [astro, "build", "--force", "--config", "scripts/fixtures/astro-blog-settings.config.mjs"],
       {
         cwd: root,
-        env: fixtureEnvironment,
+        env: {
+          ...fixtureEnvironment,
+          BLOG_SETTINGS_FIXTURE: name,
+          BLOG_SETTINGS_FOOTER_CONTENT: content,
+        },
       },
     );
-    return await readFile(join(faviconOutput, "index.html"), "utf8");
+    const assets = join(output, "_astro");
+    const css = await Promise.all(
+      (await readdir(assets))
+        .filter(file => file.endsWith(".css"))
+        .map(file => readFile(join(assets, file), "utf8")),
+    );
+    return { html: await readFile(join(output, "index.html"), "utf8"), css: css.join("\n") };
   } finally {
-    await rm(faviconOutput, { recursive: true, force: true });
+    await rm(output, { recursive: true, force: true });
+  }
+}
+
+async function footerLinks(page) {
+  return page
+    .locator(".site-footer ul a")
+    .evaluateAll(links => links.map(link => [link.textContent?.trim(), link.getAttribute("href")]));
+}
+
+async function assertFooterLayout(page, width) {
+  assert.equal(
+    await page
+      .locator(".footer-inner")
+      .evaluate(element => getComputedStyle(element).flexDirection),
+    width <= 480 ? "column" : "row",
+  );
+}
+
+async function checkFooterFixture(browser, fixture, hasContent) {
+  for (const width of [1440, 375]) {
+    for (const theme of ["light", "dark"]) {
+      const context = await browser.newContext({ viewport: { width, height: 960 } });
+      const page = await context.newPage();
+      await page.setContent(fixture.html);
+      await page.addStyleTag({ content: fixture.css });
+      await page.evaluate(theme => {
+        document.documentElement.dataset.theme = theme;
+      }, theme);
+      assert.equal(await page.locator(".footer-content").count(), hasContent ? 1 : 0);
+      assert.deepEqual(await footerLinks(page), expectedFooterLinks);
+      await assertFooterLayout(page, width);
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+        width,
+        `${width}px ${theme} 页脚不得横向溢出`,
+      );
+      assert.equal(
+        await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme),
+        theme,
+      );
+      await context.close();
+    }
   }
 }
 
@@ -110,7 +172,7 @@ async function waitForServer(server) {
   throw new Error(`Astro 预览服务器未启动：${lastError?.message ?? "未知错误"}`);
 }
 
-async function checkFixture(browser, faviconHome) {
+async function checkFixture(browser, footerFixtures) {
   const home = await readFile("dist/index.html", "utf8");
   const timeline = await readFile("dist/shuoshuo/index.html", "utf8");
   const archive = await readFile("dist/archives/index.html", "utf8");
@@ -155,13 +217,16 @@ async function checkFixture(browser, faviconHome) {
   assert.equal(searchIndex.languages["zh-cn"].page_count, 3);
 
   const faviconPage = await browser.newPage();
-  await faviconPage.setContent(faviconHome);
+  await faviconPage.setContent(footerFixtures.long.html);
   assert.equal(await faviconPage.locator('link[rel="icon"]').getAttribute("href"), fixtureFavicon);
   const fallbackHeroImages = faviconPage.locator(".hero-image");
   assert.equal(await fallbackHeroImages.count(), 1, "暗图缺省时不应重复输出亮色资源");
   assert.equal(await fallbackHeroImages.getAttribute("src"), expectedHome.hero.lightImage);
   assert.equal(await fallbackHeroImages.getAttribute("alt"), "", "空图片说明应输出装饰图片语义");
   await faviconPage.close();
+
+  await checkFooterFixture(browser, footerFixtures.long, true);
+  await checkFooterFixture(browser, footerFixtures.empty, false);
 
   for (const width of [1440, 320]) {
     const context = await browser.newContext({ viewport: { width, height: 960 } });
@@ -205,6 +270,7 @@ async function checkFixture(browser, faviconHome) {
             await page.locator(visibleHero).evaluate(element => getComputedStyle(element).display),
             "block",
           );
+          await assertFooterLayout(page, width);
         }
         await page.screenshot({
           path: `artifacts/visual/${name}/${name}-${width}-${theme}.png`,
@@ -281,22 +347,8 @@ async function checkFixture(browser, faviconHome) {
     await page.locator(".brand").getAttribute("aria-label"),
     `${expectedSite.headerTitle} 首页`,
   );
-  assert.deepEqual(
-    await page
-      .locator(".site-footer a")
-      .evaluateAll(links =>
-        links.map(link => [link.textContent?.trim(), link.getAttribute("href")]),
-      ),
-    [
-      ["RSS", "/rss.xml"],
-      ["GitHub", expectedAuthor.github],
-      ["邮箱", `mailto:${expectedAuthor.email}`],
-    ],
-  );
-  assert.ok(
-    (await page.locator(".footer-inner p").textContent())?.includes(expectedAuthor.name),
-    "页脚版权信息应使用作者显示名",
-  );
+  assert.deepEqual(await footerLinks(page), expectedFooterLinks);
+  assert.equal(await page.locator(".footer-content").innerHTML(), expectedFooter.html);
 
   const menuTrigger = page.locator("#article-menu-trigger");
   const menu = page.locator("#article-menu-list");
@@ -463,7 +515,13 @@ async function checkProduction() {
   await assert.rejects(access("dist/categories/index.html"));
 }
 
-const faviconHome = await buildFaviconFixture();
+const footerFixtures = {
+  long: await buildSettingsFixture(
+    "footer-long",
+    `超长页脚 ${"不换行文字".repeat(80)} [${"超长链接".repeat(120)}](https://example.com/)`,
+  ),
+  empty: await buildSettingsFixture("footer-empty", ""),
+};
 await build(fixtureEnvironment);
 const server = spawn(
   process.execPath,
@@ -475,7 +533,7 @@ try {
   await waitForServer(server);
   const browser = await chromium.launch({ headless: true });
   try {
-    await checkFixture(browser, faviconHome);
+    await checkFixture(browser, footerFixtures);
   } finally {
     await browser.close();
   }

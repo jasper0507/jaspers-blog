@@ -33,5 +33,10 @@ export default {
       alt: "Jasper 的博客主视觉",
     },
   },
+  footer: {
+    /** 必填但可留空；支持文字、链接、粗体、斜体、换行、{year} 和 {author}。 */
+    /** 链接只接受 HTTPS、mailto: 和以 / 开头的本站地址；不支持其他 Markdown。 */
+    content: "© {year} {author}. 保留所有权利。",
+  },
   /** “关于我”正文固定编辑：src/content/about.md（文件可为空，但不能缺失）。 */
 } satisfies BlogSettings;
