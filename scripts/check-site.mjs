@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
-import { access, mkdir, readFile, readdir } from "node:fs/promises";
+import { access, mkdir, readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { chromium } from "playwright-core";
+import { fixtureFavicon } from "./fixtures/astro-favicon.config.mjs";
 import { blogSettings } from "../src/lib/site.ts";
 import { escapeXml } from "../src/lib/xml.ts";
 
@@ -12,8 +13,10 @@ const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
 const astro = join(root, "node_modules/astro/bin/astro.mjs");
 const pagefind = join(root, "node_modules/.bin/pagefind");
+const faviconOutput = fileURLToPath(new URL("../dist-favicon/", import.meta.url));
 const host = "http://127.0.0.1:4321";
 const { site: expectedSite, author: expectedAuthor, home: expectedHome } = blogSettings;
+const hasDarkHero = expectedHome.hero.darkImage !== expectedHome.hero.lightImage;
 const routes = [
   "/",
   "/posts/visual/",
@@ -56,6 +59,22 @@ async function build(environment) {
   await execFileAsync(pagefind, ["--site", "dist", "--glob", "posts/**/*.html"], { cwd: root });
 }
 
+async function buildFaviconFixture() {
+  try {
+    await execFileAsync(
+      process.execPath,
+      [astro, "build", "--force", "--config", "scripts/fixtures/astro-favicon.config.mjs"],
+      {
+        cwd: root,
+        env: fixtureEnvironment,
+      },
+    );
+    return await readFile(join(faviconOutput, "index.html"), "utf8");
+  } finally {
+    await rm(faviconOutput, { recursive: true, force: true });
+  }
+}
+
 async function checkBuildFailure(environment, expected) {
   let error;
   try {
@@ -91,7 +110,7 @@ async function waitForServer(server) {
   throw new Error(`Astro 预览服务器未启动：${lastError?.message ?? "未知错误"}`);
 }
 
-async function checkFixture(browser) {
+async function checkFixture(browser, faviconHome) {
   const home = await readFile("dist/index.html", "utf8");
   const timeline = await readFile("dist/shuoshuo/index.html", "utf8");
   const archive = await readFile("dist/archives/index.html", "utf8");
@@ -104,11 +123,6 @@ async function checkFixture(browser) {
   assert.ok(rss.includes(`<link>${escapeXml(expectedSite.url)}</link>`));
   assert.ok(rss.includes(`<description>${escapeXml(expectedSite.description)}</description>`));
   assert.ok(sitemap.includes(`<loc>${escapeXml(expectedSite.url)}</loc>`));
-  assert.match(home, new RegExp(`>${expectedHome.hero.caption.replaceAll(".", "\\.")}<`));
-  assert.equal((home.match(/class="hero-image/g) ?? []).length, 2);
-  assert.ok(home.includes(`src="${expectedHome.hero.lightImage}"`));
-  assert.ok(home.includes(`src="${expectedHome.hero.darkImage}"`));
-  assert.doesNotMatch(home, /<link[^>]+rel="icon"/);
   assert.match(home, /同时发布的 Alpha 技术文章/);
   assert.match(home, /这是发布时间最新的公开说说/);
   assert.doesNotMatch(home, /不应公开的技术文章草稿|这是一条不应公开的草稿/);
@@ -139,6 +153,15 @@ async function checkFixture(browser) {
   assert.match(sitemap, /\/tags\/astro\//);
   assert.doesNotMatch(`${archive}${tags}${rss}${sitemap}`, /不应公开的技术文章草稿|草稿标签/);
   assert.equal(searchIndex.languages["zh-cn"].page_count, 3);
+
+  const faviconPage = await browser.newPage();
+  await faviconPage.setContent(faviconHome);
+  assert.equal(await faviconPage.locator('link[rel="icon"]').getAttribute("href"), fixtureFavicon);
+  const fallbackHeroImages = faviconPage.locator(".hero-image");
+  assert.equal(await fallbackHeroImages.count(), 1, "暗图缺省时不应重复输出亮色资源");
+  assert.equal(await fallbackHeroImages.getAttribute("src"), expectedHome.hero.lightImage);
+  assert.equal(await fallbackHeroImages.getAttribute("alt"), "", "空图片说明应输出装饰图片语义");
+  await faviconPage.close();
 
   for (const width of [1440, 320]) {
     const context = await browser.newContext({ viewport: { width, height: 960 } });
@@ -177,10 +200,9 @@ async function checkFixture(browser) {
         await page.goto(`${host}${path}`, { waitUntil: "networkidle" });
         await page.evaluate(() => document.fonts.ready);
         if (path === "/") {
+          const visibleHero = hasDarkHero ? `.hero-image-${theme}` : ".hero-image";
           assert.equal(
-            await page
-              .locator(`.hero-image-${theme}`)
-              .evaluate(element => getComputedStyle(element).display),
+            await page.locator(visibleHero).evaluate(element => getComputedStyle(element).display),
             "block",
           );
         }
@@ -198,9 +220,18 @@ async function checkFixture(browser) {
   await page.goto(host, { waitUntil: "networkidle" });
 
   const heroFrame = page.locator(".hero-media");
-  const heroImage = page.locator(".hero-image-light");
+  const heroImages = page.locator(".hero-image");
+  const heroImage = heroImages.first();
   assert.equal(await page.locator(".hero-caption").textContent(), expectedHome.hero.caption);
+  assert.equal(await heroImages.count(), hasDarkHero ? 2 : 1);
+  assert.deepEqual(
+    await heroImages.evaluateAll(images => images.map(image => image.getAttribute("src"))),
+    [expectedHome.hero.lightImage, ...(hasDarkHero ? [expectedHome.hero.darkImage] : [])],
+  );
   assert.equal(await heroImage.getAttribute("alt"), expectedHome.hero.alt);
+  const favicon = page.locator('link[rel="icon"]');
+  assert.equal(await favicon.count(), expectedSite.favicon ? 1 : 0);
+  if (expectedSite.favicon) assert.equal(await favicon.getAttribute("href"), expectedSite.favicon);
   await heroImage.evaluate(image => {
     image.src = "/images/posts/transformer-paper-notes/attention-mechanism.png";
   });
@@ -432,6 +463,7 @@ async function checkProduction() {
   await assert.rejects(access("dist/categories/index.html"));
 }
 
+const faviconHome = await buildFaviconFixture();
 await build(fixtureEnvironment);
 const server = spawn(
   process.execPath,
@@ -443,7 +475,7 @@ try {
   await waitForServer(server);
   const browser = await chromium.launch({ headless: true });
   try {
-    await checkFixture(browser);
+    await checkFixture(browser, faviconHome);
   } finally {
     await browser.close();
   }

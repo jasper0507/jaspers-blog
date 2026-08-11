@@ -4,12 +4,20 @@ import rawSettings from "../../blog.config.ts";
 declare const process: {
   getBuiltinModule(name: "fs"): {
     readFileSync(path: string | URL, encoding: "utf8"): string;
+    realpathSync(path: string | URL): string;
     statSync(path: string | URL): { isFile(): boolean };
+  };
+  getBuiltinModule(name: "path"): {
+    isAbsolute(path: string): boolean;
+    relative(from: string, to: string): string;
+    sep: string;
   };
 };
 
-const { readFileSync, statSync } = process.getBuiltinModule("fs");
+const { readFileSync, realpathSync, statSync } = process.getBuiltinModule("fs");
+const { isAbsolute, relative, sep } = process.getBuiltinModule("path");
 const aboutMarkdownPath = "src/content/about.md";
+const publicImageDirectory = realpathSync("public/images");
 const heroImageExtensions = ["svg", "png", "jpg", "jpeg", "webp", "avif", "gif"];
 const faviconExtensions = ["svg", "png", "ico"];
 
@@ -59,7 +67,20 @@ const localImage = (label: string, extensions: string[]) =>
     }
 
     try {
-      if (!statSync(`public${value}`).isFile()) {
+      const imagePath = realpathSync(`public${value}`);
+      const relativeImagePath = relative(publicImageDirectory, imagePath);
+      if (
+        relativeImagePath === ".." ||
+        relativeImagePath.startsWith(`..${sep}`) ||
+        isAbsolute(relativeImagePath)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: `${label}只接受 public/images/ 中的本地文件，不能通过符号链接指向外部路径。`,
+        });
+        return;
+      }
+      if (!statSync(imagePath).isFile()) {
         context.addIssue({
           code: "custom",
           message: `${label}文件不存在；请检查 public${value}。`,
