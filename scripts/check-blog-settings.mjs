@@ -23,17 +23,50 @@ const validSettings = {
     headerTitle: "Example",
     url: "https://example.com",
     description: "用于校验的默认简介。",
+    favicon: undefined,
   },
   author: {
     name: "示例作者",
     github: "https://github.com/example",
     email: "author@example.com",
   },
+  home: {
+    hero: {
+      caption: "示例主视觉",
+      lightImage: "/images/hero-light.svg",
+      darkImage: undefined,
+      alt: "",
+    },
+  },
 };
 
 const validated = validateBlogSettings(validSettings);
 assert.equal(validated.site.url, "https://example.com/");
 assert.equal(validated.site.headerTitle, "Example");
+assert.equal(validated.site.favicon, undefined);
+assert.equal(validated.home.hero.darkImage, "/images/hero-light.svg");
+assert.equal(validated.home.hero.alt, "");
+for (const favicon of [
+  "/images/hero-light.svg",
+  "/images/posts/transformer-paper-notes/attention-mechanism.png",
+]) {
+  assert.equal(
+    validateBlogSettings({
+      ...validSettings,
+      site: { ...validSettings.site, favicon },
+    }).site.favicon,
+    favicon,
+  );
+}
+assert.equal(
+  validateBlogSettings({
+    ...validSettings,
+    home: {
+      hero: { ...validSettings.home.hero, darkImage: "/images/hero-dark.svg" },
+    },
+  }).home.hero.darkImage,
+  "/images/hero-dark.svg",
+);
 assert.equal(
   validateBlogSettings({
     ...validSettings,
@@ -60,6 +93,8 @@ assert.equal(Object.isFrozen(validated), true);
 assert.equal(Object.isFrozen(validated.site), true);
 assert.deepEqual(validated.author, validSettings.author);
 assert.equal(Object.isFrozen(validated.author), true);
+assert.equal(Object.isFrozen(validated.home), true);
+assert.equal(Object.isFrozen(validated.home.hero), true);
 
 const invalidSettings = [
   [{ ...validSettings, extra: true }, /博客设置.*未知设置.*extra/],
@@ -140,6 +175,67 @@ const invalidSettings = [
   [
     { ...validSettings, site: { ...validSettings.site, headerTitle: "1234567890123456 " } },
     /页头最终显示名称.*16/,
+  ],
+  ...["https://example.com/favicon.svg", "/images/../hero-light.svg"].map(favicon => [
+    { ...validSettings, site: { ...validSettings.site, favicon } },
+    /浏览器图标.*public\/images/,
+  ]),
+  [
+    { ...validSettings, site: { ...validSettings.site, favicon: "/images/missing.ico" } },
+    /浏览器图标.*文件不存在/,
+  ],
+  [
+    {
+      ...validSettings,
+      site: {
+        ...validSettings.site,
+        favicon: "/images/posts/github-hexo-blog-guide/theme-installation-example.jpg",
+      },
+    },
+    /浏览器图标.*扩展名/,
+  ],
+  [{ ...validSettings, home: undefined }, /首页设置.*缺失/],
+  [{ ...validSettings, home: { ...validSettings.home, extra: true } }, /首页设置.*未知设置/],
+  [
+    { ...validSettings, home: { hero: { ...validSettings.home.hero, caption: " " } } },
+    /首页 caption.*不能为空/,
+  ],
+  [
+    { ...validSettings, home: { hero: { ...validSettings.home.hero, alt: undefined } } },
+    /主视觉图片说明.*缺失/,
+  ],
+  [
+    { ...validSettings, home: { hero: { ...validSettings.home.hero, alt: " " } } },
+    /主视觉图片说明.*空字符串/,
+  ],
+  ...[
+    "https://example.com/hero.svg",
+    "/images/../hero-light.svg",
+    "/images/%2e%2e/hero-light.svg",
+  ].map(lightImage => [
+    { ...validSettings, home: { hero: { ...validSettings.home.hero, lightImage } } },
+    /亮色主视觉.*public\/images/,
+  ]),
+  [
+    {
+      ...validSettings,
+      home: { hero: { ...validSettings.home.hero, lightImage: "/images/missing.svg" } },
+    },
+    /亮色主视觉.*文件不存在/,
+  ],
+  [
+    {
+      ...validSettings,
+      home: { hero: { ...validSettings.home.hero, lightImage: "/images/hero-light.txt" } },
+    },
+    /亮色主视觉.*扩展名/,
+  ],
+  [
+    {
+      ...validSettings,
+      home: { hero: { ...validSettings.home.hero, darkImage: "/images/missing.png" } },
+    },
+    /暗色主视觉.*文件不存在/,
   ],
 ];
 

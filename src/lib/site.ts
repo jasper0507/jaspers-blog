@@ -4,11 +4,14 @@ import rawSettings from "../../blog.config.ts";
 declare const process: {
   getBuiltinModule(name: "fs"): {
     readFileSync(path: string | URL, encoding: "utf8"): string;
+    statSync(path: string | URL): { isFile(): boolean };
   };
 };
 
-const { readFileSync } = process.getBuiltinModule("fs");
+const { readFileSync, statSync } = process.getBuiltinModule("fs");
 const aboutMarkdownPath = "src/content/about.md";
+const heroImageExtensions = ["svg", "png", "jpg", "jpeg", "webp", "avif", "gif"];
+const faviconExtensions = ["svg", "png", "ico"];
 
 export function assertAboutMarkdownExists(path: string | URL = aboutMarkdownPath) {
   try {
@@ -29,6 +32,61 @@ const requiredText = (label: string) =>
       context.addIssue({ code: "custom", message: `${label}首尾不能有空白；请删除多余空白。` });
     }
   });
+
+const localImage = (label: string, extensions: string[]) =>
+  z.string().superRefine((value, context) => {
+    const segments = value.split("/");
+    if (
+      !value.startsWith("/images/") ||
+      value.includes("\\") ||
+      /[%?#]/.test(value) ||
+      segments.some(segment => segment === "." || segment === "..")
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: `${label}只接受 public/images/ 中以 /images/ 开头的本地路径，不能使用外部 URL 或路径穿越。`,
+      });
+      return;
+    }
+
+    const extension = value.match(/\.([^.\/]+)$/)?.[1].toLowerCase();
+    if (!extension || !extensions.includes(extension)) {
+      context.addIssue({
+        code: "custom",
+        message: `${label}扩展名不受支持；请使用 ${extensions.map(item => item.toUpperCase()).join("、")} 图片。`,
+      });
+      return;
+    }
+
+    try {
+      if (!statSync(`public${value}`).isFile()) {
+        context.addIssue({
+          code: "custom",
+          message: `${label}文件不存在；请检查 public${value}。`,
+        });
+      }
+    } catch (error) {
+      if (["ENOENT", "ENOTDIR"].includes((error as { code?: string }).code ?? "")) {
+        context.addIssue({
+          code: "custom",
+          message: `${label}文件不存在；请检查 public${value}。`,
+        });
+        return;
+      }
+      throw error;
+    }
+  });
+
+const imageDescription = z.string().superRefine((value, context) => {
+  if (value !== "" && !value.trim()) {
+    context.addIssue({
+      code: "custom",
+      message: "主视觉图片说明若用于装饰图，必须明确填写空字符串。",
+    });
+  } else if (value !== value.trim()) {
+    context.addIssue({ code: "custom", message: "主视觉图片说明首尾不能有空白。" });
+  }
+});
 
 function getUrlError(value: string) {
   let url: URL;
@@ -86,6 +144,7 @@ const blogSettingsSchema = z
           if (error) context.addIssue({ code: "custom", message: error });
         }),
         description: requiredText("默认简介"),
+        favicon: localImage("浏览器图标", faviconExtensions).optional(),
       })
       .superRefine((site, context) => {
         if ([...(site.headerTitle ?? site.title)].length > 16) {
@@ -106,6 +165,14 @@ const blogSettingsSchema = z
         z.email({ message: "邮箱地址必须是有效邮箱，例如 name@example.com。" }),
       ),
     }),
+    home: z.strictObject({
+      hero: z.strictObject({
+        caption: requiredText("首页 caption"),
+        lightImage: localImage("亮色主视觉", heroImageExtensions),
+        darkImage: localImage("暗色主视觉", heroImageExtensions).optional(),
+        alt: imageDescription,
+      }),
+    }),
   })
   .transform(settings =>
     Object.freeze({
@@ -115,6 +182,12 @@ const blogSettingsSchema = z
         url: new URL(settings.site.url).href,
       }),
       author: Object.freeze(settings.author),
+      home: Object.freeze({
+        hero: Object.freeze({
+          ...settings.home.hero,
+          darkImage: settings.home.hero.darkImage ?? settings.home.hero.lightImage,
+        }),
+      }),
     }),
   );
 
@@ -126,10 +199,17 @@ const settingNames = new Map([
   ["site.headerTitle", "页头短名称"],
   ["site.url", "正式网址"],
   ["site.description", "默认简介"],
+  ["site.favicon", "浏览器图标"],
   ["author", "作者设置"],
   ["author.name", "作者显示名"],
   ["author.github", "GitHub 地址"],
   ["author.email", "邮箱地址"],
+  ["home", "首页设置"],
+  ["home.hero", "首页主视觉"],
+  ["home.hero.caption", "首页 caption"],
+  ["home.hero.lightImage", "亮色主视觉"],
+  ["home.hero.darkImage", "暗色主视觉"],
+  ["home.hero.alt", "主视觉图片说明"],
 ]);
 
 function formatIssue(issue: z.core.$ZodIssue) {
@@ -158,20 +238,3 @@ export function validateBlogSettings(input: unknown) {
 /** 所有消费者只读取这一份已校验博客设置。 */
 assertAboutMarkdownExists();
 export const blogSettings = validateBlogSettings(rawSettings);
-
-/** 首页主视觉的现有配置。 */
-export const siteConfig = {
-  hero: {
-    /** 主视觉上方一句 caption（可见 h1） */
-    caption: "Talk is cheap. Show me the code.",
-    /** 亮色主题主视觉 */
-    src: "/images/hero-light.svg",
-    /** 暗色主题主视觉 */
-    srcDark: "/images/hero-dark.svg",
-    /** 共用固有宽高（横图，约 3:2），防止布局偏移 */
-    width: 960,
-    height: 640,
-    /** 共用 alt */
-    alt: `${blogSettings.author.name} 的博客主视觉`,
-  },
-} as const;

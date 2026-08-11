@@ -2,7 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getPublishedPostCatalog } from "../lib/posts";
 import { getPublishedShuoshuo } from "../lib/shuoshuo";
-import { siteConfig } from "../lib/site";
+import { blogSettings } from "../lib/site";
 import "../styles/shuoshuo-card.css";
 
 const [{ posts: publishedPosts }, publishedShuoshuo] = await Promise.all([
@@ -11,7 +11,8 @@ const [{ posts: publishedPosts }, publishedShuoshuo] = await Promise.all([
 ]);
 const [latestPost] = publishedPosts;
 const [latestShuoshuo] = publishedShuoshuo;
-const { hero } = siteConfig;
+const { hero } = blogSettings.home;
+const hasDarkHero = hero.darkImage !== hero.lightImage;
 const postCount = publishedPosts.length;
 const shuoshuoCount = publishedShuoshuo.length;
 ---
@@ -20,25 +21,29 @@ const shuoshuoCount = publishedShuoshuo.length;
   <div class="home-grid">
     <h1 id="home-title" class="hero-caption">{hero.caption}</h1>
 
-    <section class="hero-media" aria-label={hero.alt}>
+    <div class="hero-media">
       <img
-        class="hero-image hero-image-light"
-        src={hero.src}
-        width={hero.width}
-        height={hero.height}
+        class:list={["hero-image", hasDarkHero && "hero-image-light"]}
+        src={hero.lightImage}
+        width="960"
+        height="640"
         alt={hero.alt}
         decoding="async"
         fetchpriority="high"
       />
-      <img
-        class="hero-image hero-image-dark"
-        src={hero.srcDark}
-        width={hero.width}
-        height={hero.height}
-        alt={hero.alt}
-        decoding="async"
-      />
-    </section>
+      {
+        hasDarkHero && (
+          <img
+            class="hero-image hero-image-dark"
+            src={hero.darkImage}
+            width="960"
+            height="640"
+            alt={hero.alt}
+            decoding="async"
+          />
+        )
+      }
+    </div>
 
     <div class="home-feed">
       <section class="feed-section" aria-labelledby="recent-posts">
@@ -116,15 +121,18 @@ const shuoshuoCount = publishedShuoshuo.length;
     grid-row: 2;
     position: relative;
     min-width: 0;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    border-radius: 0.5rem;
   }
 
   .hero-image {
     display: block;
     width: 100%;
     max-width: 100%;
-    height: auto;
+    height: 100%;
     object-fit: cover;
-    border-radius: 0.5rem;
+    object-position: center;
   }
 
   /* 亮/暗双图：跟随 data-theme 与系统偏好 */

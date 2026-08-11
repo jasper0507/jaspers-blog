@@ -13,7 +13,7 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const astro = join(root, "node_modules/astro/bin/astro.mjs");
 const pagefind = join(root, "node_modules/.bin/pagefind");
 const host = "http://127.0.0.1:4321";
-const { site: expectedSite, author: expectedAuthor } = blogSettings;
+const { site: expectedSite, author: expectedAuthor, home: expectedHome } = blogSettings;
 const routes = [
   "/",
   "/posts/visual/",
@@ -104,6 +104,11 @@ async function checkFixture(browser) {
   assert.ok(rss.includes(`<link>${escapeXml(expectedSite.url)}</link>`));
   assert.ok(rss.includes(`<description>${escapeXml(expectedSite.description)}</description>`));
   assert.ok(sitemap.includes(`<loc>${escapeXml(expectedSite.url)}</loc>`));
+  assert.match(home, new RegExp(`>${expectedHome.hero.caption.replaceAll(".", "\\.")}<`));
+  assert.equal((home.match(/class="hero-image/g) ?? []).length, 2);
+  assert.ok(home.includes(`src="${expectedHome.hero.lightImage}"`));
+  assert.ok(home.includes(`src="${expectedHome.hero.darkImage}"`));
+  assert.doesNotMatch(home, /<link[^>]+rel="icon"/);
   assert.match(home, /同时发布的 Alpha 技术文章/);
   assert.match(home, /这是发布时间最新的公开说说/);
   assert.doesNotMatch(home, /不应公开的技术文章草稿|这是一条不应公开的草稿/);
@@ -191,6 +196,32 @@ async function checkFixture(browser) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 960 } });
   const page = await context.newPage();
   await page.goto(host, { waitUntil: "networkidle" });
+
+  const heroFrame = page.locator(".hero-media");
+  const heroImage = page.locator(".hero-image-light");
+  assert.equal(await page.locator(".hero-caption").textContent(), expectedHome.hero.caption);
+  assert.equal(await heroImage.getAttribute("alt"), expectedHome.hero.alt);
+  await heroImage.evaluate(image => {
+    image.src = "/images/posts/transformer-paper-notes/attention-mechanism.png";
+  });
+  await heroImage.evaluate(image => image.decode());
+  const crop = await heroImage.evaluate(image => {
+    const frame = image.parentElement.getBoundingClientRect();
+    const bounds = image.getBoundingClientRect();
+    const style = getComputedStyle(image);
+    return {
+      frameRatio: frame.width / frame.height,
+      imageRatio: bounds.width / bounds.height,
+      naturalRatio: image.naturalWidth / image.naturalHeight,
+      objectFit: style.objectFit,
+      objectPosition: style.objectPosition,
+    };
+  });
+  assert.ok(Math.abs(crop.naturalRatio - 1.5) > 0.1, "裁切检查应使用非 3:2 图片");
+  assert.ok(Math.abs(crop.frameRatio - 1.5) < 0.01, "主视觉区域应固定为 3:2");
+  assert.ok(Math.abs(crop.imageRatio - 1.5) < 0.01, "主视觉图片应填满 3:2 区域");
+  assert.deepEqual([crop.objectFit, crop.objectPosition], ["cover", "50% 50%"]);
+  assert.equal(await heroFrame.evaluate(element => getComputedStyle(element).overflow), "hidden");
 
   assert.equal(await page.title(), expectedSite.title);
   assert.equal(
