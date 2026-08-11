@@ -87,10 +87,25 @@ const localImage = (label: string, extensions: string[]) =>
         });
       }
     } catch (error) {
-      if (["ENOENT", "ENOTDIR"].includes((error as { code?: string }).code ?? "")) {
+      const code = (error as { code?: string }).code;
+      if (code === "ELOOP") {
+        context.addIssue({
+          code: "custom",
+          message: `${label}文件路径包含循环符号链接；请改用 public/images/ 中的普通文件。`,
+        });
+        return;
+      }
+      if (["ENOENT", "ENOTDIR"].includes(code ?? "")) {
         context.addIssue({
           code: "custom",
           message: `${label}文件不存在；请检查 public${value}。`,
+        });
+        return;
+      }
+      if (["EACCES", "EPERM"].includes(code ?? "")) {
+        context.addIssue({
+          code: "custom",
+          message: `${label}文件无法读取；请检查 public${value} 的权限。`,
         });
         return;
       }

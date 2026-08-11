@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assertAboutMarkdownExists, validateBlogSettings } from "../src/lib/site.ts";
@@ -95,6 +95,47 @@ assert.deepEqual(validated.author, validSettings.author);
 assert.equal(Object.isFrozen(validated.author), true);
 assert.equal(Object.isFrozen(validated.home), true);
 assert.equal(Object.isFrozen(validated.home.hero), true);
+
+const imageFixtureDirectory = mkdtempSync(join(tmpdir(), "jasper-blog-images-"));
+const imageFixtureName = `.settings-${process.pid}`;
+const outsideImage = join(imageFixtureDirectory, "outside.svg");
+const outsideImageLink = `public/images/${imageFixtureName}-outside.svg`;
+const loopImageLink = `public/images/${imageFixtureName}-loop.svg`;
+writeFileSync(outsideImage, '<svg xmlns="http://www.w3.org/2000/svg"/>');
+try {
+  symlinkSync(outsideImage, outsideImageLink);
+  symlinkSync(`${imageFixtureName}-loop.svg`, loopImageLink);
+  assert.throws(
+    () =>
+      validateBlogSettings({
+        ...validSettings,
+        home: {
+          hero: {
+            ...validSettings.home.hero,
+            lightImage: `/images/${imageFixtureName}-outside.svg`,
+          },
+        },
+      }),
+    /亮色主视觉.*符号链接.*外部路径/,
+  );
+  assert.throws(
+    () =>
+      validateBlogSettings({
+        ...validSettings,
+        home: {
+          hero: {
+            ...validSettings.home.hero,
+            darkImage: `/images/${imageFixtureName}-loop.svg`,
+          },
+        },
+      }),
+    /暗色主视觉.*循环符号链接/,
+  );
+} finally {
+  rmSync(outsideImageLink, { force: true });
+  rmSync(loopImageLink, { force: true });
+  rmSync(imageFixtureDirectory, { recursive: true });
+}
 
 const invalidSettings = [
   [{ ...validSettings, extra: true }, /博客设置.*未知设置.*extra/],
