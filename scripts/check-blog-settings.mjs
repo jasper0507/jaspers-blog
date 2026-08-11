@@ -83,6 +83,14 @@ const invalidSettings = [
     },
     /GitHub 地址.*个人主页/,
   ],
+  ...[
+    "https://github.com//example",
+    "https://github.com/example?",
+    "https://github.com/example#",
+  ].map(github => [
+    { ...validSettings, author: { ...validSettings.author, github } },
+    /GitHub 地址.*个人主页/,
+  ]),
   [{ ...validSettings, author: { ...validSettings.author, email: undefined } }, /邮箱地址.*缺失/],
   [
     { ...validSettings, author: { ...validSettings.author, email: "invalid" } },

@@ -67,9 +67,10 @@ function getGitHubError(value: string) {
     return "GitHub 地址不能包含凭据、端口、查询参数或锚点。";
   }
 
-  const path = url.pathname.split("/").filter(Boolean);
-  if (path.length !== 1) return "GitHub 地址必须指向个人主页，不能指向仓库或其他页面。";
-  if (!/^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(path[0]) || path[0].includes("--")) {
+  const profile = value.match(/^https:\/\/github\.com\/([^/?#]+)\/?$/i);
+  if (!profile) return "GitHub 地址必须指向个人主页，不能指向仓库或其他页面。";
+  const username = profile[1];
+  if (!/^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i.test(username) || username.includes("--")) {
     return "GitHub 地址中的用户名无效；请填写有效的个人主页地址。";
   }
 }
