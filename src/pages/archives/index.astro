@@ -1,10 +1,9 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import PostTags from "../../components/PostTags.astro";
-import { formatPostDateIso, getPostYear, getPublishedPosts } from "../../lib/posts";
+import { getPublishedPostCatalog } from "../../lib/posts";
 
-const posts = await getPublishedPosts();
-const years = [...new Set(posts.map(post => getPostYear(post.data.publishedAt)))];
+const { archive } = await getPublishedPostCatalog();
 ---
 
 <BaseLayout
@@ -14,27 +13,130 @@ const years = [...new Set(posts.map(post => getPostYear(post.data.publishedAt)))
 >
   <h1 id="archives-title" class="sr-only">归档</h1>
   {
-    years.map(year => (
+    archive.map(({ year, posts }) => (
       <section class="archive-year" aria-labelledby={`archive-${year}`}>
         <h2 id={`archive-${year}`}>{year} 年</h2>
         <ol class="archive-timeline">
-          {posts
-            .filter(post => getPostYear(post.data.publishedAt) === year)
-            .map(post => (
-              <li>
-                <article class="archive-card">
-                  <time datetime={post.data.publishedAt.toISOString()}>
-                    {formatPostDateIso(post.data.publishedAt)}
-                  </time>
-                  <a class="archive-card-title" href={`/posts/${post.id}/`}>
-                    {post.data.title}
-                  </a>
-                  <PostTags tags={post.data.tags} />
-                </article>
-              </li>
-            ))}
+          {posts.map(post => (
+            <li>
+              <article class="archive-card">
+                <time datetime={post.publishedAt.iso}>{post.publishedAt.date}</time>
+                <a class="archive-card-title" href={post.href}>
+                  {post.title}
+                </a>
+                <PostTags tags={post.tags} />
+              </article>
+            </li>
+          ))}
         </ol>
       </section>
     ))
   }
 </BaseLayout>
+
+<style>
+  .archive-year {
+    margin-top: 2.5rem;
+  }
+
+  .archive-year:first-of-type {
+    margin-top: 0;
+  }
+
+  .archive-year > h2 {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .archive-timeline {
+    /* 轴线中心与圆点中心共用同一横坐标，避免 border-left + 手工偏移错位 */
+    --archive-rail-x: 0.5rem;
+    --archive-dot-size: 0.55rem;
+    --archive-content-inset: 1.65rem;
+    position: relative;
+    margin: 1rem 0 0;
+    padding: 0 0 0 var(--archive-content-inset);
+    list-style: none;
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .archive-timeline::before {
+    content: "";
+    position: absolute;
+    top: 0.35rem;
+    bottom: 0.35rem;
+    left: var(--archive-rail-x);
+    width: 1px;
+    background: var(--line);
+    transform: translateX(-50%);
+  }
+
+  .archive-timeline > li {
+    position: relative;
+    min-width: 0;
+  }
+
+  .archive-timeline > li::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    top: 1.55rem;
+    left: calc(var(--archive-rail-x) - var(--archive-content-inset));
+    width: var(--archive-dot-size);
+    height: var(--archive-dot-size);
+    border: 2px solid var(--background);
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 1px var(--line);
+    transform: translate(-50%, -50%);
+  }
+
+  .archive-card {
+    display: grid;
+    gap: 0.4rem;
+    min-width: 0;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    background: var(--surface);
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .archive-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    box-shadow: 0 0.35rem 1rem color-mix(in srgb, var(--text) 6%, transparent);
+  }
+
+  .archive-card time {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+
+  .archive-card-title {
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    text-decoration: none;
+  }
+
+  .archive-card-title:hover {
+    color: var(--accent);
+  }
+</style>
+
+<style is:global>
+  .archive-card .post-tags {
+    margin: 0.15rem 0 0;
+    justify-content: flex-start;
+    margin-inline-start: 0;
+  }
+</style>

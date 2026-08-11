@@ -1,24 +1,27 @@
 import type { APIRoute } from "astro";
-import { getPublishedPosts } from "../lib/posts";
-import { getPublishedShuoshuo, getShuoshuoLabel } from "../lib/shuoshuo";
+import { getPublishedPostCatalog } from "../lib/posts";
+import { getPublishedShuoshuo } from "../lib/shuoshuo";
 import { escapeXml } from "../lib/xml";
 
 export const GET: APIRoute = async ({ site }) => {
   if (!site) throw new Error("缺少站点地址，无法生成 RSS。");
 
-  const [posts, shuoshuo] = await Promise.all([getPublishedPosts(), getPublishedShuoshuo()]);
+  const [{ posts }, shuoshuo] = await Promise.all([
+    getPublishedPostCatalog(),
+    getPublishedShuoshuo(),
+  ]);
   const items = [
     ...posts.map(post => ({
-      title: post.data.title,
-      description: post.data.description,
-      publishedAt: post.data.publishedAt,
-      path: `/posts/${post.id}/`,
+      title: post.title,
+      description: post.description,
+      publishedAt: post.publishedAt.value,
+      path: post.href,
     })),
-    ...shuoshuo.map(entry => ({
-      title: getShuoshuoLabel(entry.data.publishedAt),
-      description: entry.body!,
-      publishedAt: entry.data.publishedAt,
-      path: `/shuoshuo/#${entry.id}`,
+    ...shuoshuo.map(item => ({
+      title: item.label,
+      description: item.summary,
+      publishedAt: item.publishedAt.value,
+      path: item.href,
     })),
   ].sort((left, right) => right.publishedAt.getTime() - left.publishedAt.getTime());
 

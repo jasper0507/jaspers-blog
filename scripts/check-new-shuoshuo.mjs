@@ -1,31 +1,23 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { appendFile, mkdtemp, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
+const root = fileURLToPath(new URL("..", import.meta.url));
+const astro = join(root, "node_modules/astro/bin/astro.mjs");
 const script = fileURLToPath(new URL("new-shuoshuo.mjs", import.meta.url));
 const workingDirectory = await mkdtemp(join(tmpdir(), "newblog-shuoshuo-"));
 
-const formatId = date =>
-  new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  })
-    .formatToParts(date)
-    .filter(({ type }) => type !== "literal")
-    .map(({ value }) => value)
-    .join("")
-    .replace(/^(\d{8})(\d{6})$/, "$1-$2");
+function build(environment) {
+  return execFileAsync(process.execPath, [astro, "build", "--force"], {
+    cwd: root,
+    env: environment,
+  });
+}
 
 try {
   const before = new Date();
@@ -40,22 +32,71 @@ try {
 
   assert.equal(files.length, 1);
   assert.match(files[0], /^\d{8}-\d{6}\.md$/);
-  assert.ok(
-    [formatId(before), formatId(after)].includes(files[0].replace(/\.md$/, "")),
-    "文件名应使用 Asia/Shanghai 的当前秒级时间",
-  );
-
   const source = await readFile(join(directory, files[0]), "utf8");
   const id = files[0].replace(/\.md$/, "");
+  const publishedAt = source.match(/^publishedAt: "(.+)"$/m)?.[1];
+  assert.ok(publishedAt, "应生成发布时间");
+  const publishedTime = new Date(publishedAt).getTime();
+  assert.ok(publishedTime >= before.getTime() - 1_000 && publishedTime <= after.getTime() + 1_000);
   assert.match(
     source,
     new RegExp(
-      `publishedAt: ${id.slice(0, 4)}-${id.slice(4, 6)}-${id.slice(6, 8)}T${id.slice(9, 11)}:${id.slice(11, 13)}:${id.slice(13, 15)}\\+08:00`,
+      `publishedAt: "${id.slice(0, 4)}-${id.slice(4, 6)}-${id.slice(6, 8)}T${id.slice(9, 11)}:${id.slice(11, 13)}:${id.slice(13, 15)}\\+08:00"`,
     ),
   );
-  assert.match(source, /^draft: true$/m);
+  assert.match(source, /^draft: false$/m);
   assert.doesNotMatch(source, /^title:/m);
-  assert.match(source, /在这里写说说。/);
+  assert.equal(source.replace(/^---\n[\s\S]*?\n---\n?/, "").trim(), "");
+
+  const environment = {
+    ...process.env,
+    TZ: "UTC",
+    POST_CONTENT_DIR: "./tests/fixtures/posts-visual",
+    SHUOSHUO_CONTENT_DIR: directory,
+  };
+  await assert.rejects(build(environment));
+
+  await appendFile(
+    join(directory, files[0]),
+    "\n![第一张照片][one]\n\n[![第二张照片](https://example.com/two.jpg)](https://example.com/photo)\n\n[one]: https://example.com/one.jpg\n",
+  );
+  await build(environment);
+
+  const home = await readFile(join(root, "dist/index.html"), "utf8");
+  const timeline = await readFile(join(root, "dist/shuoshuo/index.html"), "utf8");
+  const rss = await readFile(join(root, "dist/rss.xml"), "utf8");
+  const publishedAtIso = new Date(publishedAt).toISOString();
+  const publishedAtRss = new Date(publishedAt).toUTCString();
+  assert.match(home, new RegExp(`href="/shuoshuo/#${id}"[^>]*>2 Images</a>`));
+  assert.match(home, new RegExp(`datetime="${publishedAtIso}"`));
+  assert.match(timeline, new RegExp(`id="${id}"`));
+  assert.match(timeline, new RegExp(`href="/shuoshuo/#${id}"`));
+  assert.match(timeline, new RegExp(`datetime="${publishedAtIso}"`));
+  assert.equal((timeline.match(/<img /g) ?? []).length, 2);
+  assert.match(rss, /<description>2 Images<\/description>/);
+  assert.match(rss, new RegExp(`/shuoshuo/#${id}`));
+  assert.match(rss, new RegExp(`<pubDate>${publishedAtRss}</pubDate>`));
+
+  const validSource = await readFile(join(directory, files[0]), "utf8");
+  await writeFile(
+    join(directory, files[0]),
+    validSource.replace("draft: false", "draft: false\ntitle: 不允许的标题"),
+  );
+  await assert.rejects(build(environment));
+
+  const unquotedSource = validSource.replace(`"${publishedAt}"`, publishedAt);
+  await writeFile(join(directory, files[0]), unquotedSource);
+  await build(environment);
+
+  await writeFile(
+    join(directory, files[0]),
+    unquotedSource.replace(publishedAt, publishedAt.replace("+08:00", "Z")),
+  );
+  await assert.rejects(build(environment));
+
+  await writeFile(join(directory, files[0]), validSource);
+  await rename(join(directory, files[0]), join(directory, "20260230-120000.md"));
+  await assert.rejects(build(environment));
 } finally {
   await rm(workingDirectory, { recursive: true, force: true });
 }

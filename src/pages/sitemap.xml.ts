@@ -1,6 +1,5 @@
 import type { APIRoute } from "astro";
-import { getPublishedPosts } from "../lib/posts";
-import { getTagSlug } from "../lib/tags";
+import { getPublishedPostCatalog } from "../lib/posts";
 import { escapeXml } from "../lib/xml";
 
 const staticRoutes = ["/", "/shuoshuo/", "/tags/", "/archives/", "/about/"];
@@ -8,11 +7,9 @@ const staticRoutes = ["/", "/shuoshuo/", "/tags/", "/archives/", "/about/"];
 export const GET: APIRoute = async ({ site }) => {
   if (!site) throw new Error("缺少站点地址，无法生成 sitemap。");
 
-  const posts = await getPublishedPosts();
-  const postRoutes = posts.map(post => `/posts/${post.id}/`);
-  const tagRoutes = [...new Set(posts.flatMap(post => post.data.tags.map(getTagSlug)))].map(
-    slug => `/tags/${slug}/`,
-  );
+  const { posts, tags } = await getPublishedPostCatalog();
+  const postRoutes = posts.map(post => post.href);
+  const tagRoutes = tags.map(tag => tag.href);
   const routes = [...staticRoutes, ...postRoutes, ...tagRoutes];
   const urls = routes
     .map(route => `<url><loc>${escapeXml(new URL(route, site).href)}</loc></url>`)

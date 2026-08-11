@@ -8,7 +8,6 @@ interface PageData {
   description?: string;
   pageClass?: string;
   ogType?: "website" | "article";
-  structuredData?: Record<string, unknown>;
 }
 
 interface Props extends PageData {
@@ -24,23 +23,22 @@ const path = Astro.url.pathname;
 const inArticles = ["/posts/", "/tags/", "/archives/"].some(prefix => path.startsWith(prefix));
 const year = new Date().getFullYear();
 const structuredData = JSON.stringify(
-  pageData.structuredData ??
-    (path === "/"
-      ? {
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          name: siteTitle,
-          url: canonical.href,
-          inLanguage: "zh-CN",
-        }
-      : {
-          "@context": "https://schema.org",
-          "@type": "WebPage",
-          name: pageData.title ?? siteTitle,
-          description,
-          url: canonical.href,
-          inLanguage: "zh-CN",
-        }),
+  path === "/"
+    ? {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: siteTitle,
+        url: canonical.href,
+        inLanguage: "zh-CN",
+      }
+    : {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: pageData.title ?? siteTitle,
+        description,
+        url: canonical.href,
+        inLanguage: "zh-CN",
+      },
 ).replaceAll("<", "\\u003c");
 ---
 
@@ -58,10 +56,11 @@ const structuredData = JSON.stringify(
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
-    <slot name="head" />
     <link rel="stylesheet" href="/pagefind/pagefind-component-ui.css" />
     <title>{title}</title>
-    <script type="application/ld+json" set:html={structuredData} is:inline />
+    <slot name="head">
+      <script type="application/ld+json" set:html={structuredData} is:inline />
+    </slot>
     <script is:inline type="module" src="/pagefind/pagefind-component-ui.js"></script>
     <script is:inline>
       (() => {
@@ -104,50 +103,6 @@ const structuredData = JSON.stringify(
 
           matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateButton);
           updateButton();
-
-          const menu = document.querySelector("#article-menu");
-          const trigger = document.querySelector("#article-menu-trigger");
-          if (!(menu instanceof HTMLDivElement) || !(trigger instanceof HTMLButtonElement)) return;
-
-          const setExpanded = expanded => trigger.setAttribute("aria-expanded", String(expanded));
-          const closeMenu = dismissed => {
-            delete menu.dataset.open;
-            setExpanded(false);
-            if (dismissed) menu.dataset.dismissed = "";
-          };
-
-          trigger.addEventListener("click", () => {
-            const open = menu.dataset.open === undefined;
-            if (!open) return closeMenu(true);
-            menu.dataset.open = "";
-            delete menu.dataset.dismissed;
-            setExpanded(true);
-          });
-          menu.addEventListener("focusin", () => {
-            delete menu.dataset.dismissed;
-            setExpanded(true);
-          });
-          menu.addEventListener("focusout", event => {
-            if (!(event.relatedTarget instanceof Node) || !menu.contains(event.relatedTarget)) {
-              if (menu.dataset.open === undefined) setExpanded(false);
-              delete menu.dataset.dismissed;
-            }
-          });
-          menu.addEventListener("pointerleave", () => delete menu.dataset.dismissed);
-          document.addEventListener("click", event => {
-            if (event.target instanceof Node && !menu.contains(event.target)) {
-              closeMenu(true);
-            }
-          });
-          document.addEventListener("keydown", event => {
-            if (
-              event.key === "Escape" &&
-              (menu.dataset.open !== undefined || menu.matches(":focus-within"))
-            ) {
-              trigger.focus();
-              closeMenu(true);
-            }
-          });
         });
       })();
     </script>
@@ -164,8 +119,7 @@ const structuredData = JSON.stringify(
                 <button
                   id="article-menu-trigger"
                   type="button"
-                  aria-expanded="false"
-                  aria-controls="article-menu-list"
+                  popovertarget="article-menu-list"
                   data-active={inArticles || undefined}
                 >
                   文章
@@ -173,7 +127,7 @@ const structuredData = JSON.stringify(
                     <path d="m2.5 4 3.5 3.5L9.5 4"></path>
                   </svg>
                 </button>
-                <ul class="article-menu-list" id="article-menu-list">
+                <ul class="article-menu-list" id="article-menu-list" popover>
                   <li>
                     <a
                       href="/archives/"

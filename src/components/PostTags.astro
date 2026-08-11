@@ -1,8 +1,8 @@
 ---
-import { getTagSlug } from "../lib/tags";
+import type { PublishedTag } from "../lib/posts";
 
 interface Props {
-  tags: string[];
+  tags: PublishedTag[];
 }
 
 const { tags } = Astro.props;
@@ -11,16 +11,54 @@ const { tags } = Astro.props;
 {
   tags.length > 0 && (
     <ul class="post-tags" aria-label="标签">
-      {tags.map(tag => (
+      {tags.map(({ href, name }) => (
         <li>
-          <a href={`/tags/${getTagSlug(tag)}/`}>
+          <a href={href}>
             <span class="tag-hash" aria-hidden="true">
               #
             </span>
-            {tag}
+            {name}
           </a>
         </li>
       ))}
     </ul>
   )
 }
+
+<style>
+  /* 挂在技术文章上的标签：弱化 #tag 文本链（非 pill/chip） */
+  .post-tags {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.15rem 0.85rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    list-style: none;
+  }
+
+  .post-tags a {
+    display: inline-block;
+    /* 扩大可点区域，视觉仍保持文本链 */
+    padding: 0.25rem 0;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .post-tags a:hover {
+    color: var(--accent);
+  }
+
+  .post-tags .tag-hash {
+    color: color-mix(in srgb, var(--accent) 72%, var(--muted));
+    font-weight: 500;
+  }
+
+  .post-tags a:hover .tag-hash {
+    color: var(--accent);
+  }
+</style>

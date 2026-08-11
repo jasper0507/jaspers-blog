@@ -1,87 +1,116 @@
-import { getCollection } from "astro:content";
+import { getCollection, render } from "astro:content";
+import type { RenderResult } from "astro:content";
 import { isPublished } from "./content";
-import { getTagSlug } from "./tags";
+import { getTag } from "./tags";
 
-const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
-  dateStyle: "long",
+const isoDateFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
 });
 const yearFormatter = new Intl.DateTimeFormat("en", {
   year: "numeric",
   timeZone: "Asia/Shanghai",
 });
 
-export async function getPublishedPosts() {
-  const posts = await getCollection("posts");
+export interface PublishedTag {
+  name: string;
+  slug: string;
+  href: string;
+}
 
-  for (const post of posts) {
-    if (!post.body?.trim()) throw new Error(`技术文章 ${post.id} 的正文不能为空`);
+export interface PublishedPost {
+  slug: string;
+  href: string;
+  title: string;
+  description: string;
+  publishedAt: {
+    value: Date;
+    iso: string;
+    date: string;
+    compact: string;
+    year: string;
+  };
+  modifiedAtIso: string;
+  tags: PublishedTag[];
+  render(): Promise<Pick<RenderResult, "Content" | "headings">>;
+}
+
+interface ArchiveGroup {
+  year: string;
+  posts: PublishedPost[];
+}
+
+interface PublishedTagGroup extends PublishedTag {
+  posts: PublishedPost[];
+}
+
+export async function getPublishedPostCatalog() {
+  const entries = await getCollection("posts");
+
+  for (const entry of entries) {
+    if (!entry.body?.trim()) throw new Error(`技术文章 ${entry.id} 的正文不能为空`);
   }
 
-  return posts
+  const posts: PublishedPost[] = entries
     .filter(isPublished)
     .sort(
       (left, right) =>
         right.data.publishedAt.getTime() - left.data.publishedAt.getTime() ||
         left.id.localeCompare(right.id),
-    );
-}
+    )
+    .map(entry => {
+      const date = isoDateFormatter.format(entry.data.publishedAt);
+      return {
+        slug: entry.id,
+        href: `/posts/${entry.id}/`,
+        title: entry.data.title,
+        description: entry.data.description,
+        publishedAt: {
+          value: entry.data.publishedAt,
+          iso: entry.data.publishedAt.toISOString(),
+          date,
+          compact: date.replaceAll("-", "."),
+          year: yearFormatter.format(entry.data.publishedAt),
+        },
+        modifiedAtIso: (entry.data.updatedAt ?? entry.data.publishedAt).toISOString(),
+        tags: entry.data.tags.map(getTag),
+        render: async () => {
+          const { Content, headings } = await render(entry);
+          return { Content, headings };
+        },
+      };
+    });
 
-export function formatPostDate(date: Date) {
-  return dateFormatter.format(date);
-}
-
-/** 紧凑日期 YYYY.MM.DD（Asia/Shanghai）：首页信息流、单篇元信息等 */
-export function formatPostDateCompact(date: Date) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const value = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find(part => part.type === type)?.value ?? "";
-  return `${value("year")}.${value("month")}.${value("day")}`;
-}
-
-/** 归档时间轴：YYYY-MM-DD（Asia/Shanghai） */
-export function formatPostDateIso(date: Date) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
-}
-
-export function getPostYear(date: Date) {
-  return yearFormatter.format(date);
-}
-
-export async function getPublishedPostTags() {
-  const posts = await getPublishedPosts();
-  const byName = new Map<string, { name: string; slug: string; posts: typeof posts }>();
-  const slugOwners = new Map<string, string>();
+  const archive: ArchiveGroup[] = [];
+  const tagsByName = new Map<string, PublishedTagGroup>();
+  const tagHrefOwners = new Map<string, string>();
 
   for (const post of posts) {
-    for (const name of post.data.tags) {
-      let entry = byName.get(name);
-      if (!entry) {
-        const slug = getTagSlug(name);
-        const owner = slugOwners.get(slug);
-        if (owner && owner !== name) {
-          throw new Error(`标签「${owner}」与「${name}」生成了相同的 URL slug：${slug}`);
+    const latestArchiveGroup = archive.at(-1);
+    if (latestArchiveGroup?.year === post.publishedAt.year) latestArchiveGroup.posts.push(post);
+    else archive.push({ year: post.publishedAt.year, posts: [post] });
+
+    for (const tag of post.tags) {
+      let group = tagsByName.get(tag.name);
+      if (!group) {
+        const owner = tagHrefOwners.get(tag.href);
+        if (owner && owner !== tag.name) {
+          throw new Error(`标签「${owner}」与「${tag.name}」生成了相同的网址：${tag.href}`);
         }
-        slugOwners.set(slug, name);
-        entry = { name, slug, posts: [] };
-        byName.set(name, entry);
+        tagHrefOwners.set(tag.href, tag.name);
+        group = { ...tag, posts: [] };
+        tagsByName.set(tag.name, group);
       }
-      entry.posts.push(post);
+      group.posts.push(post);
     }
   }
 
-  return [...byName.values()].sort(
+  const tags = [...tagsByName.values()].sort(
     (left, right) =>
       right.posts.length - left.posts.length || left.name.localeCompare(right.name, "zh-CN"),
   );
+
+  return { posts, archive, tags };
 }

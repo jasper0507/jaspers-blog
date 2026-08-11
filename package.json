@@ -9,18 +9,15 @@
   "scripts": {
     "dev": "astro dev",
     "preview": "astro preview",
-    "format": "prettier --write \"src/**/*.{astro,js,ts}\" \"src/styles/global.css\" \"scripts/**/*.mjs\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
-    "format:check": "prettier --check \"src/**/*.{astro,js,ts}\" \"src/styles/global.css\" \"scripts/**/*.mjs\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
+    "format": "prettier --write \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card}.css\" \"scripts/**/*.mjs\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
+    "format:check": "prettier --check \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card}.css\" \"scripts/**/*.mjs\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
     "check": "astro check",
     "build": "astro build && pagefind --site dist --glob \"posts/**/*.html\"",
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
-    "test:dist": "node scripts/check-build.mjs",
-    "test:migration": "node scripts/check-migration.mjs",
     "test:shuoshuo:command": "node scripts/check-new-shuoshuo.mjs",
-    "test:shuoshuo": "node scripts/check-shuoshuo.mjs",
-    "test:visual": "npm run build && node scripts/check-visual.mjs",
-    "test": "npm run format:check && npm run check && npm run test:migration && npm run test:shuoshuo:command && npm run build && npm run test:dist && node scripts/check-visual.mjs && npm run test:shuoshuo"
+    "test:site": "node scripts/check-site.mjs",
+    "test": "npm run format:check && npm run check && node scripts/check-fetch-fonts.mjs && npm run test:shuoshuo:command && npm run test:site"
   },
   "dependencies": {
     "astro": "7.1.6"

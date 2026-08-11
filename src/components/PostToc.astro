@@ -1,0 +1,149 @@
+---
+import type { MarkdownHeading } from "astro";
+
+interface Props {
+  headings: MarkdownHeading[];
+}
+
+const toc = Astro.props.headings.filter(
+  ({ depth, slug }) => (depth === 2 || depth === 3) && slug !== "footnote-label",
+);
+
+if (toc.length === 0) return;
+---
+
+<nav class="post-toc" aria-label="文章目录">
+  <p>目录</p>
+  <ol>
+    {
+      toc.map(heading => (
+        <li class:list={[`toc-depth-${heading.depth}`]}>
+          <a href={`#${heading.slug}`} data-heading-id={heading.slug}>
+            {heading.text}
+          </a>
+        </li>
+      ))
+    }
+  </ol>
+</nav>
+
+<script is:inline>
+  (() => {
+    const tocNav = document.querySelector(".post-toc");
+    if (!(tocNav instanceof HTMLElement)) return;
+
+    const items = [...tocNav.querySelectorAll("a[data-heading-id]")].map(link => {
+      const id = link.getAttribute("data-heading-id") ?? "";
+      const heading = document.getElementById(id);
+      if (!heading) throw new Error("文章目录目标不存在：" + id);
+      return { link, heading };
+    });
+
+    let activeId = "";
+    const setActive = id => {
+      if (!id || id === activeId) return;
+      activeId = id;
+      for (const { link, heading } of items) {
+        if (heading.id === id) link.setAttribute("aria-current", "true");
+        else link.removeAttribute("aria-current");
+      }
+    };
+
+    setActive(items[0].heading.id);
+
+    if (!("IntersectionObserver" in window)) return;
+
+    const observer = new IntersectionObserver(
+      () => {
+        const current =
+          items.findLast(
+            ({ heading }) => heading.getBoundingClientRect().top <= window.innerHeight * 0.45,
+          ) ?? items[0];
+        setActive(current.heading.id);
+      },
+      {
+        rootMargin: "0px 0px -55% 0px",
+        threshold: [0, 0.25, 1],
+      },
+    );
+
+    for (const { heading } of items) observer.observe(heading);
+  })();
+</script>
+
+<style>
+  .post-toc {
+    display: none;
+    width: 11.25rem;
+    max-height: 60vh;
+    padding-left: 1.125rem;
+    position: fixed;
+    z-index: 5;
+    top: 50%;
+    left: calc(50% + var(--reading-width) / 2 + 2.5rem);
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-left: 1px solid var(--line);
+    transform: translateY(-50%);
+  }
+
+  .post-toc > p {
+    margin: 0 0 0.65rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .post-toc ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .post-toc li {
+    margin-bottom: 0.15rem;
+    line-height: 1.35;
+  }
+
+  .post-toc .toc-depth-3 {
+    padding-left: 0.65rem;
+  }
+
+  .post-toc a {
+    display: block;
+    margin-left: -0.65rem;
+    padding: 0.28rem 0.35rem 0.28rem 0.55rem;
+    border-left: 2px solid transparent;
+    color: var(--muted);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    text-decoration: none;
+    transition:
+      color 160ms ease,
+      border-color 160ms ease;
+  }
+
+  .post-toc a:hover {
+    color: var(--accent);
+  }
+
+  .post-toc a[aria-current="true"] {
+    border-left-color: var(--accent);
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  @media (min-width: 80rem) {
+    .post-toc {
+      display: block;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .post-toc a {
+      transition: none;
+    }
+  }
+</style>

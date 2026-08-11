@@ -1,131 +1,140 @@
 ---
-import type { CollectionEntry } from "astro:content";
-import { render } from "astro:content";
-import "katex/dist/katex.min.css";
+import MarkdownBody from "../../components/MarkdownBody.astro";
 import PostTags from "../../components/PostTags.astro";
+import PostToc from "../../components/PostToc.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { formatPostDateCompact, getPublishedPosts } from "../../lib/posts";
+import { getPublishedPostCatalog, type PublishedPost } from "../../lib/posts";
 
 interface Props {
-  post: CollectionEntry<"posts">;
+  post: PublishedPost;
 }
 
 export async function getStaticPaths() {
-  return (await getPublishedPosts()).map(post => ({
-    params: { slug: post.id },
+  return (await getPublishedPostCatalog()).posts.map(post => ({
+    params: { slug: post.slug },
     props: { post },
   }));
 }
 
 const { post } = Astro.props;
-const { Content, headings } = await render(post);
-const postUrl = new URL(`/posts/${post.id}/`, Astro.site);
-const toc = headings.filter(
-  ({ depth, slug }) => (depth === 2 || depth === 3) && slug !== "footnote-label",
-);
-const publishedLabel = formatPostDateCompact(post.data.publishedAt);
+const { Content, headings } = await post.render();
+const postUrl = new URL(post.href, Astro.site);
+const structuredData = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  headline: post.title,
+  description: post.description,
+  url: postUrl.href,
+  mainEntityOfPage: postUrl.href,
+  datePublished: post.publishedAt.iso,
+  dateModified: post.modifiedAtIso,
+  inLanguage: "zh-CN",
+  author: { "@type": "Person", name: "Jasper" },
+}).replaceAll("<", "\\u003c");
 ---
 
 <BaseLayout
-  title={post.data.title}
-  description={post.data.description}
+  title={post.title}
+  description={post.description}
   pageClass="post-page"
   ogType="article"
-  structuredData={{
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: post.data.title,
-    description: post.data.description,
-    url: postUrl.href,
-    mainEntityOfPage: postUrl.href,
-    datePublished: post.data.publishedAt.toISOString(),
-    dateModified: (post.data.updatedAt ?? post.data.publishedAt).toISOString(),
-    inLanguage: "zh-CN",
-    author: { "@type": "Person", name: "Jasper" },
-  }}
 >
+  <script slot="head" type="application/ld+json" set:html={structuredData} is:inline />
+
   <article class="post-article" aria-labelledby="post-title" data-pagefind-body>
     <header class="post-header">
-      <h1 id="post-title">{post.data.title}</h1>
-      <p class="post-description">{post.data.description}</p>
+      <h1 id="post-title">{post.title}</h1>
+      <p class="post-description">{post.description}</p>
       <div class="post-meta">
-        <time datetime={post.data.publishedAt.toISOString()}>{publishedLabel}</time>
-        <PostTags tags={post.data.tags} />
+        <time datetime={post.publishedAt.iso}>{post.publishedAt.compact}</time>
+        <PostTags tags={post.tags} />
       </div>
     </header>
 
-    <div class="post-body">
+    <MarkdownBody>
       <Content />
-    </div>
+    </MarkdownBody>
   </article>
 
-  {
-    toc.length > 0 && (
-      <nav class="post-toc" aria-label="文章目录">
-        <p>目录</p>
-        <ol>
-          {toc.map(heading => (
-            <li class:list={[`toc-depth-${heading.depth}`]}>
-              <a href={`#${heading.slug}`}>{heading.text}</a>
-            </li>
-          ))}
-        </ol>
-      </nav>
-    )
+  <PostToc headings={headings} />
+</BaseLayout>
+
+<style>
+  /* 编辑长文壳：居中阅读栏，无纸面卡片 */
+  .post-article {
+    max-width: var(--reading-width);
+    margin-inline: auto;
+    min-width: 0;
   }
 
-  <script is:inline>
-    (() => {
-      const tocNav = document.querySelector(".post-toc");
-      if (!(tocNav instanceof HTMLElement)) return;
+  .post-header {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--line);
+  }
 
-      const items = [...tocNav.querySelectorAll('a[href^="#"]')]
-        .map(link => {
-          if (!(link instanceof HTMLAnchorElement)) return null;
-          const id = decodeURIComponent(link.getAttribute("href")?.slice(1) ?? "");
-          const heading = id ? document.getElementById(id) : null;
-          return heading ? { link, heading } : null;
-        })
-        .filter(Boolean);
+  .post-header h1 {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 2.25rem;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    line-height: 1.15;
+  }
 
-      if (!items.length) return;
+  .post-description {
+    max-width: 42rem;
+    margin: 1.2rem 0 0;
+    color: var(--muted);
+    font-family: var(--font-sans);
+    font-size: 1.05rem;
+    line-height: 1.65;
+  }
 
-      let activeId = "";
-      const setActive = id => {
-        if (!id || id === activeId) return;
-        activeId = id;
-        for (const { link, heading } of items) {
-          if (heading.id === id) link.setAttribute("aria-current", "true");
-          else link.removeAttribute("aria-current");
-        }
-      };
+  .post-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1.25rem;
+    margin-top: 1.75rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
 
-      // 初始：靠近视口顶部的第一节
-      setActive(items[0].heading.id);
+  @media (max-width: 52rem) {
+    .post-header {
+      margin-bottom: 2rem;
+      padding-bottom: 1.25rem;
+    }
 
-      if (!("IntersectionObserver" in window)) return;
+    .post-header h1 {
+      font-size: 1.875rem;
+    }
 
-      const visible = new Map();
-      const observer = new IntersectionObserver(
-        entries => {
-          for (const entry of entries) {
-            if (entry.isIntersecting) visible.set(entry.target.id, entry);
-            else visible.delete(entry.target.id);
-          }
-          if (!visible.size) return;
-          const topmost = [...visible.values()].sort(
-            (a, b) => a.boundingClientRect.top - b.boundingClientRect.top,
-          )[0];
-          if (topmost?.target?.id) setActive(topmost.target.id);
-        },
-        {
-          // 上半屏进入即视为当前节（成熟 TOC scroll-spy 惯例）
-          rootMargin: "0px 0px -55% 0px",
-          threshold: [0, 0.25, 1],
-        },
-      );
+    .post-meta {
+      margin-top: 1.35rem;
+    }
+  }
+</style>
 
-      for (const { heading } of items) observer.observe(heading);
-    })();
-  </script>
-</BaseLayout>
+<style is:global>
+  .post-page {
+    /* 编辑长文阅读栏（JacksBlog --reading ≈ 760px）；PostToc 继承使用。 */
+    --reading-width: 47.5rem;
+    max-width: var(--shell-width);
+    padding: clamp(4rem, 8vw, 6.5rem) 0 clamp(5rem, 9vw, 7.5rem);
+  }
+
+  .post-meta .post-tags {
+    justify-content: flex-end;
+    margin-inline-start: auto;
+  }
+
+  @media (max-width: 70rem) {
+    .post-page {
+      padding-inline: var(--gutter);
+    }
+  }
+</style>

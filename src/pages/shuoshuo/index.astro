@@ -1,12 +1,13 @@
 ---
-import { render } from "astro:content";
+import MarkdownBody from "../../components/MarkdownBody.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { formatShuoshuoDate, getPublishedShuoshuo, getShuoshuoLabel } from "../../lib/shuoshuo";
+import { getPublishedShuoshuo } from "../../lib/shuoshuo";
+import "../../styles/shuoshuo-card.css";
 
 const shuoshuo = await Promise.all(
-  (await getPublishedShuoshuo()).map(async entry => ({
-    entry,
-    Content: (await render(entry)).Content,
+  (await getPublishedShuoshuo()).map(async item => ({
+    item,
+    Content: (await item.render()).Content,
   })),
 );
 ---
@@ -16,30 +17,29 @@ const shuoshuo = await Promise.all(
   {
     shuoshuo.length > 0 ? (
       <ol class="shuoshuo-list">
-        {shuoshuo.map(({ entry, Content }) => {
-          const bodyId = `shuoshuo-body-${entry.id}`;
-          const label = getShuoshuoLabel(entry.data.publishedAt);
+        {shuoshuo.map(({ item, Content }) => {
+          const bodyId = `shuoshuo-body-${item.id}`;
 
           return (
             <li>
-              <article class="shuoshuo-card" aria-label={label}>
-                <h2 class="sr-only" id={entry.id}>
-                  {label}
+              <article class="shuoshuo-card" aria-label={item.label}>
+                <h2 class="sr-only" id={item.id}>
+                  {item.label}
                 </h2>
-                <a class="shuoshuo-anchor" href={`#${entry.id}`} aria-label={`${label}的永久链接`}>
-                  <time datetime={entry.data.publishedAt.toISOString()}>
-                    {formatShuoshuoDate(entry.data.publishedAt)}
-                  </time>
+                <a class="shuoshuo-anchor" href={item.href} aria-label={item.permalinkLabel}>
+                  <time datetime={item.publishedAt.iso}>{item.publishedAt.long}</time>
                 </a>
-                <div class="post-body shuoshuo-body" id={bodyId}>
-                  <Content />
+                <div class="shuoshuo-body" id={bodyId}>
+                  <MarkdownBody>
+                    <Content />
+                  </MarkdownBody>
                 </div>
                 <button
                   class="shuoshuo-toggle"
                   type="button"
                   aria-expanded="false"
                   aria-controls={bodyId}
-                  data-shuoshuo-toggle={entry.id}
+                  data-shuoshuo-toggle={item.id}
                   hidden
                 >
                   展开
@@ -77,3 +77,61 @@ const shuoshuo = await Promise.all(
     });
   });
 </script>
+
+<style>
+  .shuoshuo-body {
+    overflow: hidden;
+  }
+
+  .shuoshuo-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .shuoshuo-list > li {
+    min-width: 0;
+    scroll-margin-top: 1.5rem;
+  }
+
+  .shuoshuo-list > li:has(h2:target) .shuoshuo-card {
+    border-color: var(--accent);
+  }
+
+  .shuoshuo-list h2 {
+    scroll-margin-top: 1.5rem;
+  }
+
+  .shuoshuo-anchor {
+    display: inline-block;
+    margin-bottom: 0.8rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+
+  .shuoshuo-body[data-collapsed] {
+    max-height: 12rem;
+    mask-image: linear-gradient(to bottom, #000 75%, transparent);
+  }
+
+  .shuoshuo-toggle {
+    margin-top: 0.75rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.22em;
+  }
+</style>
+
+<style is:global>
+  .shuoshuo-body .post-body {
+    font-size: 1rem;
+  }
+</style>
