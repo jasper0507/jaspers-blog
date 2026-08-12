@@ -656,6 +656,12 @@ async function checkFixture(browser, footerFixtures) {
   await searchInput.waitFor({ state: "visible" });
   assert.equal(await searchInput.evaluate(element => element === document.activeElement), true);
   await page.keyboard.press("Escape");
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector("pagefind-modal-trigger .pf-trigger-btn")
+        ?.getAttribute("aria-expanded") === "false",
+  );
   assert.equal(await searchTrigger.getAttribute("aria-expanded"), "false");
   assert.equal(await searchTrigger.evaluate(element => element === document.activeElement), true);
   await searchTrigger.click();
