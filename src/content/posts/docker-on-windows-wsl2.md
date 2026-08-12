@@ -2,7 +2,6 @@
 title: "新手安装 Docker 教程（Windows11 + WSL2）"
 description: "本文包含WSL2、Ubuntu、Docker Desktop的安装步骤，以及安装过程中真实遇到的报错与解决方案。新手只需一步一步跟着做即可。"
 publishedAt: 2026-03-08T22:45:34+08:00
-updatedAt: 2026-03-08T22:45:34+08:00
 tags:
   - "工程实践"
   - "容器与环境"
@@ -477,4 +476,3 @@ docker run
 ````
 
 ---
-

@@ -11,7 +11,7 @@ export default {
     url: "https://blog.jasper0507.cc.cd",
     /** 默认简介：用于没有单独简介的页面元信息和 RSS。 */
     description: "Jasper 的个人技术博客，记录技术文章与说说。",
-    /** 可选浏览器图标；支持 public/images/ 中的 SVG、PNG 或 ICO。 */
+    /** 可选 1:1 浏览器图标；优先方形 SVG，PNG/ICO 至少包含 32×32 表示。 */
     favicon: undefined,
   },
   /** 作者：显示名补全博客身份，并与固定公开联系方式集中填写。 */
@@ -23,14 +23,14 @@ export default {
     /** 公开邮箱：用于页脚联系链接。 */
     email: "jasper0507.self@gmail.com",
   },
-  /** 首页主视觉：一句话与 public/images/ 中的亮暗主题图片。 */
+  /** 首页主视觉：亮暗图片均为 3:2、推荐 960×640 或更高。 */
   home: {
     hero: {
       /** 首页主视觉上方的一句话。 */
       caption: "Talk is cheap. Show me the code.",
-      /** 亮色主题主视觉；填写 public/images/ 下以 /images/ 开头的公开路径。 */
+      /** 亮色主视觉：3:2，推荐 960×640 或更高；非 3:2 图片居中裁切且不拉伸。 */
       lightImage: "/images/hero-light.svg",
-      /** 可选暗色主视觉；省略时复用亮色图片。 */
+      /** 可选 3:2 暗色主视觉；应与亮图尺寸及主体位置一致，省略时复用亮图。 */
       darkImage: "/images/hero-dark.svg",
       /** 图片有表达内容时填写说明；纯装饰图片明确填写空字符串。 */
       alt: "Jasper 的博客主视觉",

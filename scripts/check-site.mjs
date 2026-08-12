@@ -148,6 +148,48 @@ async function checkFooterFixture(browser, fixture, hasContent) {
   }
 }
 
+async function checkDarkSearchTrigger(page) {
+  await page.waitForFunction(
+    () =>
+      customElements.get("pagefind-modal-trigger") &&
+      document.querySelector("pagefind-modal-trigger .pf-trigger-btn"),
+  );
+  const shell = page.locator("pagefind-modal-trigger");
+  const trigger = page.getByRole("button", { name: "搜索" });
+  const icon = trigger.locator(".pf-trigger-icon");
+  assert.equal(await trigger.getAttribute("aria-keyshortcuts"), "/");
+  assert.equal(
+    await shell.evaluate(element => getComputedStyle(element).colorScheme),
+    await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme),
+  );
+  assert.deepEqual(
+    await icon.evaluate(element => {
+      const style = getComputedStyle(element);
+      return [style.backgroundColor, getComputedStyle(element.parentElement).color];
+    }),
+    ["rgb(232, 230, 222)", "rgb(232, 230, 222)"],
+  );
+  await trigger.focus();
+  assert.notEqual(
+    await trigger.evaluate(element => getComputedStyle(element).outlineStyle),
+    "none",
+  );
+  await trigger.hover();
+  await page.waitForTimeout(200);
+  assert.deepEqual(
+    await trigger.evaluate(element => {
+      const style = getComputedStyle(element);
+      return [style.color, style.borderBottomColor, style.borderBottomWidth];
+    }),
+    ["rgb(217, 119, 87)", "rgb(217, 119, 87)", "2px"],
+  );
+  assert.equal(
+    await icon.evaluate(element => getComputedStyle(element).backgroundColor),
+    "rgb(217, 119, 87)",
+  );
+  await page.mouse.move(0, 0);
+}
+
 async function checkSettingsFixture(browser, fixture) {
   const page = await browser.newPage();
   await page.setContent(fixture.home);
@@ -385,6 +427,7 @@ async function checkFixture(browser, footerFixtures) {
             "block",
           );
           await assertFooterLayout(page, width);
+          if (theme === "dark") await checkDarkSearchTrigger(page);
         }
         await page.screenshot({
           path: `artifacts/visual/${name}/${name}-${width}-${theme}.png`,
@@ -534,6 +577,13 @@ async function checkFixture(browser, footerFixtures) {
   const postStructuredData = JSON.parse(
     await page.locator('script[type="application/ld+json"]').textContent(),
   );
+  assert.equal(await page.locator(".post-meta time").textContent(), "2026.01.02");
+  assert.equal(
+    await page.locator(".post-meta time").getAttribute("datetime"),
+    "2026-01-01T16:00:00.000Z",
+  );
+  assert.equal(postStructuredData.datePublished, "2026-01-01T16:00:00.000Z");
+  assert.equal("dateModified" in postStructuredData, false);
   assert.deepEqual(postStructuredData.author, {
     "@type": "Person",
     name: expectedAuthor.name,
@@ -600,8 +650,15 @@ async function checkFixture(browser, footerFixtures) {
       customElements.get("pagefind-modal-trigger") &&
       document.querySelector("pagefind-modal-trigger .pf-trigger-btn"),
   );
-  await page.locator("pagefind-modal-trigger .pf-trigger-btn").click();
+  const searchTrigger = page.getByRole("button", { name: "搜索" });
   const searchInput = page.locator("pagefind-modal input").first();
+  await page.keyboard.press("/");
+  await searchInput.waitFor({ state: "visible" });
+  assert.equal(await searchInput.evaluate(element => element === document.activeElement), true);
+  await page.keyboard.press("Escape");
+  assert.equal(await searchTrigger.getAttribute("aria-expanded"), "false");
+  assert.equal(await searchTrigger.evaluate(element => element === document.activeElement), true);
+  await searchTrigger.click();
   await searchInput.fill("视觉验收专用技术文章");
   const result = page
     .locator("pagefind-results a, dialog.pf-modal a")

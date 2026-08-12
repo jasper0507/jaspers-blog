@@ -203,9 +203,10 @@ button {
   --pf-background: transparent;
   --pf-border: transparent;
   --pf-border-focus: transparent;
-  --pf-text-muted: var(--muted);
+  --pf-text-muted: var(--text);
   --pf-border-radius: 0;
   width: auto;
+  color-scheme: inherit;
 }
 
 .nav-search .pf-trigger-btn {
@@ -217,13 +218,13 @@ button {
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
-  color: var(--muted) !important;
+  color: var(--text) !important;
   justify-content: center;
 }
 
 .nav-search .pf-trigger-btn:hover {
   border-bottom-color: var(--accent) !important;
-  color: var(--text) !important;
+  color: var(--accent) !important;
 }
 
 .nav-search .pf-trigger-icon {
