@@ -168,3 +168,9 @@ src/lib/site.ts（严格校验、补齐可选值、检查资源）
 - 整站检查确认博客名称、作者、简介、正式网址、GitHub、邮箱和页脚内容在 HTML、RSS、站点地图与结构化数据中来自同一设置。
 - 浏览器冒烟覆盖桌面和手机下的 3:2 主视觉裁切、超长页脚文字换行、空页脚内容以及亮暗主题切换。
 - 完成前运行 `npm test`、`npm run build` 和 `git diff --check`。
+
+## 依据
+
+- [同类项目配置设计调研](../research/user-defined-configurations.md)
+- [ADR-0020：使用 TypeScript 文件承载博客设置](../adr/0020-typescript-blog-settings-file.md)
+- [ADR-0021：全站只使用一份已校验的博客设置](../adr/0021-single-validated-blog-settings.md)
