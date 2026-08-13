@@ -28,7 +28,6 @@ const structuredData = JSON.stringify({
   url: postUrl.href,
   mainEntityOfPage: postUrl.href,
   datePublished: post.publishedAt.iso,
-  dateModified: post.modifiedAtIso,
   inLanguage: "zh-CN",
   author: { "@type": "Person", name: blogSettings.author.name },
 }).replaceAll("<", "\\u003c");

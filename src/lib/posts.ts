@@ -32,7 +32,6 @@ export interface PublishedPost {
     compact: string;
     year: string;
   };
-  modifiedAtIso: string;
   tags: PublishedTag[];
   render(): Promise<Pick<RenderResult, "Content" | "headings">>;
 }
@@ -74,7 +73,6 @@ export async function getPublishedPostCatalog() {
           compact: date.replaceAll("-", "."),
           year: yearFormatter.format(entry.data.publishedAt),
         },
-        modifiedAtIso: (entry.data.updatedAt ?? entry.data.publishedAt).toISOString(),
         tags: entry.data.tags.map(getTag),
         render: async () => {
           const { Content, headings } = await render(entry);

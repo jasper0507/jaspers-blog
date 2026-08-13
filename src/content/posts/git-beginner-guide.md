@@ -2,7 +2,6 @@
 title: "git新手入门参考"
 description: "这是一篇用于新手快速上手git基本操作的文章。"
 publishedAt: 2026-01-23T17:57:17+08:00
-updatedAt: 2026-01-23T17:57:17+08:00
 tags:
   - "工程实践"
   - "版本控制"
