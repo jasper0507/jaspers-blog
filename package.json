@@ -16,11 +16,13 @@
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "new:post": "node scripts/new-post.mjs",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
+    "publish": "node scripts/publish.mjs",
     "test:settings": "node --experimental-strip-types scripts/check-blog-settings.mjs",
     "test:post:command": "node scripts/check-new-post.mjs",
+    "test:publish:command": "node scripts/check-publish.mjs",
     "test:shuoshuo:command": "node scripts/check-new-shuoshuo.mjs",
     "test:site": "node --experimental-strip-types scripts/check-site.mjs",
-    "test": "npm run format:check && npm run check && npm run test:settings && node scripts/check-fetch-fonts.mjs && npm run test:post:command && npm run test:shuoshuo:command && npm run test:site"
+    "test": "npm run format:check && npm run check && npm run test:settings && node scripts/check-fetch-fonts.mjs && npm run test:post:command && npm run test:publish:command && npm run test:shuoshuo:command && npm run test:site"
   },
   "dependencies": {
     "astro": "7.1.6"

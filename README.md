@@ -59,7 +59,7 @@
 - “关于我”正文：[`src/content/about.md`](src/content/about.md)，可以留空但不能删除。
 - 本地主视觉和浏览器图标：[`public/images/`](public/images/)，在设置文件中填写以 `/images/` 开头的路径。浏览器图标必须为 1:1，优先使用方形 SVG，PNG/ICO 至少提供 32×32 表示；亮暗主视觉均使用 3:2，推荐 960×640 或更高且尺寸、主体位置一致，非 3:2 图片会居中裁切而不拉伸。
 
-修改后运行 `npm run dev` 预览；发布前运行 `npm test`、`npm run build` 和 `npm run preview`。Git 提交与推送方式不变，Cloudflare Pages 仍使用 `npm run build` 和 `dist`，完整操作见 [Cloudflare Pages 部署与日常发布](docs/deployment.md)。第三方资源声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+修改后运行 `npm run dev` 预览；需要验收完整搜索时运行 `npm run build` 和 `npm run preview`。站点发布统一使用下方的 `npm run publish`，Cloudflare Pages 仍使用 `npm run build` 和 `dist`，完整操作见 [Cloudflare Pages 部署与日常发布](docs/deployment.md)。第三方资源声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ### 添加文章
 
@@ -91,9 +91,21 @@ draft: true
 - `publishedAt` 只接受有效的完整上海时间 `YYYY-MM-DDTHH:mm:ss+08:00`；日期值、UTC `Z` 和其他时区均无效。
 - `draft: true` 不进入公开页面；准备发布时改为 `false`。发布时间只用于显示和排序，不提供定时发布。
 - 正文不能为空。文章图片使用外部图床，并以普通 Markdown 图片语法引用。
-- 保存后运行 `npm run dev` 预览。发布前运行 `npm test` 和 `npm run build`；搜索需要构建索引，因此请用 `npm run preview` 验收完整搜索。
+- 保存后运行 `npm run dev` 预览。搜索需要构建索引，因此请用 `npm run build` 和 `npm run preview` 验收完整搜索；发布时使用下方的站点发布命令。
 
 如需发布说说，运行 `npm run new:shuoshuo`，再编辑命令生成的 Markdown 文件。
+
+### 站点发布
+
+在已检出的 `main` 分支准备好全部有意改动，然后提供非空的完整 Git 提交信息：
+
+```sh
+npm run publish -- "发布新的技术文章"
+```
+
+命令依次运行 `npm test` 和生产构建；两者成功后才会暂存全部 tracked 变更、删除及未忽略的新文件，创建一个提交并正常推送到 `origin/main`。技术文章、说说、博客设置和文档可进入同一站点发布快照，`draft` 仍是内容是否公开的唯一开关。命令不会自动格式化、同步分支、解决冲突、改写历史或直接调用 Cloudflare API。
+
+若远程 `main` 已领先，正常推送会失败，本地发布提交会保留且远程不变。请手动同步 `origin/main`、处理冲突并验收后，再自行推送或重新执行发布命令；不要 force-push。
 
 ## 💻 技术栈
 
@@ -131,19 +143,20 @@ npm run preview
 
 所有命令均在项目根目录执行。
 
-| 命令                         | 作用                                       |
-| :--------------------------- | :----------------------------------------- |
-| `npm ci`                     | 按 `package-lock.json` 安装依赖            |
-| `npm run dev`                | 启动本地开发服务器                         |
-| `npm run build`              | 构建静态站点并为技术文章生成 Pagefind 索引 |
-| `npm run preview`            | 本地预览 `dist` 生产构建                   |
-| `npm run check`              | 运行 Astro 与 TypeScript 检查              |
-| `npm run format`             | 使用 Prettier 格式化项目文件               |
-| `npm run format:check`       | 检查项目文件格式，不修改文件               |
-| `npm test`                   | 运行格式、类型、脚本和站点验收             |
-| `npm run new:post -- <slug>` | 创建带当前上海时间的技术文章 Markdown      |
-| `npm run new:shuoshuo`       | 创建带上海时间稳定 ID 的说说 Markdown      |
-| `npm run fonts:fetch`        | 下载 Noto 字体分包并更新字体 CSS           |
+| 命令                          | 作用                                       |
+| :---------------------------- | :----------------------------------------- |
+| `npm ci`                      | 按 `package-lock.json` 安装依赖            |
+| `npm run dev`                 | 启动本地开发服务器                         |
+| `npm run build`               | 构建静态站点并为技术文章生成 Pagefind 索引 |
+| `npm run preview`             | 本地预览 `dist` 生产构建                   |
+| `npm run check`               | 运行 Astro 与 TypeScript 检查              |
+| `npm run format`              | 使用 Prettier 格式化项目文件               |
+| `npm run format:check`        | 检查项目文件格式，不修改文件               |
+| `npm test`                    | 运行格式、类型、脚本和站点验收             |
+| `npm run new:post -- <slug>`  | 创建带当前上海时间的技术文章 Markdown      |
+| `npm run new:shuoshuo`        | 创建带上海时间稳定 ID 的说说 Markdown      |
+| `npm run publish -- "<信息>"` | 验收、构建并发布全部改动到 `origin/main`   |
+| `npm run fonts:fetch`         | 下载 Noto 字体分包并更新字体 CSS           |
 
 ## ✨ Feedback & Suggestions
 

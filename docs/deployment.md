@@ -36,6 +36,10 @@
 - 设置图片：浏览器图标必须为 1:1，优先方形 SVG，PNG/ICO 至少提供 32×32 表示；亮暗主视觉均为 3:2，推荐 960×640 或更高且尺寸、主体位置一致，非 3:2 图片居中裁切且不拉伸。
 - 图片：技术文章图片使用外部图床；仓库不校验图片是否存在或内容是否变化。
 - 说说：运行 `npm run new:shuoshuo`，再编辑生成的 Markdown。
-- 发布：运行 `npm run build`，然后提交并推送到 `main`。
+- 发布：切换并检出 `main`，确保 `origin` 指向正式仓库，然后运行 `npm run publish -- "<commit message>"`；提交信息必填且会原样作为完整 Git commit message。
+- 发布顺序：命令先运行完整 `npm test`，再运行生产 `npm run build`；两者成功后才执行 `git add -A`、创建单个提交并正常推送到 `origin/main`。格式检查不会改写文件。
+- 发布快照：tracked 修改与删除、未忽略的新文件都会进入同一提交，因此技术文章、说说、博客设置和文档可一并发布；`draft` 是内容是否进入公开站点的唯一开关。
+- 失败处理：参数为空、分支不是 `main`、没有改动或缺少 `origin` 时命令不推送；校验或构建失败时也不创建提交。命令不会 pull、merge、rebase、解决冲突、force-push 或调用 Cloudflare API。
+- 远程冲突：若远程 `main` 已领先，正常 push 会拒绝。本地发布提交会保留且远程不变；请手动同步 `origin/main`、处理冲突并重新验收，再自行推送或重新运行发布命令。
 - 本地验收搜索：须先 `npm run build`（生成 Pagefind 索引），再 `npm run preview`；`npm run dev` 下索引可能不完整。
 - 字体：Noto / Source Serif / IBM Plex 均自托管于 `public/fonts/`，构建产物不得依赖 Google Fonts 等 CDN。若需更新 Noto 分包，运行 `npm run fonts:fetch` 后提交生成的 woff2 与 `src/styles/fonts.css`。
