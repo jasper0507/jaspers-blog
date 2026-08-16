@@ -30,6 +30,21 @@ $$
 console.log("visual fixture");
 ```
 
+行内公式 $a + b$。
+
+> [!NOTE]
+> 提示块用于强调阅读提示。
+
+```js title="example.js" {2}
+const keep = 1;
+const highlight = 2;
+```
+
+```js
+const before = 1; // [!code --]
+const after = 2; // [!code ++]
+```
+
 第一节滚动填充段落一。
 
 第一节滚动填充段落二。

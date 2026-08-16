@@ -320,6 +320,17 @@ function assertInOrder(source, needles, message) {
   }
 }
 
+function assertRenderedKatex(html, message) {
+  assert.match(html, /class="katex"/, `${message}：应渲染 KaTeX`);
+  assert.match(html, /class="katex-display"/, `${message}：应渲染块级公式`);
+  assert.doesNotMatch(html, /language-math/, `${message}：不得留下未渲染的 math 源码块`);
+}
+
+function assertChineseFootnotes(html, message) {
+  assert.match(html, /id="footnote-label"[^>]*>脚注</, `${message}：脚注标题应为中文`);
+  assert.match(html, /aria-label="返回脚注引用"/, `${message}：脚注返回文案应为中文`);
+}
+
 async function waitForServer(server) {
   let lastError;
   for (let attempt = 0; attempt < 100; attempt += 1) {
@@ -340,9 +351,25 @@ async function checkFixture(browser, footerFixtures) {
   const timeline = await readFile("dist/shuoshuo/index.html", "utf8");
   const archive = await readFile("dist/archives/index.html", "utf8");
   const tags = await readFile("dist/tags/index.html", "utf8");
+  const visual = await readFile("dist/posts/visual/index.html", "utf8");
   const rss = await readFile("dist/rss.xml", "utf8");
   const sitemap = await readFile("dist/sitemap.xml", "utf8");
   const searchIndex = JSON.parse(await readFile("dist/pagefind/pagefind-entry.json", "utf8"));
+
+  assertRenderedKatex(visual, "视觉验收技术文章");
+  assert.match(
+    visual,
+    /annotation encoding="application\/x-tex">E = mc\^2</,
+    "块级公式应保留原 TeX",
+  );
+  assert.match(visual, /annotation encoding="application\/x-tex">a \+ b</, "行内公式应保留原 TeX");
+  assertChineseFootnotes(visual, "视觉验收技术文章");
+  assert.match(visual, /markdown-alert markdown-alert-note/, "GitHub 风格提示块应存在");
+  assert.match(visual, /提示块用于强调阅读提示/, "提示块正文应可读");
+  assert.match(visual, /data-title="example\.js"/, "代码块应保留文件名");
+  assert.match(visual, /class="line highlighted"/, "代码块应保留行高亮");
+  assert.match(visual, /class="line diff remove"/, "代码块应保留 diff 删除标记");
+  assert.match(visual, /class="line diff add"/, "代码块应保留 diff 新增标记");
 
   assert.ok(rss.includes(`<title>${escapeXml(expectedSite.title)}</title>`));
   assert.ok(rss.includes(`<link>${escapeXml(expectedSite.url)}</link>`));
@@ -605,6 +632,29 @@ async function checkFixture(browser, footerFixtures) {
   assert.equal(await toc.locator('a[aria-current="true"]').count(), 1, "目录初始应有一个当前项");
   assert.equal(await toc.locator('[aria-current="true"]').getAttribute("href"), "#第一节");
 
+  const katex = page.locator(".post-body .katex").first();
+  assert.ok(await katex.count(), "公式应渲染为 KaTeX");
+  assert.match(
+    await katex.evaluate(element => getComputedStyle(element).fontFamily),
+    /KaTeX/i,
+    "公式应带上现有 KaTeX 样式表",
+  );
+  assert.equal(await page.locator("#footnote-label").textContent(), "脚注");
+  assert.ok(await page.locator('[aria-label="返回脚注引用"]').count());
+  const alert = page.locator(".markdown-alert-note");
+  assert.match(await alert.textContent(), /NOTE/);
+  assert.match(await alert.textContent(), /提示块用于强调阅读提示/);
+  assert.match(
+    await page
+      .locator('.astro-code[data-title="example.js"]')
+      .evaluate(element => getComputedStyle(element, "::before").content),
+    /example\.js/,
+    "代码块文件名应对读者可见",
+  );
+  assert.ok(await page.locator(".astro-code .line.highlighted").count());
+  assert.ok(await page.locator(".astro-code .line.diff.add").count());
+  assert.ok(await page.locator(".astro-code .line.diff.remove").count());
+
   await page.setViewportSize({ width: 1279, height: 960 });
   assert.equal(await toc.evaluate(element => getComputedStyle(element).display), "none");
   await page.setViewportSize({ width: 1280, height: 960 });
@@ -690,6 +740,18 @@ async function checkProduction() {
   const searchIndex = JSON.parse(await readFile("dist/pagefind/pagefind-entry.json", "utf8"));
   assert.equal(searchIndex.languages["zh-cn"].page_count, postDirectories.length);
   await assert.rejects(access("dist/categories/index.html"));
+
+  const paperNotes = await readFile("dist/posts/transformer-paper-notes/index.html", "utf8");
+  const quickStart = await readFile("dist/posts/markdown-quick-start/index.html", "utf8");
+  assert.match(paperNotes, /class="katex"/, "论文笔记应渲染 KaTeX");
+  assert.doesNotMatch(paperNotes, /language-math/, "论文笔记不得留下未渲染的 math 源码块");
+  assert.match(
+    paperNotes,
+    /annotation encoding="application\/x-tex">N=6</,
+    "论文笔记行内公式应仍正确",
+  );
+  assertRenderedKatex(quickStart, "Markdown 教程");
+  assertChineseFootnotes(quickStart, "Markdown 教程");
 }
 
 const footerFixtures = {

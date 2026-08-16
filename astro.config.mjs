@@ -1,13 +1,10 @@
 import { defineConfig } from "astro/config";
-import { unified } from "@astrojs/markdown-remark";
 import {
   transformerMetaHighlight,
   transformerNotationDiff,
   transformerNotationHighlight,
 } from "@shikijs/transformers";
-import rehypeKatex from "rehype-katex";
-import { remarkAlert } from "remark-github-blockquote-alert";
-import remarkMath from "remark-math";
+import { siteMarkdownProcessor } from "./src/lib/markdown-satteri.js";
 import { blogSettings } from "./src/lib/site.ts";
 
 const kraftPaperTheme = {
@@ -68,14 +65,7 @@ export default defineConfig({
     "/search": "/",
   },
   markdown: {
-    processor: unified({
-      remarkPlugins: [remarkMath, [remarkAlert, { legacyTitle: true }]],
-      rehypePlugins: [rehypeKatex],
-      remarkRehype: {
-        footnoteLabel: "脚注",
-        footnoteBackLabel: "返回脚注引用",
-      },
-    }),
+    processor: siteMarkdownProcessor(),
     shikiConfig: {
       theme: kraftPaperTheme,
       wrap: false,
