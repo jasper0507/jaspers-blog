@@ -1,3 +1,4 @@
+import sitemap from "@astrojs/sitemap";
 import { defineConfig } from "astro/config";
 import {
   transformerMetaHighlight,
@@ -59,6 +60,12 @@ const transformerCodeTitle = {
 export default defineConfig({
   site: blogSettings.site.url,
   trailingSlash: "always",
+  integrations: [
+    sitemap({
+      // 站点地图合同：搜索入口是弹层而非页面，即使将来出现 /search/ 路由也不收录。
+      filter: page => !page.endsWith("/search/"),
+    }),
+  ],
   redirects: {
     "/posts": "/archives",
     "/posts/2": "/archives",

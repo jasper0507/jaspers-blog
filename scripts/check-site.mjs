@@ -96,7 +96,7 @@ async function buildSettingsFixture() {
       archives: await readFile(join(output, "archives/index.html"), "utf8"),
       post: await readFile(join(output, "posts/visual/index.html"), "utf8"),
       rss: await readFile(join(output, "rss.xml"), "utf8"),
-      sitemap: await readFile(join(output, "sitemap.xml"), "utf8"),
+      sitemap: await readFile(join(output, "sitemap-0.xml"), "utf8"),
       css: css.join("\n"),
     };
   } finally {
@@ -360,7 +360,7 @@ async function checkFixture(browser, settingsFixture) {
   const tags = await readFile("dist/tags/index.html", "utf8");
   const visual = await readFile("dist/posts/visual/index.html", "utf8");
   const rss = await readFile("dist/rss.xml", "utf8");
-  const sitemap = await readFile("dist/sitemap.xml", "utf8");
+  const sitemap = await readFile("dist/sitemap-0.xml", "utf8");
   const searchIndex = JSON.parse(await readFile("dist/pagefind/pagefind-entry.json", "utf8"));
 
   assertRenderedKatex(visual, "视觉验收技术文章");
@@ -410,6 +410,11 @@ async function checkFixture(browser, settingsFixture) {
   assert.doesNotMatch(rss, /这里继续放入足够长的正文/);
   assert.match(sitemap, /\/posts\/alpha\//);
   assert.match(sitemap, /\/tags\/astro\//);
+  assert.doesNotMatch(
+    sitemap,
+    /\/search\/|\/rss\.xml|<loc>[^<]*#/,
+    "站点地图不得包含搜索页、订阅源或说说锚点",
+  );
   assert.doesNotMatch(`${archive}${tags}${rss}${sitemap}`, /不应公开的技术文章草稿|草稿标签/);
   assert.equal(searchIndex.languages["zh-cn"].page_count, 3);
 
@@ -737,7 +742,8 @@ async function checkProduction() {
   }
   await Promise.all([
     access("dist/rss.xml"),
-    access("dist/sitemap.xml"),
+    access("dist/sitemap-index.xml"),
+    access("dist/sitemap-0.xml"),
     access("dist/pagefind/pagefind.js"),
   ]);
   const postDirectories = (await readdir("dist/posts", { withFileTypes: true })).filter(
@@ -746,6 +752,7 @@ async function checkProduction() {
   const searchIndex = JSON.parse(await readFile("dist/pagefind/pagefind-entry.json", "utf8"));
   assert.equal(searchIndex.languages["zh-cn"].page_count, postDirectories.length);
   await assert.rejects(access("dist/categories/index.html"));
+  await assert.rejects(access("dist/prototype/warmth/index.html"));
 
   const paperNotes = await readFile("dist/posts/transformer-paper-notes/index.html", "utf8");
   const quickStart = await readFile("dist/posts/markdown-quick-start/index.html", "utf8");
