@@ -207,9 +207,7 @@ const blogSettingsSchema = z
       ),
     }),
     home: z.strictObject({
-      headline: z.strictObject({
-        text: requiredText("首页标题句"),
-      }),
+      headline: requiredText("首页标题句"),
     }),
     footer: z.strictObject({
       text: z.string(),
@@ -224,9 +222,7 @@ const blogSettingsSchema = z
       }),
       author: Object.freeze(settings.author),
       home: Object.freeze({
-        headline: Object.freeze({
-          text: settings.home.headline.text,
-        }),
+        headline: settings.home.headline,
       }),
       footer: Object.freeze(settings.footer),
     }),
@@ -246,8 +242,7 @@ const settingNames = new Map([
   ["author.github", "GitHub 地址"],
   ["author.email", "邮箱地址"],
   ["home", "首页设置"],
-  ["home.headline", "首页开场"],
-  ["home.headline.text", "首页标题句"],
+  ["home.headline", "首页标题句"],
   ["footer", "页脚设置"],
   ["footer.text", "页脚文本"],
 ]);

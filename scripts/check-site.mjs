@@ -222,10 +222,7 @@ async function checkSettingsFixture(browser, fixture) {
     await page.locator('meta[property="og:url"]').getAttribute("content"),
     fixtureSettings.site.url,
   );
-  assert.equal(
-    await page.locator(".home-caption").textContent(),
-    fixtureSettings.home.headline.text,
-  );
+  assert.equal(await page.locator(".home-headline").textContent(), fixtureSettings.home.headline);
   assert.equal(
     await page.locator('link[rel="icon"]').getAttribute("href"),
     fixtureSettings.site.favicon,
@@ -450,8 +447,8 @@ async function checkFixture(browser, settingsFixture) {
         await page.evaluate(() => document.fonts.ready);
         if (path === "/") {
           assert.equal(
-            await page.locator(".home-caption").textContent(),
-            expectedHome.headline.text,
+            await page.locator(".home-headline").textContent(),
+            expectedHome.headline,
             "首页标题句应来自博客设置",
           );
           await assertFooterLayout(page, width);
@@ -472,7 +469,7 @@ async function checkFixture(browser, settingsFixture) {
 
   /* 占位主视觉已按 ADR-0020 移除：首页开场只剩标题句与信息流 */
   assert.equal(await page.locator(".hero-media, .hero-image").count(), 0, "首页不应再有占位主视觉");
-  assert.equal(await page.locator(".home-caption").textContent(), expectedHome.headline.text);
+  assert.equal(await page.locator(".home-headline").textContent(), expectedHome.headline);
   assert.equal(await page.locator("h1").count(), 1, "首页应只有一个 h1");
   const recentPosts = page.locator('[aria-labelledby="recent-posts"] li');
   assert.ok((await recentPosts.count()) > 1, "首页最近文章应体现信息密度（多于一条）");

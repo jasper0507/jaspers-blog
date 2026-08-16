@@ -31,9 +31,7 @@ const validSettings = {
     email: "author@example.com",
   },
   home: {
-    headline: {
-      text: "示例标题句",
-    },
+    headline: "示例标题句",
   },
   footer: {
     text: "© {year} **{author}**",
@@ -44,7 +42,7 @@ const validated = await validateBlogSettings(validSettings, new Date("2025-12-31
 assert.equal(validated.site.url, "https://example.com/");
 assert.equal(validated.site.headerTitle, "Example");
 assert.equal(validated.site.favicon, undefined);
-assert.equal(validated.home.headline.text, "示例标题句");
+assert.equal(validated.home.headline, "示例标题句");
 assert.equal(validated.footer.copyright, "© 2026 **示例作者**");
 assert.equal(
   (
@@ -113,7 +111,6 @@ assert.equal(Object.isFrozen(validated.site), true);
 assert.deepEqual(validated.author, validSettings.author);
 assert.equal(Object.isFrozen(validated.author), true);
 assert.equal(Object.isFrozen(validated.home), true);
-assert.equal(Object.isFrozen(validated.home.headline), true);
 assert.equal(Object.isFrozen(validated.footer), true);
 
 const imageFixtureDirectory = mkdtempSync(join(tmpdir(), "jasper-blog-images-"));
@@ -249,26 +246,9 @@ const invalidSettings = [
   ],
   [{ ...validSettings, home: undefined }, /首页设置.*缺失/],
   [{ ...validSettings, home: { ...validSettings.home, extra: true } }, /首页设置.*未知设置/],
-  [{ ...validSettings, home: { headline: undefined } }, /首页开场.*缺失/],
-  [
-    { ...validSettings, home: { headline: { ...validSettings.home.headline, extra: true } } },
-    /首页开场.*未知设置/,
-  ],
-  [
-    { ...validSettings, home: { headline: { ...validSettings.home.headline, text: undefined } } },
-    /首页标题句.*缺失/,
-  ],
-  [
-    { ...validSettings, home: { headline: { ...validSettings.home.headline, text: " " } } },
-    /首页标题句.*不能为空/,
-  ],
-  [
-    {
-      ...validSettings,
-      home: { headline: { ...validSettings.home.headline, text: " 示例标题句" } },
-    },
-    /首页标题句.*首尾不能有空白/,
-  ],
+  [{ ...validSettings, home: { headline: undefined } }, /首页标题句.*缺失/],
+  [{ ...validSettings, home: { headline: " " } }, /首页标题句.*不能为空/],
+  [{ ...validSettings, home: { headline: " 示例标题句" } }, /首页标题句.*首尾不能有空白/],
   [{ ...validSettings, footer: undefined }, /页脚设置.*缺失/],
   [{ ...validSettings, footer: { text: undefined } }, /页脚文本.*缺失/],
   [{ ...validSettings, footer: { text: "正文", extra: true } }, /页脚设置.*未知设置/],

@@ -178,6 +178,8 @@
 .post-body img {
   max-width: 100%;
   height: auto;
+  /* 独立成段的插图节奏；不吃 typography 出厂的 2em 边距 */
+  margin-block: 1.5em;
 }
 
 /* 引用：克制的珊瑚左边线 + 透明底，非色块；不吃 prose 的斜体与大引号 */

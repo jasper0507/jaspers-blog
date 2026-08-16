@@ -12,9 +12,7 @@ export const fixtureSettings = {
     email: "fixture@example.com",
   },
   home: {
-    headline: {
-      text: "集中设置已生效",
-    },
+    headline: "集中设置已生效",
   },
   footer: {
     text: "© {year} {author}. 保留所有权利。",

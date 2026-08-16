@@ -16,7 +16,6 @@
     sans-serif;
   --font-mono:
     "IBM Plex Mono", "Sarasa Mono SC", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  --container-shell: 70rem;
   --container-reading: 47.5rem;
 }
 
@@ -32,6 +31,13 @@
 
 /* 导航当前项：页面 aria-current 或文章菜单 data-active */
 @custom-variant is-current (&[aria-current="page"], &[data-active="true"]);
+
+/* 页头 / 正文 / 页脚共用的内容壳轨道：与内容壳同宽、居中、两侧留白 */
+@utility shell-track {
+  width: min(100%, var(--shell-width));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
 
 :root {
   color-scheme: light dark;
@@ -71,6 +77,13 @@ html[data-theme="light"] {
 
 html[data-theme="dark"] {
   color-scheme: dark;
+}
+
+/* 手机上的壳留白收紧 */
+@media (max-width: 52rem) {
+  :root {
+    --gutter: 1rem;
+  }
 }
 
 @layer base {
