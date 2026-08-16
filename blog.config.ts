@@ -36,5 +36,10 @@ export default {
       alt: "Jasper 的博客主视觉",
     },
   },
+  /** 页脚：左侧纯文本；右侧 RSS、GitHub 与邮箱保持固定。 */
+  footer: {
+    /** 可留空；按字面显示。可用 {year}、{author}，不支持 Markdown。 */
+    text: "© {year} {author}. 保留所有权利。",
+  },
   /** “关于我”正文固定编辑：src/content/about.md（文件可为空，但不能缺失）。 */
 } satisfies BlogSettings;

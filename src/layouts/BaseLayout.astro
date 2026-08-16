@@ -179,7 +179,7 @@ const structuredData = JSON.stringify(
     </main>
     <footer class="site-footer">
       <div class="footer-inner">
-        <div class="footer-content">{footerCopyright}</div>
+        {footerCopyright && <div class="footer-content">{footerCopyright}</div>}
         <ul aria-label="联系方式">
           <li><a href="/rss.xml">RSS</a></li>
           <li><a href={github}>GitHub</a></li>

@@ -43,6 +43,7 @@ export default {
   site: fixtureSettings.site,
   author: fixtureSettings.author,
   home: fixtureSettings.home,
+  footer: fixtureSettings.footer,
 };`;
           }
         },

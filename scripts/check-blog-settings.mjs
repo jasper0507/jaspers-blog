@@ -38,6 +38,9 @@ const validSettings = {
       alt: "",
     },
   },
+  footer: {
+    text: "© {year} **{author}**",
+  },
 };
 
 const validated = await validateBlogSettings(validSettings, new Date("2025-12-31T16:00:00Z"));
@@ -46,18 +49,28 @@ assert.equal(validated.site.headerTitle, "Example");
 assert.equal(validated.site.favicon, undefined);
 assert.equal(validated.home.hero.darkImage, "/images/hero-light.svg");
 assert.equal(validated.home.hero.alt, "");
-assert.equal(validated.footer.copyright, "© 2026 示例作者. 保留所有权利。");
+assert.equal(validated.footer.copyright, "© 2026 **示例作者**");
+assert.equal(
+  (
+    await validateBlogSettings(
+      { ...validSettings, footer: { text: "" } },
+      new Date("2025-12-31T16:00:00Z"),
+    )
+  ).footer.copyright,
+  "",
+);
 assert.equal(
   (
     await validateBlogSettings(
       {
         ...validSettings,
         author: { ...validSettings.author, name: "<script>alert(1)</script>" },
+        footer: { text: "{author}" },
       },
       new Date("2025-12-31T16:00:00Z"),
     )
   ).footer.copyright,
-  "© 2026 <script>alert(1)</script>. 保留所有权利。",
+  "<script>alert(1)</script>",
 );
 for (const favicon of [
   "/images/hero-light.svg",
@@ -315,7 +328,10 @@ const invalidSettings = [
     },
     /暗色主视觉.*文件不存在/,
   ],
-  [{ ...validSettings, footer: { content: "© {year}" } }, /博客设置.*未知设置.*footer/],
+  [{ ...validSettings, footer: undefined }, /页脚设置.*缺失/],
+  [{ ...validSettings, footer: { text: undefined } }, /页脚文本.*缺失/],
+  [{ ...validSettings, footer: { text: "正文", extra: true } }, /页脚设置.*未知设置/],
+  [{ ...validSettings, footer: { text: "{unknown}" } }, /页脚文本.*未知占位符.*unknown/],
 ];
 
 for (const [settings, expected] of invalidSettings) {

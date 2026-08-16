@@ -1,3 +1,3 @@
-# 页脚左侧用生成的版权行，不用配置 Markdown
+# 页脚左侧是纯文本，不用 Markdown
 
-页脚左侧曾经是 `blog.config.ts` 里一段受限 Markdown，只为写出「© 年份 作者」。这会单独拉起 `@astrojs/markdown-remark`，和正文的 Sätteri 路径并列。版权行改为由作者显示名和上海年份生成，配置里不再接受 `footer`；联系方式仍用已有的 RSS / GitHub / 邮箱字段。不要把页脚接到正文 Markdown 处理器上。
+成熟 Astro 博客主题（官方 blog starter、AstroPaper、Fuwari、Cactus）用身份字段和组件模板拼版权行，不为页脚单独开 Markdown 处理器。本站允许在 `blog.config.ts` 用 `footer.text` 改左侧文案，只做 `{year}` / `{author}` 替换并当普通文本输出；留空则不渲染左侧。联系方式仍用 RSS / GitHub / 邮箱字段。不要把页脚接到正文 Sätteri，也不要为这一行再引入 unified。

@@ -25,8 +25,17 @@ const footerYearFormatter = new Intl.DateTimeFormat("en", {
   year: "numeric",
 });
 
-function footerCopyright(author: string, now: Date) {
-  return `© ${footerYearFormatter.format(now)} ${author}. 保留所有权利。`;
+function renderFooterText(text: string, author: string, now: Date) {
+  const copyright = text
+    .replaceAll("{year}", footerYearFormatter.format(now))
+    .replaceAll("{author}", author);
+  const placeholders = [...copyright.matchAll(/\{([^{}]*)\}/g)].map(match => match[1]);
+  if (placeholders.length) {
+    throw new Error(
+      `页脚文本包含未知占位符“{${[...new Set(placeholders)].join("}、{")}}”；只支持 {year} 和 {author}。`,
+    );
+  }
+  return copyright;
 }
 
 export function assertAboutMarkdownExists(path: string | URL = aboutMarkdownPath) {
@@ -217,6 +226,9 @@ const blogSettingsSchema = z
         alt: imageDescription,
       }),
     }),
+    footer: z.strictObject({
+      text: z.string(),
+    }),
   })
   .transform(settings =>
     Object.freeze({
@@ -232,6 +244,7 @@ const blogSettingsSchema = z
           darkImage: settings.home.hero.darkImage ?? settings.home.hero.lightImage,
         }),
       }),
+      footer: Object.freeze(settings.footer),
     }),
   );
 
@@ -254,6 +267,8 @@ const settingNames = new Map([
   ["home.hero.lightImage", "亮色主视觉"],
   ["home.hero.darkImage", "暗色主视觉"],
   ["home.hero.alt", "主视觉图片说明"],
+  ["footer", "页脚设置"],
+  ["footer.text", "页脚文本"],
 ]);
 
 function formatIssue(issue: z.core.$ZodIssue) {
@@ -276,12 +291,17 @@ export async function validateBlogSettings(input: unknown, now = new Date()) {
   if (!result.success) {
     throw new Error(`博客设置无效：\n${result.error.issues.map(formatIssue).join("\n")}`);
   }
-  return Object.freeze({
-    ...result.data,
-    footer: Object.freeze({
-      copyright: footerCopyright(result.data.author.name, now),
-    }),
-  });
+  try {
+    return Object.freeze({
+      ...result.data,
+      footer: Object.freeze({
+        ...result.data.footer,
+        copyright: renderFooterText(result.data.footer.text, result.data.author.name, now),
+      }),
+    });
+  } catch (error) {
+    throw new Error(`博客设置无效：\n${(error as Error).message}`);
+  }
 }
 
 /** 所有消费者只读取这一份已校验博客设置。 */
