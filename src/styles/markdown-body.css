@@ -10,16 +10,16 @@
   --body-heading: light-dark(#1c1815, #f5f3ec);
   --body-muted: light-dark(#72695e, #a29a8d);
   --body-quote: light-dark(#625950, #b5ac9f);
-  --body-quote-border: light-dark(#dcd2c4, #45413a);
+  --body-quote-border: light-dark(#c15f3c, #d97757);
   --body-border: light-dark(#ddd5ca, #3e3b36);
   --body-accent: light-dark(#c15f3c, #d97757);
   --body-accent-hover: light-dark(#a14d2e, #e69373);
   --body-inline-color: light-dark(#a34a3a, #e39a82);
   --body-inline-bg: light-dark(#f2eeea, #363430);
   --body-inline-border: light-dark(#d7cec5, #47443e);
-  --body-code-bg: light-dark(#fcfcfa, #2d2c29);
-  --body-code-border: light-dark(#e9e2d8, #3e3b36);
-  --body-table-strong: light-dark(#8a8175, #8c8478);
+  --body-code-bg: light-dark(#f7f5ef, #2d2c29);
+  --body-code-border: light-dark(#e4ddd2, #3e3b36);
+  --body-table-strong: light-dark(#6f675c, #9a9286);
   --body-table-row: light-dark(#c9bfb2, #4a463f);
   --body-table-soft: light-dark(#e4dcd0, #3a3733);
   --body-table-hover: light-dark(rgb(193 95 60 / 5%), rgb(217 119 87 / 7%));
@@ -104,6 +104,12 @@
 
 .post-body :where(ul, ol) {
   padding-left: 1.45rem;
+  /* Tailwind preflight 抹掉浏览器默认列表记号，正文显式恢复 */
+  list-style: disc;
+}
+
+.post-body ol {
+  list-style: decimal;
 }
 
 .post-body li {
@@ -257,7 +263,7 @@
   margin-block: 0.9em 1.1em;
   padding: 0.9rem 1rem 0.85rem;
   border: 1px solid var(--body-code-border);
-  border-radius: 0.5rem;
+  border-radius: 0.65rem;
   background: var(--body-code-bg) !important;
   color: var(--code-foreground);
   overflow-x: auto;

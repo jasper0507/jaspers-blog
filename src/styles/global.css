@@ -1,3 +1,35 @@
+@import "tailwindcss";
+
+@plugin "@tailwindcss/typography";
+
+/*
+ * 官方主题机制（Tailwind 4 @theme）承接纸面 token：
+ * 颜色经 inline 透传到 :root 上的 light-dark() 变量（bg-surface / text-muted /
+ * border-line / text-accent …），亮暗仍由 color-scheme 与 data-theme 决定；
+ * 字体与内容宽度在 @theme 中唯一定义，var(--font-*) / var(--container-*) 照常可用。
+ */
+@theme {
+  --font-serif:
+    "Source Serif 4", "Noto Serif SC", Georgia, "Songti SC", "Source Han Serif SC", serif;
+  --font-sans:
+    "IBM Plex Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
+    sans-serif;
+  --font-mono:
+    "IBM Plex Mono", "Sarasa Mono SC", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --container-shell: 70rem;
+  --container-reading: 47.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-focus: var(--focus);
+}
+
 :root {
   color-scheme: light dark;
   --background: light-dark(#f5f4f2, #262624);
@@ -9,13 +41,6 @@
   --focus: light-dark(#8f3f2d, #f39a79);
   --shell-width: 70rem;
   --gutter: 2rem;
-  --font-serif:
-    "Source Serif 4", "Noto Serif SC", Georgia, "Songti SC", "Source Han Serif SC", serif;
-  --font-sans:
-    "IBM Plex Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
-    sans-serif;
-  --font-mono:
-    "IBM Plex Mono", "Sarasa Mono SC", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 
   /* Pagefind 面板：对齐站内暖纸 token */
   --pf-text: var(--text);

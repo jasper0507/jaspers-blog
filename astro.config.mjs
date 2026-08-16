@@ -1,4 +1,5 @@
 import sitemap from "@astrojs/sitemap";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import {
   transformerMetaHighlight,
@@ -70,6 +71,9 @@ export default defineConfig({
     "/posts": "/archives",
     "/posts/2": "/archives",
     "/search": "/",
+  },
+  vite: {
+    plugins: [tailwindcss()],
   },
   markdown: {
     processor: siteMarkdownProcessor(),
