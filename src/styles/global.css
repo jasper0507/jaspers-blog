@@ -32,11 +32,12 @@
 
 :root {
   color-scheme: light dark;
-  --background: light-dark(#f5f4f2, #262624);
-  --surface: light-dark(#faf9f5, #2f2e2a);
-  --text: light-dark(#282724, #e8e6de);
-  --muted: light-dark(#686660, #b9b6ac);
-  --line: light-dark(#d7d4cc, #3e3b36);
+  /* 温暖克制的纸面 token（ADR-0020）：羊皮底、暖灰字、珊瑚强调 */
+  --background: light-dark(#f5f2ea, #272421);
+  --surface: light-dark(#fbf9f4, #322f29);
+  --text: light-dark(#292520, #e9e6dd);
+  --muted: light-dark(#6e675b, #b8b2a5);
+  --line: light-dark(#ded7c7, #423d34);
   --accent: light-dark(#b05c3f, #d97757);
   --focus: light-dark(#8f3f2d, #f39a79);
   --shell-width: 70rem;

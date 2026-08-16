@@ -31,11 +31,8 @@ const validSettings = {
     email: "author@example.com",
   },
   home: {
-    hero: {
-      caption: "示例主视觉",
-      lightImage: "/images/hero-light.svg",
-      darkImage: undefined,
-      alt: "",
+    headline: {
+      text: "示例标题句",
     },
   },
   footer: {
@@ -47,8 +44,7 @@ const validated = await validateBlogSettings(validSettings, new Date("2025-12-31
 assert.equal(validated.site.url, "https://example.com/");
 assert.equal(validated.site.headerTitle, "Example");
 assert.equal(validated.site.favicon, undefined);
-assert.equal(validated.home.hero.darkImage, "/images/hero-light.svg");
-assert.equal(validated.home.hero.alt, "");
+assert.equal(validated.home.headline.text, "示例标题句");
 assert.equal(validated.footer.copyright, "© 2026 **示例作者**");
 assert.equal(
   (
@@ -90,17 +86,6 @@ assert.equal(
   (
     await validateBlogSettings({
       ...validSettings,
-      home: {
-        hero: { ...validSettings.home.hero, darkImage: "/images/hero-dark.svg" },
-      },
-    })
-  ).home.hero.darkImage,
-  "/images/hero-dark.svg",
-);
-assert.equal(
-  (
-    await validateBlogSettings({
-      ...validSettings,
       site: {
         ...validSettings.site,
         title: "1234567890123456",
@@ -128,7 +113,7 @@ assert.equal(Object.isFrozen(validated.site), true);
 assert.deepEqual(validated.author, validSettings.author);
 assert.equal(Object.isFrozen(validated.author), true);
 assert.equal(Object.isFrozen(validated.home), true);
-assert.equal(Object.isFrozen(validated.home.hero), true);
+assert.equal(Object.isFrozen(validated.home.headline), true);
 assert.equal(Object.isFrozen(validated.footer), true);
 
 const imageFixtureDirectory = mkdtempSync(join(tmpdir(), "jasper-blog-images-"));
@@ -143,26 +128,16 @@ try {
   await assert.rejects(
     validateBlogSettings({
       ...validSettings,
-      home: {
-        hero: {
-          ...validSettings.home.hero,
-          lightImage: `/images/${imageFixtureName}-outside.svg`,
-        },
-      },
+      site: { ...validSettings.site, favicon: `/images/${imageFixtureName}-outside.svg` },
     }),
-    /亮色主视觉.*符号链接.*外部路径/,
+    /浏览器图标.*符号链接.*外部路径/,
   );
   await assert.rejects(
     validateBlogSettings({
       ...validSettings,
-      home: {
-        hero: {
-          ...validSettings.home.hero,
-          darkImage: `/images/${imageFixtureName}-loop.svg`,
-        },
-      },
+      site: { ...validSettings.site, favicon: `/images/${imageFixtureName}-loop.svg` },
     }),
-    /暗色主视觉.*循环符号链接/,
+    /浏览器图标.*循环符号链接/,
   );
 } finally {
   rmSync(outsideImageLink, { force: true });
@@ -274,59 +249,25 @@ const invalidSettings = [
   ],
   [{ ...validSettings, home: undefined }, /首页设置.*缺失/],
   [{ ...validSettings, home: { ...validSettings.home, extra: true } }, /首页设置.*未知设置/],
-  [{ ...validSettings, home: { hero: undefined } }, /首页主视觉.*缺失/],
+  [{ ...validSettings, home: { headline: undefined } }, /首页开场.*缺失/],
   [
-    { ...validSettings, home: { hero: { ...validSettings.home.hero, extra: true } } },
-    /首页主视觉.*未知设置/,
+    { ...validSettings, home: { headline: { ...validSettings.home.headline, extra: true } } },
+    /首页开场.*未知设置/,
   ],
   [
-    { ...validSettings, home: { hero: { ...validSettings.home.hero, caption: undefined } } },
-    /首页 caption.*缺失/,
+    { ...validSettings, home: { headline: { ...validSettings.home.headline, text: undefined } } },
+    /首页标题句.*缺失/,
   ],
   [
-    { ...validSettings, home: { hero: { ...validSettings.home.hero, caption: " " } } },
-    /首页 caption.*不能为空/,
-  ],
-  [
-    { ...validSettings, home: { hero: { ...validSettings.home.hero, lightImage: undefined } } },
-    /亮色主视觉.*缺失/,
-  ],
-  [
-    { ...validSettings, home: { hero: { ...validSettings.home.hero, alt: undefined } } },
-    /主视觉图片说明.*缺失/,
-  ],
-  [
-    { ...validSettings, home: { hero: { ...validSettings.home.hero, alt: " " } } },
-    /主视觉图片说明.*空字符串/,
-  ],
-  ...[
-    "https://example.com/hero.svg",
-    "/images/../hero-light.svg",
-    "/images/%2e%2e/hero-light.svg",
-  ].map(lightImage => [
-    { ...validSettings, home: { hero: { ...validSettings.home.hero, lightImage } } },
-    /亮色主视觉.*public\/images/,
-  ]),
-  [
-    {
-      ...validSettings,
-      home: { hero: { ...validSettings.home.hero, lightImage: "/images/missing.svg" } },
-    },
-    /亮色主视觉.*文件不存在/,
+    { ...validSettings, home: { headline: { ...validSettings.home.headline, text: " " } } },
+    /首页标题句.*不能为空/,
   ],
   [
     {
       ...validSettings,
-      home: { hero: { ...validSettings.home.hero, lightImage: "/images/hero-light.txt" } },
+      home: { headline: { ...validSettings.home.headline, text: " 示例标题句" } },
     },
-    /亮色主视觉.*扩展名/,
-  ],
-  [
-    {
-      ...validSettings,
-      home: { hero: { ...validSettings.home.hero, darkImage: "/images/missing.png" } },
-    },
-    /暗色主视觉.*文件不存在/,
+    /首页标题句.*首尾不能有空白/,
   ],
   [{ ...validSettings, footer: undefined }, /页脚设置.*缺失/],
   [{ ...validSettings, footer: { text: undefined } }, /页脚文本.*缺失/],

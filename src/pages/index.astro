@@ -9,78 +9,93 @@ const [{ posts: publishedPosts }, publishedShuoshuo] = await Promise.all([
   getPublishedPostCatalog(),
   getPublishedShuoshuo(),
 ]);
-const [latestPost] = publishedPosts;
-const [latestShuoshuo] = publishedShuoshuo;
-const { hero } = blogSettings.home;
-const hasDarkHero = hero.darkImage !== hero.lightImage;
+const recentPosts = publishedPosts.slice(0, 5);
+const recentShuoshuo = publishedShuoshuo.slice(0, 3);
+const { headline } = blogSettings.home;
 const postCount = publishedPosts.length;
 const shuoshuoCount = publishedShuoshuo.length;
 ---
 
-<BaseLayout pageClass="home">
-  <div class="home-grid">
-    <h1 id="home-title" class="hero-caption">{hero.caption}</h1>
+<BaseLayout>
+  <div class="mx-auto w-full max-w-[62rem] pt-[clamp(4.5rem,9vw,7rem)] pb-[clamp(5rem,9vw,7.5rem)]">
+    <!-- 开场：标题句承载作者声音，取代占位主视觉（ADR-0020） -->
+    <header class="max-w-[42rem]">
+      <h1
+        id="home-title"
+        class="home-caption font-serif text-[clamp(2.1rem,3.4vw,2.75rem)] leading-[1.18] font-semibold tracking-[-0.02em] text-text"
+      >
+        {headline.text}
+      </h1>
+      <p class="mt-5 max-w-[36rem] font-serif text-[1.08rem] leading-[1.7] text-muted">
+        {blogSettings.site.description}
+      </p>
+    </header>
 
-    <div class="hero-media">
-      <img
-        class:list={["hero-image", hasDarkHero && "hero-image-light"]}
-        src={hero.lightImage}
-        width="960"
-        height="640"
-        alt={hero.alt}
-        decoding="async"
-        fetchpriority="high"
-      />
-      {
-        hasDarkHero && (
-          <img
-            class="hero-image hero-image-dark"
-            src={hero.darkImage}
-            width="960"
-            height="640"
-            alt={hero.alt}
-            decoding="async"
-          />
-        )
-      }
-    </div>
-
-    <div class="home-feed">
-      <section class="feed-section" aria-labelledby="recent-posts">
-        <div class="section-heading">
-          <h2 id="recent-posts">最近文章</h2>
-          <a href="/archives/">查看全部 ({postCount})</a>
+    <div
+      class="mt-[clamp(3rem,6vw,4.5rem)] grid gap-x-[clamp(2rem,4vw,3.5rem)] gap-y-12 min-[52rem]:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]"
+    >
+      <section class="border-t border-text pt-4" aria-labelledby="recent-posts">
+        <div class="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 id="recent-posts" class="text-[1rem] font-semibold tracking-[-0.02em]">最近文章</h2>
+          <a
+            class="text-[0.86rem] whitespace-nowrap text-muted no-underline hover:text-text"
+            href="/archives/"
+          >
+            查看全部 ({postCount})
+          </a>
         </div>
         {
-          latestPost ? (
-            <article class="post-preview">
-              <time datetime={latestPost.publishedAt.iso}>{latestPost.publishedAt.compact}</time>
-              <h3>
-                <a href={latestPost.href}>{latestPost.title}</a>
-              </h3>
-              <p class="post-preview-description">{latestPost.description}</p>
-            </article>
+          recentPosts.length > 0 ? (
+            <ol class="divide-y divide-line">
+              {recentPosts.map(post => (
+                <li class="grid grid-cols-[5.25rem_minmax(0,1fr)] items-baseline gap-x-4 py-3">
+                  <time datetime={post.publishedAt.iso} class="font-mono text-[0.78rem] text-muted">
+                    {post.publishedAt.compact}
+                  </time>
+                  <a
+                    class="font-serif text-[1.02rem] leading-[1.45] font-semibold wrap-anywhere text-text no-underline hover:text-accent"
+                    href={post.href}
+                  >
+                    {post.title}
+                  </a>
+                </li>
+              ))}
+            </ol>
           ) : (
             <p class="empty-state">技术文章尚未发布。</p>
           )
         }
       </section>
 
-      <section class="feed-section" aria-labelledby="recent-shuoshuo">
-        <div class="section-heading">
-          <h2 id="recent-shuoshuo">最近说说</h2>
-          <a href="/shuoshuo/">查看全部 ({shuoshuoCount})</a>
+      <section class="border-t border-text pt-4" aria-labelledby="recent-shuoshuo">
+        <div class="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 id="recent-shuoshuo" class="text-[1rem] font-semibold tracking-[-0.02em]">
+            最近说说
+          </h2>
+          <a
+            class="text-[0.86rem] whitespace-nowrap text-muted no-underline hover:text-text"
+            href="/shuoshuo/"
+          >
+            查看全部 ({shuoshuoCount})
+          </a>
         </div>
         {
-          latestShuoshuo ? (
-            <article class="post-preview shuoshuo-preview" aria-label={latestShuoshuo.label}>
-              <time datetime={latestShuoshuo.publishedAt.iso}>
-                {latestShuoshuo.publishedAt.compact}
-              </time>
-              <h3>
-                <a href={latestShuoshuo.href}>{latestShuoshuo.summary}</a>
-              </h3>
-            </article>
+          recentShuoshuo.length > 0 ? (
+            <div class="grid gap-3">
+              {recentShuoshuo.map(item => (
+                <article class="shuoshuo-preview" aria-label={item.label}>
+                  <time datetime={item.publishedAt.iso} class="font-mono text-[0.78rem] text-muted">
+                    {item.publishedAt.compact}
+                  </time>
+                  <a
+                    class="mt-1.5 block font-serif text-[0.98rem] leading-[1.55] wrap-anywhere text-text no-underline hover:text-accent"
+                    href={item.href}
+                  >
+                    {item.summary}
+                  </a>
+                </article>
+              ))}
+            </div>
           ) : (
             <p class="empty-state">暂无说说</p>
           )
@@ -89,194 +104,3 @@ const shuoshuoCount = publishedShuoshuo.length;
     </div>
   </div>
 </BaseLayout>
-
-<style>
-  /*
-   * 双行两栏：行1 caption | 空；行2 图 | 信息流
-   * 使 feed 顶与图顶对齐（JacksBlog 咬合）
-   */
-  .home-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    column-gap: clamp(2.5rem, 4vw, 4.5rem);
-    row-gap: 1.15rem;
-    align-items: start;
-  }
-
-  .hero-caption {
-    grid-column: 1;
-    grid-row: 1;
-    margin: 0;
-    color: var(--text);
-    font-family: var(--font-serif);
-    font-size: clamp(1.65rem, 2.6vw, 2rem);
-    font-weight: 600;
-    letter-spacing: -0.03em;
-    line-height: 1.25;
-  }
-
-  .hero-media {
-    grid-column: 1;
-    grid-row: 2;
-    position: relative;
-    min-width: 0;
-    aspect-ratio: 3 / 2;
-    overflow: hidden;
-    border-radius: 0.5rem;
-  }
-
-  .hero-image {
-    display: block;
-    width: 100%;
-    max-width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-  }
-
-  /* 亮/暗双图：跟随 data-theme 与系统偏好 */
-  .hero-image-dark {
-    display: none;
-  }
-
-  :global(html[data-theme="dark"]) .hero-image-light {
-    display: none;
-  }
-
-  :global(html[data-theme="dark"]) .hero-image-dark {
-    display: block;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :global(html:not([data-theme="light"])) .hero-image-light {
-      display: none;
-    }
-
-    :global(html:not([data-theme="light"])) .hero-image-dark {
-      display: block;
-    }
-  }
-
-  .home-feed {
-    grid-column: 2;
-    grid-row: 2;
-    display: grid;
-    gap: 3rem;
-    min-width: 0;
-  }
-
-  /* 分区线：信息流栏近满宽细线（JacksBlog 节奏） */
-  .feed-section {
-    padding-top: 1.15rem;
-    border-top: 1px solid var(--text);
-  }
-
-  .section-heading {
-    margin-bottom: 1.15rem;
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .section-heading h2 {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-  }
-
-  .section-heading a {
-    color: var(--muted);
-    font-size: 0.86rem;
-    white-space: nowrap;
-    text-decoration: none;
-  }
-
-  .section-heading a:hover {
-    color: var(--text);
-  }
-
-  .post-preview {
-    display: grid;
-    gap: 0.35rem;
-    min-width: 0;
-  }
-
-  .post-preview h3 {
-    margin: 0;
-    font-family: var(--font-serif);
-    font-size: 1.125rem;
-    font-weight: 600;
-    line-height: 1.4;
-    overflow-wrap: anywhere;
-  }
-
-  .post-preview h3 a {
-    text-decoration: none;
-  }
-
-  .post-preview p {
-    margin: 0.55rem 0;
-    color: var(--muted);
-    line-height: 1.55;
-    overflow-wrap: anywhere;
-  }
-
-  /* 首页最近文章：单行截断，覆盖通用段落样式 */
-  .post-preview-description {
-    margin: 0;
-    line-height: 1.5;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    overflow-wrap: normal;
-  }
-
-  .post-preview time,
-  .shuoshuo-preview time {
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-  }
-
-  @media (max-width: 52rem) {
-    .home-grid {
-      grid-template-columns: 1fr;
-      grid-template-rows: none;
-      column-gap: 0;
-      row-gap: 2.5rem;
-    }
-
-    .hero-caption,
-    .hero-media,
-    .home-feed {
-      grid-column: 1;
-      grid-row: auto;
-    }
-
-    .hero-media {
-      max-width: 28rem;
-    }
-  }
-
-  @media (max-width: 30rem) {
-    .section-heading {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-  }
-</style>
-
-<style is:global>
-  .home {
-    padding-block: clamp(4.5rem, 8vw, 6.5rem) clamp(5rem, 9vw, 7.5rem);
-  }
-
-  @media (max-width: 52rem) {
-    .home {
-      padding-block: 3.5rem 5rem;
-    }
-  }
-</style>
