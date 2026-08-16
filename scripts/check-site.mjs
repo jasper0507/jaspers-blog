@@ -68,8 +68,8 @@ async function build(environment) {
   await execFileAsync(pagefind, ["--site", "dist", "--glob", "posts/**/*.html"], { cwd: root });
 }
 
-async function buildSettingsFixture(name, content) {
-  const output = fileURLToPath(new URL(`../dist-${name}/`, import.meta.url));
+async function buildSettingsFixture() {
+  const output = fileURLToPath(new URL("../dist-settings/", import.meta.url));
   try {
     await execFileAsync(
       process.execPath,
@@ -78,8 +78,7 @@ async function buildSettingsFixture(name, content) {
         cwd: root,
         env: {
           ...fixtureEnvironment,
-          BLOG_SETTINGS_FIXTURE: name,
-          BLOG_SETTINGS_FOOTER_CONTENT: content,
+          BLOG_SETTINGS_FIXTURE: "settings",
         },
       },
     );
@@ -120,7 +119,12 @@ async function assertFooterLayout(page, width) {
   );
 }
 
-async function checkFooterFixture(browser, fixture, hasContent) {
+function shanghaiYear(now = new Date()) {
+  return new Intl.DateTimeFormat("en", { timeZone: "Asia/Shanghai", year: "numeric" }).format(now);
+}
+
+async function checkFooterFixture(browser, fixture) {
+  const copyright = `© ${shanghaiYear()} ${fixtureSettings.author.name}. 保留所有权利。`;
   for (const width of [1440, 375]) {
     for (const theme of ["light", "dark"]) {
       const context = await browser.newContext({ viewport: { width, height: 960 } });
@@ -130,7 +134,7 @@ async function checkFooterFixture(browser, fixture, hasContent) {
       await page.evaluate(theme => {
         document.documentElement.dataset.theme = theme;
       }, theme);
-      assert.equal(await page.locator(".footer-content").count(), hasContent ? 1 : 0);
+      assert.equal(await page.locator(".footer-content").textContent(), copyright);
       assert.deepEqual(await footerLinks(page), expectedFooterLinks(fixtureSettings.author));
       await assertFooterLayout(page, width);
       assert.ok(
@@ -236,7 +240,10 @@ async function checkSettingsFixture(browser, fixture) {
     fixtureSettings.site.favicon,
   );
   assert.equal(await page.locator(".hero-image").count(), 1, "暗图缺省时不应重复输出亮色资源");
-  assert.match(await page.locator(".footer-content").textContent(), /^超长页脚/);
+  assert.equal(
+    await page.locator(".footer-content").textContent(),
+    `© ${shanghaiYear()} ${fixtureSettings.author.name}. 保留所有权利。`,
+  );
   assert.deepEqual(
     JSON.parse(await page.locator('script[type="application/ld+json"]').textContent()),
     {
@@ -346,7 +353,7 @@ async function waitForServer(server) {
   throw new Error(`Astro 预览服务器未启动：${lastError?.message ?? "未知错误"}`);
 }
 
-async function checkFixture(browser, footerFixtures) {
+async function checkFixture(browser, settingsFixture) {
   const home = await readFile("dist/index.html", "utf8");
   const timeline = await readFile("dist/shuoshuo/index.html", "utf8");
   const archive = await readFile("dist/archives/index.html", "utf8");
@@ -406,9 +413,8 @@ async function checkFixture(browser, footerFixtures) {
   assert.doesNotMatch(`${archive}${tags}${rss}${sitemap}`, /不应公开的技术文章草稿|草稿标签/);
   assert.equal(searchIndex.languages["zh-cn"].page_count, 3);
 
-  await checkSettingsFixture(browser, footerFixtures.long);
-  await checkFooterFixture(browser, footerFixtures.long, true);
-  await checkFooterFixture(browser, footerFixtures.empty, false);
+  await checkSettingsFixture(browser, settingsFixture);
+  await checkFooterFixture(browser, settingsFixture);
 
   for (const width of [1440, 320]) {
     const context = await browser.newContext({ viewport: { width, height: 960 } });
@@ -532,7 +538,7 @@ async function checkFixture(browser, footerFixtures) {
     `${expectedSite.headerTitle} 首页`,
   );
   assert.deepEqual(await footerLinks(page), expectedFooterLinks(expectedAuthor));
-  assert.equal(await page.locator(".footer-content").innerHTML(), expectedFooter.html);
+  assert.equal(await page.locator(".footer-content").textContent(), expectedFooter.copyright);
 
   const menuTrigger = page.locator("#article-menu-trigger");
   const menu = page.locator("#article-menu-list");
@@ -754,13 +760,7 @@ async function checkProduction() {
   assertChineseFootnotes(quickStart, "Markdown 教程");
 }
 
-const footerFixtures = {
-  long: await buildSettingsFixture(
-    "footer-long",
-    `超长页脚 ${"不换行文字".repeat(80)} [${"超长链接".repeat(120)}](https://example.com/)`,
-  ),
-  empty: await buildSettingsFixture("footer-empty", ""),
-};
+const settingsFixture = await buildSettingsFixture();
 await build(fixtureEnvironment);
 const server = spawn(
   process.execPath,
@@ -772,7 +772,7 @@ try {
   await waitForServer(server);
   const browser = await chromium.launch({ headless: true });
   try {
-    await checkFixture(browser, footerFixtures);
+    await checkFixture(browser, settingsFixture);
   } finally {
     await browser.close();
   }

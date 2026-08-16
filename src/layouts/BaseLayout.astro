@@ -22,7 +22,7 @@ const {
   favicon,
 } = blogSettings.site;
 const { github, email } = blogSettings.author;
-const footerHtml = blogSettings.footer.html;
+const footerCopyright = blogSettings.footer.copyright;
 const pageData = Astro.props.frontmatter ?? Astro.props;
 const title = pageData.title ? `${pageData.title} | ${siteTitle}` : siteTitle;
 const description = pageData.description ?? defaultDescription;
@@ -179,7 +179,7 @@ const structuredData = JSON.stringify(
     </main>
     <footer class="site-footer">
       <div class="footer-inner">
-        {footerHtml && <div class="footer-content" set:html={footerHtml} />}
+        <div class="footer-content">{footerCopyright}</div>
         <ul aria-label="联系方式">
           <li><a href="/rss.xml">RSS</a></li>
           <li><a href={github}>GitHub</a></li>

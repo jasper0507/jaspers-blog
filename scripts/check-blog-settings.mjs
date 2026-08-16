@@ -38,10 +38,6 @@ const validSettings = {
       alt: "",
     },
   },
-  footer: {
-    content:
-      "© {year} **{author}** *博客*  \n[HTTPS](https://example.com) [邮箱](mailto:author@example.com) [本站](/about/)",
-  },
 };
 
 const validated = await validateBlogSettings(validSettings, new Date("2025-12-31T16:00:00Z"));
@@ -50,23 +46,19 @@ assert.equal(validated.site.headerTitle, "Example");
 assert.equal(validated.site.favicon, undefined);
 assert.equal(validated.home.hero.darkImage, "/images/hero-light.svg");
 assert.equal(validated.home.hero.alt, "");
-assert.match(validated.footer.html, /© 2026 <strong>示例作者<\/strong> <em>博客<\/em><br>/);
-assert.match(validated.footer.html, /href="https:\/\/example\.com"/);
-assert.match(validated.footer.html, /href="mailto:author@example\.com"/);
-assert.match(validated.footer.html, /href="\/about\/"/);
+assert.equal(validated.footer.copyright, "© 2026 示例作者. 保留所有权利。");
 assert.equal(
-  (await validateBlogSettings({ ...validSettings, footer: { content: "" } })).footer.html,
-  "",
+  (
+    await validateBlogSettings(
+      {
+        ...validSettings,
+        author: { ...validSettings.author, name: "<script>alert(1)</script>" },
+      },
+      new Date("2025-12-31T16:00:00Z"),
+    )
+  ).footer.copyright,
+  "© 2026 <script>alert(1)</script>. 保留所有权利。",
 );
-const escapedAuthorHtml = (
-  await validateBlogSettings({
-    ...validSettings,
-    author: { ...validSettings.author, name: "<script>alert(1)</script>" },
-    footer: { content: "{author}" },
-  })
-).footer.html;
-assert.doesNotMatch(escapedAuthorHtml, /<script>/);
-assert.match(escapedAuthorHtml, /alert\(1\)/);
 for (const favicon of [
   "/images/hero-light.svg",
   "/images/posts/transformer-paper-notes/attention-mechanism.png",
@@ -323,29 +315,7 @@ const invalidSettings = [
     },
     /暗色主视觉.*文件不存在/,
   ],
-  [{ ...validSettings, footer: undefined }, /页脚设置.*缺失/],
-  [{ ...validSettings, footer: { content: undefined } }, /页脚内容.*缺失/],
-  [{ ...validSettings, footer: { content: "正文", extra: true } }, /页脚设置.*未知设置/],
-  ...[
-    ["<span>HTML</span>", /页脚内容.*HTML/],
-    ["![图片](/images/hero-light.svg)", /页脚内容.*图片/],
-    ["# 标题", /页脚内容.*标题/],
-    ["- 列表", /页脚内容.*列表/],
-    ["> 引用", /页脚内容.*引用/],
-    ["---", /页脚内容.*分隔线/],
-    ["`代码`", /页脚内容.*代码/],
-    ["```js\nalert(1)\n```", /页脚内容.*代码/],
-    ["| 表格 |\n| --- |\n| 内容 |", /页脚内容.*表格/],
-    ["~~删除线~~", /页脚内容.*删除线/],
-    ["{unknown}", /页脚内容.*未知占位符.*unknown/],
-    ["[链接](http://example.com)", /页脚内容.*链接.*HTTP/],
-    ["[链接](https:example.com)", /页脚内容.*链接.*HTTPS/],
-    ["[链接](javascript:alert(1))", /页脚内容.*链接.*javascript/],
-    ["[链接](data:text/plain,test)", /页脚内容.*链接.*data/],
-    ["[链接](ftp://example.com)", /页脚内容.*链接.*ftp/],
-    ["[链接](relative/path)", /页脚内容.*链接.*relative\/path/],
-    ["[链接](//example.com)", /页脚内容.*链接.*\/\/example\.com/],
-  ].map(([content, expected]) => [{ ...validSettings, footer: { content } }, expected]),
+  [{ ...validSettings, footer: { content: "© {year}" } }, /博客设置.*未知设置.*footer/],
 ];
 
 for (const [settings, expected] of invalidSettings) {
