@@ -172,7 +172,7 @@ npm run publish -- "发布新的技术文章"
 
 ## 👨🏻‍💻 本地运行
 
-需要 Node.js `22.16.0`（最低 `22.12.0`）和 npm。首次运行：
+需要 Node.js `24.19.0`（最低 `24.11.0`）和 npm。首次运行：
 
 ```sh
 git clone git@github.com:jasper0507/jaspers-blog.git

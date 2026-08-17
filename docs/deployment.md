@@ -4,7 +4,7 @@
 
 - 正式分支：`main`
 - 根目录：仓库根目录
-- Node.js `22.16.0`（由 `.node-version` 固定）
+- Node.js `24.19.0`（由 `.node-version` 固定）
 - 包管理器：`npm`（使用仓库内 `package-lock.json`）
 - 构建命令：`npm run build`
 - 输出目录：`dist`
