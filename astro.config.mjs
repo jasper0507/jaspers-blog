@@ -1,13 +1,12 @@
+import sitemap from "@astrojs/sitemap";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
-import { unified } from "@astrojs/markdown-remark";
 import {
   transformerMetaHighlight,
   transformerNotationDiff,
   transformerNotationHighlight,
 } from "@shikijs/transformers";
-import rehypeKatex from "rehype-katex";
-import { remarkAlert } from "remark-github-blockquote-alert";
-import remarkMath from "remark-math";
+import { siteMarkdownProcessor } from "./src/lib/markdown-satteri.js";
 import { blogSettings } from "./src/lib/site.ts";
 
 const kraftPaperTheme = {
@@ -62,20 +61,22 @@ const transformerCodeTitle = {
 export default defineConfig({
   site: blogSettings.site.url,
   trailingSlash: "always",
+  integrations: [
+    sitemap({
+      // 站点地图合同：搜索入口是弹层而非页面，即使将来出现 /search/ 路由也不收录。
+      filter: page => !page.endsWith("/search/"),
+    }),
+  ],
   redirects: {
     "/posts": "/archives",
     "/posts/2": "/archives",
     "/search": "/",
   },
+  vite: {
+    plugins: [tailwindcss()],
+  },
   markdown: {
-    processor: unified({
-      remarkPlugins: [remarkMath, [remarkAlert, { legacyTitle: true }]],
-      rehypePlugins: [rehypeKatex],
-      remarkRehype: {
-        footnoteLabel: "脚注",
-        footnoteBackLabel: "返回脚注引用",
-      },
-    }),
+    processor: siteMarkdownProcessor(),
     shikiConfig: {
       theme: kraftPaperTheme,
       wrap: false,

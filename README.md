@@ -14,7 +14,7 @@
 
 - [x] 技术文章与说说两种内容类型
 - [x] 基于 Astro Content Collections 的内容校验与草稿过滤
-- [x] 集中配置博客身份、公开联系方式、首页主视觉、浏览器图标与页脚内容
+- [x] 集中配置博客身份、公开联系方式、首页主视觉、浏览器图标与页脚文本
 - [x] 响应式布局、亮色/暗色主题，以及键盘可访问的导航与搜索
 - [x] Pagefind 静态全文搜索
 - [x] 文章标签、按年归档及自动目录
@@ -42,7 +42,9 @@
 │   ├── pages/              # 页面与 XML 路由
 │   ├── styles/             # 全局、文章与说说样式
 │   └── content.config.ts   # Content Collections 数据结构
-├── tests/fixtures/         # 构建验收用内容
+├── tests/
+│   ├── fixtures/          # 构建验收用内容
+│   └── site/              # Playwright 整站验收用例
 ├── blog.config.ts          # 博客设置的唯一日常入口
 ├── astro.config.mjs        # Astro、Markdown 与代码高亮配置
 ├── package.json            # 依赖与命令
@@ -124,14 +126,16 @@ draft: false
 
 个性化博客只需打开根目录 [`blog.config.ts`](blog.config.ts)。页面、RSS、Canonical URL、Open Graph、结构化数据和站点地图共用这份已校验的博客设置，不需要再修改页面源码。
 
-| 设置区      | 可配置内容                                                                                |
-| :---------- | :---------------------------------------------------------------------------------------- |
-| `site`      | 博客名称、可选页头短名称、正式网址、默认简介和可选浏览器图标                              |
-| `author`    | 作者显示名，以及页脚固定展示的 GitHub 个人主页和邮箱                                      |
-| `home.hero` | 首页文案、必需的亮色主视觉、可选暗色主视觉和图片说明                                      |
-| `footer`    | 可留空的受限 Markdown；支持文字、链接、粗体、斜体、换行及 `{year}`、`{author}` 两个占位符 |
+| 设置区      | 可配置内容                                                     |
+| :---------- | :------------------------------------------------------------- |
+| `site`      | 博客名称、可选页头短名称、正式网址、默认简介和可选浏览器图标   |
+| `author`    | 作者显示名，以及页脚固定展示的 GitHub 个人主页和邮箱           |
+| `home.hero` | 首页文案、必需的亮色主视觉、可选暗色主视觉和图片说明           |
+| `footer`    | 左侧纯文本，可留空；支持 `{year}`、`{author}`，不支持 Markdown |
 
-设置文件会拒绝未知字段、空白必填值、无效网址、不安全页脚链接，以及不存在或越过 `public/images/` 的图片路径，并在校验或构建时给出明确错误。
+页脚右侧仍是固定的 RSS、GitHub 与邮箱。
+
+设置文件会拒绝未知字段、空白必填值、无效网址，以及不存在或越过 `public/images/` 的图片路径，并在校验或构建时给出明确错误。
 
 不适合放进设置文件的内容使用固定位置：
 
@@ -163,7 +167,7 @@ npm run publish -- "发布新的技术文章"
 | 样式           | 原生 CSS 与 CSS Custom Properties                           |
 | 搜索           | [Pagefind](https://pagefind.app/)                           |
 | 格式化         | [Prettier](https://prettier.io/)                            |
-| 验收           | Node.js 脚本 + Playwright Core                              |
+| 验收           | [Playwright Test](https://playwright.dev/)                  |
 | 部署           | [Cloudflare Pages](https://pages.cloudflare.com/)           |
 
 ## 👨🏻‍💻 本地运行

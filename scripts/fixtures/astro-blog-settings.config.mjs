@@ -5,14 +5,12 @@ import { fixtureSettings } from "./blog-settings.mjs";
 
 const rawSettingsPath = fileURLToPath(new URL("../../blog.config.ts", import.meta.url));
 const virtualSettings = "\0blog-settings-fixture";
-const fixture = process.env.BLOG_SETTINGS_FIXTURE ?? "footer-long";
+const fixture = process.env.BLOG_SETTINGS_FIXTURE ?? "settings";
 const outDirs = {
-  "footer-long": "./dist-footer-long/",
-  "footer-empty": "./dist-footer-empty/",
+  settings: "./dist-settings/",
 };
 if (!(fixture in outDirs)) throw new Error("未知博客设置 fixture。");
-const footerContent = process.env.BLOG_SETTINGS_FOOTER_CONTENT;
-Object.assign(rawSettings, fixtureSettings, { footer: { content: footerContent } });
+Object.assign(rawSettings, fixtureSettings);
 const { default: baseConfig } = await import("../../astro.config.mjs");
 if (baseConfig.site !== fixtureSettings.site.url) {
   throw new Error("Astro site 未从已校验博客设置读取。");
@@ -45,7 +43,7 @@ export default {
   site: fixtureSettings.site,
   author: fixtureSettings.author,
   home: fixtureSettings.home,
-  footer: { content: ${JSON.stringify(footerContent)} },
+  footer: fixtureSettings.footer,
 };`;
           }
         },

@@ -1,4 +1,3 @@
-import { createMarkdownProcessor, type Node, type RemarkPlugin } from "@astrojs/markdown-remark";
 import { z } from "astro/zod";
 import rawSettings from "../../blog.config.ts";
 
@@ -21,109 +20,22 @@ const aboutMarkdownPath = "src/content/about.md";
 const publicImageDirectory = realpathSync("public/images");
 const heroImageExtensions = ["svg", "png", "jpg", "jpeg", "webp", "avif", "gif"];
 const faviconExtensions = ["svg", "png", "ico"];
-const footerNodeTypes = new Set([
-  "root",
-  "paragraph",
-  "text",
-  "link",
-  "linkReference",
-  "definition",
-  "strong",
-  "emphasis",
-  "break",
-]);
-const footerNodeNames: Record<string, string> = {
-  html: "HTML",
-  image: "图片",
-  imageReference: "图片",
-  heading: "标题",
-  list: "列表",
-  listItem: "列表",
-  blockquote: "引用",
-  thematicBreak: "分隔线",
-  code: "代码",
-  inlineCode: "代码",
-  table: "表格",
-  tableRow: "表格",
-  tableCell: "表格",
-  delete: "删除线",
-};
-
-interface FooterMarkdownNode extends Node {
-  children?: FooterMarkdownNode[];
-  title?: string | null;
-  url?: string;
-  value?: string;
-}
-
-function getFooterLinkError(value: string) {
-  if (value.startsWith("/") && !value.startsWith("//") && !value.includes("\\")) return;
-
-  try {
-    const protocol = new URL(value).protocol;
-    if (/^https:\/\//i.test(value) && protocol === "https:") return;
-    if (/^mailto:/i.test(value) && protocol === "mailto:") return;
-  } catch {
-    // The shared error below tells the builder which link needs fixing.
-  }
-
-  return `页脚内容链接“${value}”不安全；只接受 HTTPS、mailto: 和根相对本站地址。`;
-}
-
-const validateFooterMarkdown: RemarkPlugin = () => (tree, file) => {
-  const astroData = (file.data.astro ??= {});
-  const frontmatter = astroData.frontmatter ?? {};
-  const errors = new Set<string>();
-
-  const visit = (node: FooterMarkdownNode) => {
-    if (!footerNodeTypes.has(node.type)) {
-      errors.add(
-        footerNodeNames[node.type]
-          ? `页脚内容不能使用${footerNodeNames[node.type]}。`
-          : `页脚内容不能使用 Markdown 结构“${node.type}”。`,
-      );
-    }
-
-    if (["link", "definition"].includes(node.type) && node.url !== undefined) {
-      const error = getFooterLinkError(node.url);
-      if (error) errors.add(error);
-    }
-
-    node.children?.forEach(visit);
-  };
-
-  visit(tree as FooterMarkdownNode);
-  if (errors.size) {
-    astroData.frontmatter = { ...frontmatter, footerErrors: [...errors] };
-    tree.children = [];
-  }
-};
-
-const footerMarkdownRenderer = await createMarkdownProcessor({
-  syntaxHighlight: false,
-  gfm: true,
-  smartypants: false,
-  remarkPlugins: [validateFooterMarkdown],
+const footerYearFormatter = new Intl.DateTimeFormat("en", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
 });
 
-async function renderFooterMarkdown(content: string, author: string, now: Date) {
-  const footerYear = new Intl.DateTimeFormat("en", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-  }).format(now);
-  const encodedAuthor = Array.from(author, character => `&#${character.codePointAt(0)};`).join("");
-  const expanded = content.replaceAll("{year}", footerYear).replaceAll("{author}", encodedAuthor);
-  const placeholders = [...expanded.matchAll(/\{([^{}]*)\}/g)].map(match => match[1]);
+function renderFooterText(text: string, author: string, now: Date) {
+  const copyright = text
+    .replaceAll("{year}", footerYearFormatter.format(now))
+    .replaceAll("{author}", author);
+  const placeholders = [...copyright.matchAll(/\{([^{}]*)\}/g)].map(match => match[1]);
   if (placeholders.length) {
     throw new Error(
-      `页脚内容包含未知占位符“{${[...new Set(placeholders)].join("}、{")}}”；只支持 {year} 和 {author}。`,
+      `页脚文本包含未知占位符“{${[...new Set(placeholders)].join("}、{")}}”；只支持 {year} 和 {author}。`,
     );
   }
-
-  const result = await footerMarkdownRenderer.render(expanded, { frontmatter: {} });
-  const errors = result.metadata.frontmatter.footerErrors as string[] | undefined;
-  if (errors?.length) throw new Error(errors.join("\n"));
-  return result.code.trim();
+  return copyright;
 }
 
 export function assertAboutMarkdownExists(path: string | URL = aboutMarkdownPath) {
@@ -315,7 +227,7 @@ const blogSettingsSchema = z
       }),
     }),
     footer: z.strictObject({
-      content: z.string(),
+      text: z.string(),
     }),
   })
   .transform(settings =>
@@ -356,7 +268,7 @@ const settingNames = new Map([
   ["home.hero.darkImage", "暗色主视觉"],
   ["home.hero.alt", "主视觉图片说明"],
   ["footer", "页脚设置"],
-  ["footer.content", "页脚内容"],
+  ["footer.text", "页脚文本"],
 ]);
 
 function formatIssue(issue: z.core.$ZodIssue) {
@@ -380,14 +292,12 @@ export async function validateBlogSettings(input: unknown, now = new Date()) {
     throw new Error(`博客设置无效：\n${result.error.issues.map(formatIssue).join("\n")}`);
   }
   try {
-    const html = await renderFooterMarkdown(
-      result.data.footer.content,
-      result.data.author.name,
-      now,
-    );
     return Object.freeze({
       ...result.data,
-      footer: Object.freeze({ ...result.data.footer, html }),
+      footer: Object.freeze({
+        ...result.data.footer,
+        copyright: renderFooterText(result.data.footer.text, result.data.author.name, now),
+      }),
     });
   } catch (error) {
     throw new Error(`博客设置无效：\n${(error as Error).message}`);

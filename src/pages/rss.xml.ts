@@ -1,3 +1,4 @@
+import rss from "@astrojs/rss";
 import type { APIRoute } from "astro";
 import { getPublishedPostCatalog } from "../lib/posts";
 import { blogSettings } from "../lib/site";
@@ -14,27 +15,23 @@ export const GET: APIRoute = async () => {
     ...posts.map(post => ({
       title: post.title,
       description: post.description,
-      publishedAt: post.publishedAt.value,
-      path: post.href,
+      pubDate: post.publishedAt.value,
+      link: new URL(post.href, url).href,
     })),
     ...shuoshuo.map(item => ({
       title: item.label,
       description: item.summary,
-      publishedAt: item.publishedAt.value,
-      path: item.href,
+      pubDate: item.publishedAt.value,
+      link: new URL(item.href, url).href,
     })),
-  ].sort((left, right) => right.publishedAt.getTime() - left.publishedAt.getTime());
+  ].sort((left, right) => right.pubDate.getTime() - left.pubDate.getTime());
 
-  const channelUrl = new URL("/rss.xml", url).href;
-  const itemXml = items
-    .map(item => {
-      const itemUrl = new URL(item.path, url).href;
-      return `<item><title>${escapeXml(item.title)}</title><link>${escapeXml(itemUrl)}</link><guid isPermaLink="true">${escapeXml(itemUrl)}</guid><pubDate>${item.publishedAt.toUTCString()}</pubDate><description>${escapeXml(item.description)}</description></item>`;
-    })
-    .join("");
-
-  return new Response(
-    `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>${escapeXml(title)}</title><link>${escapeXml(url)}</link><description>${escapeXml(description)}</description><language>zh-CN</language><atom:link href="${escapeXml(channelUrl)}" rel="self" type="application/rss+xml"/>${itemXml}</channel></rss>`,
-    { headers: { "Content-Type": "application/rss+xml; charset=utf-8" } },
-  );
+  return rss({
+    title,
+    description,
+    site: url,
+    xmlns: { atom: "http://www.w3.org/2005/Atom" },
+    customData: `<language>zh-CN</language><atom:link href="${escapeXml(new URL("/rss.xml", url).href)}" rel="self" type="application/rss+xml"/>`,
+    items,
+  });
 };

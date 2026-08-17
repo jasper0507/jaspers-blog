@@ -22,13 +22,19 @@ const {
   favicon,
 } = blogSettings.site;
 const { github, email } = blogSettings.author;
-const footerHtml = blogSettings.footer.html;
+const footerCopyright = blogSettings.footer.copyright;
 const pageData = Astro.props.frontmatter ?? Astro.props;
 const title = pageData.title ? `${pageData.title} | ${siteTitle}` : siteTitle;
 const description = pageData.description ?? defaultDescription;
 const canonical = new URL(Astro.url.pathname, url);
 const path = Astro.url.pathname;
 const inArticles = ["/posts/", "/tags/", "/archives/"].some(prefix => path.startsWith(prefix));
+/* 导航项（含文章菜单触发钮）：移动端更小的点按内边距，≥30rem 恢复桌面尺度 */
+const navItemClass =
+  "inline-flex min-h-[2.75rem] cursor-pointer items-center border-0 border-b-2 border-b-transparent bg-transparent px-[0.35rem] text-[0.9rem] font-semibold text-muted no-underline hover:border-b-accent hover:text-text min-[30rem]:px-[0.55rem] min-[30rem]:text-[0.95rem] is-current:border-b-accent is-current:text-text";
+/* 文章菜单弹出层条目 */
+const menuLinkClass =
+  "flex min-h-[2.75rem] items-center px-3 text-[0.92rem] text-muted no-underline hover:bg-background hover:text-text";
 const structuredData = JSON.stringify(
   path === "/"
     ? {
@@ -117,16 +123,29 @@ const structuredData = JSON.stringify(
   </head>
   <body>
     <a class="skip-link" href="#main-content">跳到主要内容</a>
-    <header class="site-header">
-      <div class="header-inner">
-        <a class="brand" href="/" aria-label={`${headerTitle} 首页`}>{headerTitle}</a>
-        <nav aria-label="主导航">
-          <ul class="nav-list">
+    <header class="site-header relative z-10">
+      <div
+        class="header-inner shell-track grid min-h-[4.5rem] grid-cols-[1fr_auto] items-center gap-[0.2rem_1rem] border-b border-text py-3 min-[52rem]:gap-x-5 min-[52rem]:py-0"
+      >
+        <a
+          class="brand w-fit text-[1.15rem] font-bold tracking-[-0.02em] text-text no-underline"
+          href="/"
+          aria-label={`${headerTitle} 首页`}>{headerTitle}</a
+        >
+        <nav
+          class="col-span-full row-start-2 min-[52rem]:col-span-1 min-[52rem]:row-auto"
+          aria-label="主导航"
+        >
+          <ul
+            class="m-0 flex list-none items-center justify-between gap-[clamp(0.2rem,1.5vw,1.25rem)] p-0 min-[52rem]:justify-start"
+          >
             <li>
-              <div class="article-menu" id="article-menu">
+              <div class="article-menu relative" id="article-menu">
                 <button
                   id="article-menu-trigger"
+                  class={`${navItemClass} gap-[0.3rem]`}
                   type="button"
+                  style="anchor-name:--article-menu"
                   popovertarget="article-menu-list"
                   data-active={inArticles || undefined}
                 >
@@ -138,6 +157,7 @@ const structuredData = JSON.stringify(
                 <ul class="article-menu-list" id="article-menu-list" popover>
                   <li>
                     <a
+                      class={menuLinkClass}
                       href="/archives/"
                       aria-current={path.startsWith("/archives/") ? "page" : undefined}
                     >
@@ -145,7 +165,11 @@ const structuredData = JSON.stringify(
                     </a>
                   </li>
                   <li>
-                    <a href="/tags/" aria-current={path.startsWith("/tags/") ? "page" : undefined}>
+                    <a
+                      class={menuLinkClass}
+                      href="/tags/"
+                      aria-current={path.startsWith("/tags/") ? "page" : undefined}
+                    >
                       标签
                     </a>
                   </li>
@@ -154,6 +178,7 @@ const structuredData = JSON.stringify(
             </li>
             <li>
               <a
+                class={navItemClass}
                 href="/shuoshuo/"
                 aria-current={path.startsWith("/shuoshuo/") ? "page" : undefined}
               >
@@ -161,11 +186,15 @@ const structuredData = JSON.stringify(
               </a>
             </li>
             <li>
-              <a href="/about/" aria-current={path.startsWith("/about/") ? "page" : undefined}>
+              <a
+                class={navItemClass}
+                href="/about/"
+                aria-current={path.startsWith("/about/") ? "page" : undefined}
+              >
                 关于
               </a>
             </li>
-            <li class="nav-search">
+            <li class="nav-search flex items-center">
               {/* 放大镜入口；/ 打开面板（可编辑焦点下不劫持）；Esc/遮罩/关闭钮退出 */}
               <pagefind-modal-trigger compact hide-shortcut shortcut="/" placeholder="搜索"
               ></pagefind-modal-trigger>
@@ -174,13 +203,22 @@ const structuredData = JSON.stringify(
         </nav>
       </div>
     </header>
-    <main id="main-content" class={pageData.pageClass}>
+    <main id="main-content" class={`shell-track flex-1 ${pageData.pageClass ?? ""}`}>
       <slot />
     </main>
     <footer class="site-footer">
-      <div class="footer-inner">
-        {footerHtml && <div class="footer-content" set:html={footerHtml} />}
-        <ul aria-label="联系方式">
+      <div
+        class="footer-inner shell-track flex min-h-[6rem] items-center justify-between gap-x-8 gap-y-4 border-t border-line py-6 text-[0.86rem] text-muted max-[30rem]:flex-col max-[30rem]:items-start [&_p]:m-0 [&_p+p]:mt-2"
+      >
+        {
+          footerCopyright && (
+            <div class="footer-content min-w-0 [overflow-wrap:anywhere]">{footerCopyright}</div>
+          )
+        }
+        <ul
+          class="m-0 ml-auto flex shrink-0 list-none gap-5 p-0 max-[30rem]:ml-0"
+          aria-label="联系方式"
+        >
           <li><a href="/rss.xml">RSS</a></li>
           <li><a href={github}>GitHub</a></li>
           <li>
@@ -204,21 +242,72 @@ const structuredData = JSON.stringify(
       </pagefind-modal-footer>
     </pagefind-modal>
     <button
-      class="theme-toggle"
+      class="theme-toggle group fixed right-[max(1rem,env(safe-area-inset-right,0px))] bottom-[max(1rem,env(safe-area-inset-bottom,0px))] z-40 grid h-[2.75rem] w-[2.75rem] cursor-pointer place-items-center rounded-full border border-line bg-surface p-0 shadow-[0_0.35rem_1.25rem_rgb(0_0_0/8%)] transition-[border-color,color,background-color,box-shadow] duration-[180ms] ease-in hover:border-accent hover:bg-surface hover:text-accent hover:shadow-[0_0.45rem_1.4rem_rgb(0_0_0/12%)]"
       id="theme-toggle"
       type="button"
       aria-label="切换主题"
       title="切换主题"
     >
-      <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+      <svg
+        class="theme-icon theme-icon-sun block h-[1.15rem] w-[1.15rem] fill-none stroke-current stroke-[1.6] [grid-area:1/1] [stroke-linecap:round] [stroke-linejoin:round] group-data-[theme=dark]:hidden"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
         <circle cx="12" cy="12" r="3.5"></circle>
         <path
           d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
         ></path>
       </svg>
-      <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+      <svg
+        class="theme-icon theme-icon-moon hidden h-[1.15rem] w-[1.15rem] fill-none stroke-current stroke-[1.6] [grid-area:1/1] [stroke-linecap:round] [stroke-linejoin:round] group-data-[theme=dark]:block"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
         <path d="M20.4 15.4A8.5 8.5 0 0 1 8.6 3.6 8.5 8.5 0 1 0 20.4 15.4Z"></path>
       </svg>
     </button>
+    <style>
+      /* 文章菜单弹出层：CSS 锚点定位无法用工具类表达，保留为集成样式 */
+      .article-menu-list {
+        position: fixed;
+        position-anchor: --article-menu;
+        inset: auto;
+        top: calc(anchor(bottom) + 0.35rem);
+        left: anchor(center);
+        width: 9rem;
+        margin: 0;
+        padding: 0.45rem;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        box-shadow: 0 0.8rem 2rem rgb(0 0 0 / 12%);
+        transform: translateX(-50%);
+      }
+
+      .article-menu-list a[aria-current="page"] {
+        background: var(--background);
+        color: var(--text);
+      }
+
+      @media (max-width: 30rem) {
+        .article-menu-list {
+          left: anchor(left);
+          transform: none;
+        }
+      }
+
+      .article-menu > button svg {
+        width: 0.75rem;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.5;
+        transition: transform 180ms ease;
+      }
+
+      .article-menu:has(.article-menu-list:popover-open) > button svg {
+        transform: rotate(180deg);
+      }
+    </style>
   </body>
 </html>

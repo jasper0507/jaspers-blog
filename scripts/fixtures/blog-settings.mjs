@@ -19,4 +19,7 @@ export const fixtureSettings = {
       alt: "",
     },
   },
+  footer: {
+    text: "© {year} {author}. 保留所有权利。",
+  },
 };

@@ -27,7 +27,7 @@ export default {
   home: {
     hero: {
       /** 首页主视觉上方的一句话。 */
-      caption: "Talk is cheap. Show me the code.",
+      caption: "喊黑夜吻白天。",
       /** 亮色主视觉：3:2，推荐 960×640 或更高；非 3:2 图片居中裁切且不拉伸。 */
       lightImage: "/images/hero-light.svg",
       /** 可选 3:2 暗色主视觉；应与亮图尺寸及主体位置一致，省略时复用亮图。 */
@@ -36,11 +36,10 @@ export default {
       alt: "Jasper 的博客主视觉",
     },
   },
-  /** 页脚：左侧自定义内容；右侧 RSS、GitHub 与邮箱保持固定。 */
+  /** 页脚：左侧纯文本；右侧 RSS、GitHub 与邮箱保持固定。 */
   footer: {
-    /** 必填但可留空；支持文字、链接、粗体、斜体、换行、{year} 和 {author}。 */
-    /** 链接只接受 HTTPS、mailto: 和以 / 开头的本站地址；不支持其他 Markdown。 */
-    content: "© {year} {author}. 保留所有权利。",
+    /** 可留空；按字面显示。可用 {year}、{author}，不支持 Markdown。 */
+    text: "© {year} {author}. 保留所有权利。",
   },
   /** “关于我”正文固定编辑：src/content/about.md（文件可为空，但不能缺失）。 */
 } satisfies BlogSettings;

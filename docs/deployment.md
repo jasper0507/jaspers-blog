@@ -23,7 +23,7 @@
    ```sh
    curl --fail --silent --show-error --location https://blog.jasper0507.cc.cd/
    curl --fail --silent --show-error https://blog.jasper0507.cc.cd/rss.xml
-   curl --fail --silent --show-error https://blog.jasper0507.cc.cd/sitemap.xml
+   curl --fail --silent --show-error https://blog.jasper0507.cc.cd/sitemap-index.xml
    curl --fail --silent --show-error https://blog.jasper0507.cc.cd/pagefind/pagefind.js
    ```
 

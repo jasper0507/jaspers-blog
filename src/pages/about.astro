@@ -6,19 +6,13 @@ import { blogSettings } from "../lib/site";
 const description = `关于 ${blogSettings.author.name} 与 ${blogSettings.site.title}。`;
 ---
 
-<BaseLayout title="关于" description={description} pageClass="prose">
+<BaseLayout title="关于" description={description} pageClass="page-shell about-page">
   <h1 class="sr-only">关于</h1>
   <Content />
 </BaseLayout>
 
 <style>
-  :global(.prose) {
-    max-width: 48rem;
-    padding-top: clamp(4rem, 8vw, 6.5rem);
-    padding-bottom: clamp(5rem, 9vw, 7.5rem);
-  }
-
-  :global(.prose h1) {
+  :global(.about-page h1) {
     margin: 0 0 1.5rem;
     font-family: var(--font-serif);
     font-size: clamp(2.5rem, 5vw, 3.5rem);
@@ -27,28 +21,30 @@ const description = `关于 ${blogSettings.author.name} 与 ${blogSettings.site.
     line-height: 1.1;
   }
 
-  :global(.prose p),
-  :global(.prose li) {
+  :global(.about-page p),
+  :global(.about-page li) {
     color: var(--text);
     font-family: var(--font-serif);
     font-size: clamp(1rem, 1.5vw, 1.12rem);
   }
 
-  :global(.prose strong),
-  :global(.prose b) {
+  :global(.about-page strong),
+  :global(.about-page b) {
     font-weight: 700;
   }
 
-  :global(.prose p),
-  :global(.prose ul) {
+  :global(.about-page p),
+  :global(.about-page ul) {
     max-width: 42rem;
   }
 
-  :global(.prose p) {
+  :global(.about-page p) {
     margin-block: 0 1.25rem;
   }
 
-  :global(.prose ul) {
+  :global(.about-page ul) {
     padding-left: 1.25rem;
+    /* Tailwind preflight 抹掉浏览器默认列表记号，这里显式恢复 */
+    list-style: disc;
   }
 </style>
