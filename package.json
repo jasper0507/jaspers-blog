@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "astro dev",
     "preview": "astro preview",
-    "format": "prettier --write \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card}.css\" \"scripts/**/*.mjs\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
-    "format:check": "prettier --check \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card}.css\" \"scripts/**/*.mjs\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
+    "format": "prettier --write \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card}.css\" \"scripts/**/*.mjs\" \"tests/site/**/*.ts\" \"playwright.config.ts\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
+    "format:check": "prettier --check \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card}.css\" \"scripts/**/*.mjs\" \"tests/site/**/*.ts\" \"playwright.config.ts\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
     "check": "astro check",
     "build": "astro build && pagefind --site dist --glob \"posts/**/*.html\"",
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
@@ -21,7 +21,7 @@
     "test:post:command": "node scripts/check-new-post.mjs",
     "test:publish:command": "node scripts/check-publish.mjs",
     "test:shuoshuo:command": "node scripts/check-new-shuoshuo.mjs",
-    "test:site": "node --experimental-strip-types scripts/check-site.mjs",
+    "test:site": "playwright test",
     "test": "npm run format:check && npm run check && npm run test:settings && node scripts/check-fetch-fonts.mjs && npm run test:post:command && npm run test:publish:command && npm run test:shuoshuo:command && npm run test:site"
   },
   "dependencies": {
@@ -32,13 +32,13 @@
   "devDependencies": {
     "@astrojs/check": "0.9.10",
     "@astrojs/markdown-satteri": "0.3.5",
+    "@playwright/test": "^1.61.1",
     "@shikijs/transformers": "4.3.1",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
     "github-slugger": "2.0.0",
     "katex": "0.18.1",
     "pagefind": "1.5.2",
-    "playwright-core": "1.61.1",
     "prettier": "3.9.6",
     "prettier-plugin-astro": "0.14.1",
     "prettier-plugin-tailwindcss": "^0.8.1",

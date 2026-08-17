@@ -42,7 +42,9 @@
 │   ├── pages/              # 页面与 XML 路由
 │   ├── styles/             # 全局、文章与说说样式
 │   └── content.config.ts   # Content Collections 数据结构
-├── tests/fixtures/         # 构建验收用内容
+├── tests/
+│   ├── fixtures/          # 构建验收用内容
+│   └── site/              # Playwright 整站验收用例
 ├── blog.config.ts          # 博客设置的唯一日常入口
 ├── astro.config.mjs        # Astro、Markdown 与代码高亮配置
 ├── package.json            # 依赖与命令
@@ -165,7 +167,7 @@ npm run publish -- "发布新的技术文章"
 | 样式           | 原生 CSS 与 CSS Custom Properties                           |
 | 搜索           | [Pagefind](https://pagefind.app/)                           |
 | 格式化         | [Prettier](https://prettier.io/)                            |
-| 验收           | Node.js 脚本 + Playwright Core                              |
+| 验收           | [Playwright Test](https://playwright.dev/)                  |
 | 部署           | [Cloudflare Pages](https://pages.cloudflare.com/)           |
 
 ## 👨🏻‍💻 本地运行
