@@ -56,6 +56,11 @@ export const tagCollisionEnvironment = {
   POST_CONTENT_DIR: "./tests/fixtures/posts-tag-collision",
   SHUOSHUO_CONTENT_DIR: "./tests/fixtures/shuoshuo-empty",
 };
+export const draftTagCollisionEnvironment = {
+  ...process.env,
+  POST_CONTENT_DIR: "./tests/fixtures/posts-draft-tag-collision",
+  SHUOSHUO_CONTENT_DIR: "./tests/fixtures/shuoshuo-empty",
+};
 
 export async function build(environment: Record<string, string | undefined>) {
   await execFileAsync(process.execPath, [astro, "build", "--force"], {

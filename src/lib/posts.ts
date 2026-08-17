@@ -47,9 +47,18 @@ interface PublishedTagGroup extends PublishedTag {
 
 export async function getPublishedPostCatalog() {
   const entries = await getCollection("posts");
+  const tagHrefOwners = new Map<string, string>();
 
   for (const entry of entries) {
     if (!entry.body?.trim()) throw new Error(`技术文章 ${entry.id} 的正文不能为空`);
+    for (const tagName of entry.data.tags) {
+      const { href } = getTag(tagName);
+      const owner = tagHrefOwners.get(href);
+      if (owner && owner !== tagName) {
+        throw new Error(`标签「${owner}」与「${tagName}」生成了相同的网址：${href}`);
+      }
+      tagHrefOwners.set(href, tagName);
+    }
   }
 
   const posts: PublishedPost[] = entries
@@ -83,7 +92,6 @@ export async function getPublishedPostCatalog() {
 
   const archive: ArchiveGroup[] = [];
   const tagsByName = new Map<string, PublishedTagGroup>();
-  const tagHrefOwners = new Map<string, string>();
 
   for (const post of posts) {
     const latestArchiveGroup = archive.at(-1);
@@ -93,11 +101,6 @@ export async function getPublishedPostCatalog() {
     for (const tag of post.tags) {
       let group = tagsByName.get(tag.name);
       if (!group) {
-        const owner = tagHrefOwners.get(tag.href);
-        if (owner && owner !== tag.name) {
-          throw new Error(`标签「${owner}」与「${tag.name}」生成了相同的网址：${tag.href}`);
-        }
-        tagHrefOwners.set(tag.href, tag.name);
         group = { ...tag, posts: [] };
         tagsByName.set(tag.name, group);
       }
