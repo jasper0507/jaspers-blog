@@ -1,7 +1,7 @@
 ---
 title: "DEeR论文精读"
 description: "这是一篇研究医学场景下的隐私保护联邦 LoRA 微调的论文。"
-publishedAt: 2026-04-29T23:48:50+08:00
+publishedAt: "2026-04-29T23:48:50+08:00"
 tags:
   - "人工智能"
   - "联邦学习"

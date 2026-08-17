@@ -51,6 +51,24 @@ test("正文渲染：公式、脚注、提示块与代码块附加", async ({ pa
   assert.ok(await page.locator(".astro-code .line.diff.remove").count());
 });
 
+test("正文列表保留标记", async ({ page }) => {
+  await page.goto(`${host}/posts/visual/`);
+  assert.equal(
+    await page
+      .locator(".post-body ul")
+      .first()
+      .evaluate(element => getComputedStyle(element).listStyleType),
+    "disc",
+  );
+  assert.equal(
+    await page
+      .locator(".post-body ol")
+      .first()
+      .evaluate(element => getComputedStyle(element).listStyleType),
+    "decimal",
+  );
+});
+
 test("目录按正文顺序包含 h2/h3 并跟随滚动", async ({ page }) => {
   await page.goto(`${host}/posts/visual/`);
   const toc = page.locator(".post-toc");

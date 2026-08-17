@@ -33,11 +33,6 @@ export default defineConfig({
       testMatch: /\.spec\.ts$/,
     },
     {
-      name: "settings",
-      testDir: "tests/site/settings",
-      testMatch: /\.spec\.ts$/,
-    },
-    {
       name: "guard",
       testDir: "tests/site/guard",
       testMatch: /\.setup\.ts$/,

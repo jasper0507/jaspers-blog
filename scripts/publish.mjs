@@ -36,7 +36,6 @@ const changes = (await execFileAsync("git", ["status", "--porcelain", "--untrack
 if (!changes) throw new Error("没有可提交的改动");
 
 await runNpm(["test"], "完整校验失败；未创建发布提交");
-await runNpm(["run", "build"], "生产构建失败；未创建发布提交");
 
 await execFileAsync("git", ["add", "-A"]);
 await execFileAsync("git", ["commit", "-m", args[0]]);

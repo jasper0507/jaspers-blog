@@ -1,27 +1,19 @@
 import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
-import type { Loader, LoaderContext, ParseDataOptions } from "astro/loaders";
 import { z } from "astro/zod";
-import {
-  hasValidPostPublishedAtSource,
-  isPostSlug,
-  POST_CONTENT_DIRECTORY,
-} from "./lib/post-rules.js";
-import {
-  hasValidShuoshuoPublishedAtSource,
-  isShuoshuoStableId,
-  SHUOSHUO_CONTENT_DIRECTORY,
-} from "./lib/shuoshuo-rules.js";
+import { isPostSlug, POST_CONTENT_DIRECTORY } from "./lib/post-rules.js";
+import { isShanghaiDateTime } from "./lib/shanghai-time.js";
+import { isShuoshuoStableId, SHUOSHUO_CONTENT_DIRECTORY } from "./lib/shuoshuo-rules.js";
 import { getTagError } from "./lib/tags";
 
 declare const process: {
   env: Record<string, string | undefined>;
-  getBuiltinModule(name: "fs/promises"): {
-    readFile(path: string, encoding: "utf8"): Promise<string>;
-  };
 };
 
-const { readFile } = process.getBuiltinModule("fs/promises");
+const publishedAt = z
+  .string()
+  .refine(isShanghaiDateTime, "发布时间必须是有效的上海时间并带 +08:00")
+  .transform(value => new Date(value));
 
 const postFiles = glob({
   base: process.env.POST_CONTENT_DIR ?? `./${POST_CONTENT_DIRECTORY}`,
@@ -32,32 +24,13 @@ const postFiles = glob({
     return id;
   },
 });
-const postLoader: Loader = {
-  name: "post-loader",
-  async load(context: LoaderContext) {
-    await postFiles.load({
-      ...context,
-      parseData: async <TData extends Record<string, unknown>>(
-        options: ParseDataOptions<TData>,
-      ) => {
-        if (!options.filePath) throw new Error(`技术文章 ${options.id} 缺少源文件路径`);
-        const source = await readFile(options.filePath, "utf8");
-        if (!hasValidPostPublishedAtSource(source)) {
-          throw new Error(`技术文章 ${options.id} 的发布时间必须是有效的上海时间并带 +08:00`);
-        }
-        return context.parseData(options);
-      },
-    });
-  },
-};
-
 const posts = defineCollection({
-  loader: postLoader,
+  loader: postFiles,
   schema: z
     .object({
       title: z.string().trim().min(1),
       description: z.string().trim().min(1),
-      publishedAt: z.coerce.date(),
+      publishedAt,
       tags: z
         .array(
           z
@@ -92,30 +65,11 @@ const shuoshuoFiles = glob({
     return id;
   },
 });
-const shuoshuoLoader: Loader = {
-  name: "shuoshuo-loader",
-  async load(context: LoaderContext) {
-    await shuoshuoFiles.load({
-      ...context,
-      parseData: async <TData extends Record<string, unknown>>(
-        options: ParseDataOptions<TData>,
-      ) => {
-        if (!options.filePath) throw new Error(`说说 ${options.id} 缺少源文件路径`);
-        const source = await readFile(options.filePath, "utf8");
-        if (!hasValidShuoshuoPublishedAtSource(source)) {
-          throw new Error(`说说 ${options.id} 的发布时间必须是有效的上海时间并带 +08:00`);
-        }
-        return context.parseData(options);
-      },
-    });
-  },
-};
-
 const shuoshuo = defineCollection({
-  loader: shuoshuoLoader,
+  loader: shuoshuoFiles,
   schema: z
     .object({
-      publishedAt: z.coerce.date(),
+      publishedAt,
       draft: z.boolean(),
     })
     .strict(),

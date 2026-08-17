@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@plugin "@tailwindcss/typography";
-
 /*
  * 官方主题机制（Tailwind 4 @theme）承接纸面 token：
  * 颜色经 inline 透传到 :root 上的 light-dark() 变量（bg-surface / text-muted /

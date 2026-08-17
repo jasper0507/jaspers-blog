@@ -3,7 +3,6 @@ import type { APIRoute } from "astro";
 import { getPublishedPostCatalog } from "../lib/posts";
 import { blogSettings } from "../lib/site";
 import { getPublishedShuoshuo } from "../lib/shuoshuo";
-import { escapeXml } from "../lib/xml";
 
 export const GET: APIRoute = async () => {
   const { title, url, description } = blogSettings.site;
@@ -31,7 +30,7 @@ export const GET: APIRoute = async () => {
     description,
     site: url,
     xmlns: { atom: "http://www.w3.org/2005/Atom" },
-    customData: `<language>zh-CN</language><atom:link href="${escapeXml(new URL("/rss.xml", url).href)}" rel="self" type="application/rss+xml"/>`,
+    customData: `<language>zh-CN</language><atom:link href="${new URL("/rss.xml", url).href}" rel="self" type="application/rss+xml"/>`,
     items,
   });
 };

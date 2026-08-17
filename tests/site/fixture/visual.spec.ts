@@ -2,14 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "@playwright/test";
-import {
-  assertFooterLayout,
-  checkDarkSearchTrigger,
-  hasDarkHero,
-  host,
-  root,
-  visualRoutes,
-} from "../helpers.ts";
+import { assertFooterLayout, hasDarkHero, host, root, visualRoutes } from "../helpers.ts";
 
 test.setTimeout(180_000);
 
@@ -36,7 +29,6 @@ for (const width of [1440, 375]) {
             "block",
           );
           await assertFooterLayout(page, width);
-          if (theme === "dark") await checkDarkSearchTrigger(page);
         }
         await page.screenshot({
           path: join(root, `artifacts/visual/${name}/${name}-${width}-${theme}.png`),

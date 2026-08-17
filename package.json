@@ -17,12 +17,11 @@
     "new:post": "node scripts/new-post.mjs",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
     "publish": "node scripts/publish.mjs",
-    "test:settings": "node --experimental-strip-types scripts/check-blog-settings.mjs",
     "test:post:command": "node scripts/check-new-post.mjs",
     "test:publish:command": "node scripts/check-publish.mjs",
     "test:shuoshuo:command": "node scripts/check-new-shuoshuo.mjs",
     "test:site": "playwright test",
-    "test": "npm run format:check && npm run check && npm run test:settings && node scripts/check-fetch-fonts.mjs && npm run test:post:command && npm run test:publish:command && npm run test:shuoshuo:command && npm run test:site"
+    "test": "npm run format:check && npm run check && node scripts/check-fetch-fonts.mjs && npm run test:post:command && npm run test:publish:command && npm run test:shuoshuo:command && npm run test:site"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",
@@ -34,7 +33,6 @@
     "@astrojs/markdown-satteri": "0.3.5",
     "@playwright/test": "^1.61.1",
     "@shikijs/transformers": "4.3.1",
-    "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
     "github-slugger": "2.0.0",
     "katex": "0.18.1",

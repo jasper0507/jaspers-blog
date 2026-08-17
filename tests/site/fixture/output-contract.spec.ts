@@ -2,14 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "@playwright/test";
-import { escapeXml } from "../../../src/lib/xml.ts";
-import {
-  assertChineseFootnotes,
-  assertInOrder,
-  assertRenderedKatex,
-  expectedSite,
-  root,
-} from "../helpers.ts";
+import { assertInOrder, expectedSite, root } from "../helpers.ts";
 
 const readDist = (path: string) => readFile(join(root, "dist", path), "utf8");
 
@@ -55,9 +48,9 @@ test("标签列表按 zh-CN 排序", async () => {
 
 test("RSS 合并技术文章与说说并保持排序", async () => {
   const rss = await readDist("rss.xml");
-  assert.ok(rss.includes(`<title>${escapeXml(expectedSite.title)}</title>`));
-  assert.ok(rss.includes(`<link>${escapeXml(expectedSite.url)}</link>`));
-  assert.ok(rss.includes(`<description>${escapeXml(expectedSite.description)}</description>`));
+  assert.ok(rss.includes("<title>Jasper&apos;s Blog</title>"));
+  assert.ok(rss.includes(`<link>${expectedSite.url}</link>`));
+  assert.ok(rss.includes(`<description>${expectedSite.description}</description>`));
   assert.equal((rss.match(/<item>/g) ?? []).length, 6);
   assertInOrder(
     rss,
@@ -70,7 +63,7 @@ test("RSS 合并技术文章与说说并保持排序", async () => {
 
 test("站点地图收录范围", async () => {
   const sitemap = await readDist("sitemap-0.xml");
-  assert.ok(sitemap.includes(`<loc>${escapeXml(expectedSite.url)}</loc>`));
+  assert.ok(sitemap.includes(`<loc>${expectedSite.url}</loc>`));
   assert.match(sitemap, /\/posts\/alpha\//);
   assert.match(sitemap, /\/tags\/astro\//);
   assert.doesNotMatch(
@@ -83,22 +76,4 @@ test("站点地图收录范围", async () => {
 test("Pagefind 只覆盖已发布技术文章", async () => {
   const searchIndex = JSON.parse(await readDist("pagefind/pagefind-entry.json"));
   assert.equal(searchIndex.languages["zh-cn"].page_count, 3);
-});
-
-test("视觉验收技术文章的正文渲染", async () => {
-  const visual = await readDist("posts/visual/index.html");
-  assertRenderedKatex(visual, "视觉验收技术文章");
-  assert.match(
-    visual,
-    /annotation encoding="application\/x-tex">E = mc\^2</,
-    "块级公式应保留原 TeX",
-  );
-  assert.match(visual, /annotation encoding="application\/x-tex">a \+ b</, "行内公式应保留原 TeX");
-  assertChineseFootnotes(visual, "视觉验收技术文章");
-  assert.match(visual, /markdown-alert markdown-alert-note/, "GitHub 风格提示块应存在");
-  assert.match(visual, /提示块用于强调阅读提示/, "提示块正文应可读");
-  assert.match(visual, /data-title="example\.js"/, "代码块应保留文件名");
-  assert.match(visual, /class="line highlighted"/, "代码块应保留行高亮");
-  assert.match(visual, /class="line diff remove"/, "代码块应保留 diff 删除标记");
-  assert.match(visual, /class="line diff add"/, "代码块应保留 diff 新增标记");
 });

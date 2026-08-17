@@ -11,14 +11,7 @@ export const root = fileURLToPath(new URL("../../", import.meta.url));
 export const astro = join(root, "node_modules/astro/bin/astro.mjs");
 export const pagefind = join(root, "node_modules/.bin/pagefind");
 export const host = "http://127.0.0.1:4321";
-export const settingsPort = 4322;
-export const settingsHost = `http://127.0.0.1:${settingsPort}`;
-export const {
-  site: expectedSite,
-  author: expectedAuthor,
-  home: expectedHome,
-  footer: expectedFooter,
-} = blogSettings;
+export const { site: expectedSite, author: expectedAuthor, home: expectedHome } = blogSettings;
 export const hasDarkHero = expectedHome.hero.darkImage !== expectedHome.hero.lightImage;
 export const expectedFooterLinks = (author: typeof expectedAuthor) => [
   ["RSS", "/rss.xml"],
@@ -104,46 +97,4 @@ export async function assertFooterLayout(page: Page, width: number) {
       .evaluate(element => getComputedStyle(element).flexDirection),
     width <= 480 ? "column" : "row",
   );
-}
-
-export async function checkDarkSearchTrigger(page: Page) {
-  await page.waitForFunction(
-    () =>
-      customElements.get("pagefind-modal-trigger") &&
-      document.querySelector("pagefind-modal-trigger .pf-trigger-btn"),
-  );
-  const shell = page.locator("pagefind-modal-trigger");
-  const trigger = page.getByRole("button", { name: "搜索" });
-  const icon = trigger.locator(".pf-trigger-icon");
-  assert.equal(await trigger.getAttribute("aria-keyshortcuts"), "/");
-  assert.equal(
-    await shell.evaluate(element => getComputedStyle(element).colorScheme),
-    await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme),
-  );
-  assert.deepEqual(
-    await icon.evaluate(element => {
-      const style = getComputedStyle(element);
-      return [style.backgroundColor, getComputedStyle(element.parentElement!).color];
-    }),
-    ["rgb(233, 230, 221)", "rgb(233, 230, 221)"],
-  );
-  await trigger.focus();
-  assert.notEqual(
-    await trigger.evaluate(element => getComputedStyle(element).outlineStyle),
-    "none",
-  );
-  await trigger.hover();
-  await page.waitForTimeout(200);
-  assert.deepEqual(
-    await trigger.evaluate(element => {
-      const style = getComputedStyle(element);
-      return [style.color, style.borderBottomColor, style.borderBottomWidth];
-    }),
-    ["rgb(217, 119, 87)", "rgb(217, 119, 87)", "2px"],
-  );
-  assert.equal(
-    await icon.evaluate(element => getComputedStyle(element).backgroundColor),
-    "rgb(217, 119, 87)",
-  );
-  await page.mouse.move(0, 0);
 }

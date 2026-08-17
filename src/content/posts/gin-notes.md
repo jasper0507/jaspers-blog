@@ -1,7 +1,7 @@
 ---
 title: "Gin笔记(长期更新)"
 description: "这是一篇用于记录Gin框架的个人笔记。"
-publishedAt: 2026-01-23T18:24:57+08:00
+publishedAt: "2026-01-23T18:24:57+08:00"
 tags:
   - "后端开发"
   - "Web 框架"

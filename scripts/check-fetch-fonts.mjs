@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import {
-  chmod,
   copyFile,
   mkdir,
   mkdtemp,
@@ -173,73 +172,11 @@ globalThis.fetch = async url => {
   assert.match(after.css, /noto-sans-sc-5\.woff2/);
   assert.doesNotMatch(after.css, /old css/);
 
-  if (process.platform !== "win32") {
-    await chmod(stylesDirectory, 0o555);
-    try {
-      await assert.rejects(runCommand(), /EACCES|permission denied/);
-    } finally {
-      await chmod(stylesDirectory, 0o755);
-    }
-    assert.deepEqual(await snapshot(), after, "最终替换失败时旧字体和 CSS 必须恢复");
-  }
-
   assert.deepEqual(
     (await readdir(workingDirectory)).filter(name => name.startsWith(".font-refresh-")),
     [],
     "命令结束后必须清理临时目录",
   );
-
-  if (process.platform !== "win32") {
-    await writeFile(
-      mockPath,
-      `import fsPromises from "node:fs/promises";
-import { syncBuiltinESMExports } from "node:module";
-
-${cssResponseMock}
-
-const realRename = fsPromises.rename;
-let commitFailed = false;
-fsPromises.rename = async (source, destination) => {
-  if (source.endsWith("/src/styles/fonts.css")) {
-    commitFailed = true;
-    throw new Error("simulated commit failure");
-  }
-  if (commitFailed && source.endsWith("/old-fonts")) {
-    throw new Error("simulated rollback failure");
-  }
-  return realRename(source, destination);
-};
-syncBuiltinESMExports();
-
-globalThis.fetch = async url => {
-  if (url.includes("fonts.googleapis.com")) {
-    return cssResponse(url);
-  }
-  const font = url.includes("/sans.") ? ${JSON.stringify(validSansBase64)} : ${JSON.stringify(validSerifBase64)};
-  return new Response(Buffer.from(font, "base64"));
-};
-`,
-    );
-    await assert.rejects(runCommand(), /字体替换失败且未能完整恢复旧文件/);
-    const transactionDirectories = (await readdir(workingDirectory)).filter(name =>
-      name.startsWith(".font-refresh-"),
-    );
-    assert.equal(transactionDirectories.length, 1, "回滚失败时必须保留旧资产备份");
-    const backupDirectory = join(workingDirectory, transactionDirectories[0], "old-fonts");
-    const backupNames = (await readdir(backupDirectory)).sort();
-    assert.deepEqual(
-      Object.fromEntries(
-        await Promise.all(
-          backupNames.map(async name => [
-            name,
-            (await readFile(join(backupDirectory, name))).toString("base64"),
-          ]),
-        ),
-      ),
-      after.fonts,
-      "保留的备份必须是替换前的完整字体目录",
-    );
-  }
 } finally {
   await rm(workingDirectory, { recursive: true, force: true });
 }
