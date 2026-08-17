@@ -9,12 +9,9 @@ export default defineConfig({
   fullyParallel: false,
   outputDir: "artifacts/test-results",
   // 验收内容合同：webServer 先用 fixture 内容构建 dist，再起预览服务器；
-  // guard 项目随后重放冲突构建与生产构建，因此这里不允许复用旧服务器。
+  // guard 项目随后重放冲突构建，production 项目自行构建生产内容，因此这里不复用旧服务器。
   webServer: {
-    command:
-      "node node_modules/astro/bin/astro.mjs build --force && " +
-      'node_modules/.bin/pagefind --site dist --glob "posts/**/*.html" && ' +
-      "node node_modules/astro/bin/astro.mjs preview --host 127.0.0.1 --port 4321",
+    command: "npm run build && npm run preview -- --host 127.0.0.1 --port 4321",
     url: `${host}/`,
     reuseExistingServer: false,
     timeout: 240_000,

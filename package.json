@@ -12,7 +12,7 @@
     "format": "prettier --write \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card}.css\" \"scripts/**/*.mjs\" \"tests/site/**/*.ts\" \"playwright.config.ts\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
     "format:check": "prettier --check \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card}.css\" \"scripts/**/*.mjs\" \"tests/site/**/*.ts\" \"playwright.config.ts\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
     "check": "astro check",
-    "build": "astro build && pagefind --site dist --glob \"posts/**/*.html\"",
+    "build": "astro build --force && pagefind --site dist --glob \"posts/**/*.html\"",
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "new:post": "node scripts/new-post.mjs",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",

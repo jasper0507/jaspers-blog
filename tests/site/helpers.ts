@@ -1,15 +1,12 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import type { Page } from "@playwright/test";
-import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { blogSettings } from "../../src/lib/site.ts";
 
-export const execFileAsync = promisify(execFile);
+const execFileAsync = promisify(execFile);
 export const root = fileURLToPath(new URL("../../", import.meta.url));
-export const astro = join(root, "node_modules/astro/bin/astro.mjs");
-export const pagefind = join(root, "node_modules/.bin/pagefind");
 export const host = "http://127.0.0.1:4321";
 export const {
   site: expectedSite,
@@ -63,11 +60,10 @@ export const draftTagCollisionEnvironment = {
 };
 
 export async function build(environment: Record<string, string | undefined>) {
-  await execFileAsync(process.execPath, [astro, "build", "--force"], {
+  await execFileAsync("npm", ["run", "build"], {
     cwd: root,
     env: environment,
   });
-  await execFileAsync(pagefind, ["--site", "dist", "--glob", "posts/**/*.html"], { cwd: root });
 }
 
 export function assertInOrder(source: string, needles: string[], message: string) {

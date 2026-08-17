@@ -2,10 +2,19 @@ import assert from "node:assert/strict";
 import { access, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "@playwright/test";
-import { assertChineseFootnotes, assertRenderedKatex, root } from "../helpers.ts";
+import {
+  assertChineseFootnotes,
+  assertRenderedKatex,
+  build,
+  productionEnvironment,
+  root,
+} from "../helpers.ts";
 
 const accessDist = (path: string) => access(join(root, "dist", path));
 const readDist = (path: string) => readFile(join(root, "dist", path), "utf8");
+
+test.setTimeout(300_000);
+test.beforeAll(() => build(productionEnvironment));
 
 test("生产构建产物覆盖固定栏位", async () => {
   for (const route of ["", "shuoshuo", "tags", "archives", "about"]) {
