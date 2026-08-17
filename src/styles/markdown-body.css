@@ -7,8 +7,8 @@
   --body-quote: light-dark(#625950, #b5ac9f);
   --body-quote-border: light-dark(#c15f3c, #d97757);
   --body-border: light-dark(#ddd5ca, #3e3b36);
-  --body-accent: light-dark(#c15f3c, #d97757);
-  --body-accent-hover: light-dark(#a14d2e, #e69373);
+  --body-accent: light-dark(#a14d2e, #d97757);
+  --body-accent-hover: light-dark(#8f3f2d, #e69373);
   --body-inline-color: light-dark(#a34a3a, #e39a82);
   --body-inline-bg: light-dark(#f2eeea, #363430);
   --body-inline-border: light-dark(#d7cec5, #47443e);
@@ -23,9 +23,9 @@
   /* Shiki 语法色：正文作用域内对齐 Kraft 代码 token */
   --code-background: var(--body-code-bg);
   --code-foreground: light-dark(#1c1815, #e8e6de);
-  --code-comment: light-dark(#8a7f73, #978f82);
-  --code-string: light-dark(#4e7e3c, #9cbd84);
-  --code-constant: light-dark(#b4622d, #e0a175);
+  --code-comment: light-dark(#766c61, #9b9386);
+  --code-string: light-dark(#477436, #9cbd84);
+  --code-constant: light-dark(#9f5225, #e0a175);
   --code-keyword: light-dark(#7e4fb5, #af95de);
   --code-function: light-dark(#3c6aa8, #85aedc);
   --code-parameter: light-dark(#886c32, #d3b46f);

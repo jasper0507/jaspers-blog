@@ -164,7 +164,7 @@ npm run publish -- "发布新的技术文章"
 | 类型检查       | [TypeScript](https://www.typescriptlang.org/) + Astro Check |
 | 内容           | Markdown + Astro Content Collections                        |
 | Markdown 扩展  | GFM、Remark、Rehype、KaTeX、Shiki                           |
-| 样式           | 原生 CSS 与 CSS Custom Properties                           |
+| 样式           | Tailwind CSS 4、原生 CSS 与 CSS Custom Properties           |
 | 搜索           | [Pagefind](https://pagefind.app/)                           |
 | 格式化         | [Prettier](https://prettier.io/)                            |
 | 验收           | [Playwright Test](https://playwright.dev/)                  |

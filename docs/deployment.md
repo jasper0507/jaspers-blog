@@ -15,7 +15,7 @@
 
 ## 所有者首次上线清单
 
-1. 在 Cloudflare 控制台进入 **Workers & Pages**，创建 Pages 项目并授权读取私有 GitHub 仓库 `jasper0507/newblog`。
+1. 在 Cloudflare 控制台进入 **Workers & Pages**，创建 Pages 项目并授权读取私有 GitHub 仓库 `jasper0507/jaspers-blog`。
 2. 选择 `main` 为正式分支，按上方配置保存并部署；构建日志应显示 Astro 静态构建成功，随后 Pagefind 索引数量与当前公开技术文章数量一致。
 3. 在项目的 **Custom domains** 中选择 **Set up a domain**，输入 `blog.jasper0507.cc.cd` 并激活。必须先在 Pages 项目中关联域名；若 DNS 不在同一 Cloudflare 账户，再按向导添加指向项目 `<project>.pages.dev` 地址的 CNAME。详见 [Cloudflare 自定义域名文档](https://developers.cloudflare.com/pages/configuration/custom-domains/)。
 4. 等待域名状态变为 **Active**，然后执行：

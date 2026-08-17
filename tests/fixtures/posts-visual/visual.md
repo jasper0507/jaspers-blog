@@ -32,6 +32,7 @@ $$
 
 ```js
 console.log("visual fixture");
+// 代码注释
 ```
 
 行内公式 $a + b$。
