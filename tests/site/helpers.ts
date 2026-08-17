@@ -11,7 +11,12 @@ export const root = fileURLToPath(new URL("../../", import.meta.url));
 export const astro = join(root, "node_modules/astro/bin/astro.mjs");
 export const pagefind = join(root, "node_modules/.bin/pagefind");
 export const host = "http://127.0.0.1:4321";
-export const { site: expectedSite, author: expectedAuthor, home: expectedHome } = blogSettings;
+export const {
+  site: expectedSite,
+  author: expectedAuthor,
+  home: expectedHome,
+  footer: expectedFooter,
+} = blogSettings;
 export const hasDarkHero = expectedHome.hero.darkImage !== expectedHome.hero.lightImage;
 export const expectedFooterLinks = (author: typeof expectedAuthor) => [
   ["RSS", "/rss.xml"],
@@ -58,10 +63,6 @@ export async function build(environment: Record<string, string | undefined>) {
     env: environment,
   });
   await execFileAsync(pagefind, ["--site", "dist", "--glob", "posts/**/*.html"], { cwd: root });
-}
-
-export function shanghaiYear(now = new Date()) {
-  return new Intl.DateTimeFormat("en", { timeZone: "Asia/Shanghai", year: "numeric" }).format(now);
 }
 
 export function assertInOrder(source: string, needles: string[], message: string) {

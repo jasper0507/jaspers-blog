@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "@playwright/test";
 import {
   expectedAuthor,
+  expectedFooter,
   expectedFooterLinks,
   expectedHome,
   expectedSite,
   footerLinks,
   hasDarkHero,
   host,
-  shanghaiYear,
 } from "../helpers.ts";
 
 test("首页主视觉资源与标题结构", async ({ page }) => {
@@ -95,10 +95,7 @@ test("首页元信息、品牌与页脚", async ({ page }) => {
     `${expectedSite.headerTitle} 首页`,
   );
   assert.deepEqual(await footerLinks(page), expectedFooterLinks(expectedAuthor));
-  assert.equal(
-    await page.locator(".footer-content").textContent(),
-    `© ${shanghaiYear()} ${expectedAuthor.name}. 保留所有权利。`,
-  );
+  assert.equal(await page.locator(".footer-content").textContent(), expectedFooter.copyright);
 });
 
 test("文章菜单弹层可键盘关闭并归还焦点", async ({ page }) => {

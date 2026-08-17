@@ -26,28 +26,30 @@ export type BlogSettings = {
   };
 };
 
+const settings: BlogSettings = rawSettings;
+
 const year = new Intl.DateTimeFormat("en", {
   timeZone: "Asia/Shanghai",
   year: "numeric",
 }).format(new Date());
 
 export const blogSettings = {
-  ...rawSettings,
+  ...settings,
   site: {
-    ...rawSettings.site,
-    headerTitle: rawSettings.site.headerTitle ?? rawSettings.site.title,
-    url: new URL(rawSettings.site.url).href,
+    ...settings.site,
+    headerTitle: settings.site.headerTitle ?? settings.site.title,
+    url: new URL(settings.site.url).href,
   },
   home: {
     hero: {
-      ...rawSettings.home.hero,
-      darkImage: rawSettings.home.hero.darkImage ?? rawSettings.home.hero.lightImage,
+      ...settings.home.hero,
+      darkImage: settings.home.hero.darkImage ?? settings.home.hero.lightImage,
     },
   },
   footer: {
-    ...rawSettings.footer,
-    copyright: rawSettings.footer.text
+    ...settings.footer,
+    copyright: settings.footer.text
       .replaceAll("{year}", year)
-      .replaceAll("{author}", rawSettings.author.name),
+      .replaceAll("{author}", settings.author.name),
   },
 };

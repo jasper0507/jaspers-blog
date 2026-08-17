@@ -183,6 +183,9 @@ await mkdir(fontsDir, { recursive: true });
 const transactionDir = await mkdtemp(join(root, ".font-refresh-"));
 const nextFontsDir = join(transactionDir, "fonts");
 const nextCssPath = join(transactionDir, "fonts.css");
+const oldFontsDir = join(transactionDir, "old-fonts");
+const oldCssPath = join(transactionDir, "old-fonts.css");
+let preserveTransaction = false;
 
 try {
   await mkdir(nextFontsDir);
@@ -250,13 +253,17 @@ try {
     console.log("wrote LICENSE-noto-sans-sc.txt from serif OFL template");
   }
 
-  // ponytail: 替换阶段失败后用 Git 恢复已跟踪生成资产，不维护第二套事务日志。
-  await rm(fontsDir, { recursive: true });
+  // ponytail: 替换失败时保留旧资产供人工恢复；无人值守更新再加崩溃安全事务。
+  preserveTransaction = true;
+  await rename(fontsDir, oldFontsDir);
   await rename(nextFontsDir, fontsDir);
+  await rename(cssPath, oldCssPath);
   await rename(nextCssPath, cssPath);
+  preserveTransaction = false;
 
   console.log(`wrote ${cssPath} (${generated.length} Noto faces)`);
   console.log("done");
 } finally {
-  await rm(transactionDir, { recursive: true, force: true });
+  if (preserveTransaction) console.error(`字体替换未完成；旧资产保留在 ${transactionDir}`);
+  else await rm(transactionDir, { recursive: true, force: true });
 }

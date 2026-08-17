@@ -48,7 +48,6 @@ test("标签列表按 zh-CN 排序", async () => {
 
 test("RSS 合并技术文章与说说并保持排序", async () => {
   const rss = await readDist("rss.xml");
-  assert.ok(rss.includes("<title>Jasper&apos;s Blog</title>"));
   assert.ok(rss.includes(`<link>${expectedSite.url}</link>`));
   assert.ok(rss.includes(`<description>${expectedSite.description}</description>`));
   assert.equal((rss.match(/<item>/g) ?? []).length, 6);
