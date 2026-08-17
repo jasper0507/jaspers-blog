@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readdir, readFile, rm } from "node:fs/promises";
+import { spawn, type ChildProcess } from "node:child_process";
+import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "@playwright/test";
 import { fixtureSettings } from "../../../scripts/fixtures/blog-settings.mjs";
@@ -12,62 +13,106 @@ import {
   expectedSite,
   fixtureEnvironment,
   footerLinks,
+  pagefind,
   root,
+  settingsHost,
+  settingsPort,
   shanghaiYear,
 } from "../helpers.ts";
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(240_000);
 
-type SettingsFixture = {
-  home: string;
-  about: string;
-  shuoshuo: string;
-  tags: string;
-  archives: string;
-  post: string;
+const output = join(root, "dist-settings");
+const settingsEnv = { ...fixtureEnvironment, BLOG_SETTINGS_FIXTURE: "settings" };
+
+type SettingsOutput = {
   rss: string;
   sitemap: string;
-  css: string;
+  html: string;
 };
 
-let fixture!: SettingsFixture;
+let built!: SettingsOutput;
+let preview: ChildProcess | undefined;
+
+async function waitForPreview(server: ChildProcess, url: string) {
+  const timeoutMs = 60_000;
+  const started = Date.now();
+  let exitCode: number | null = null;
+  server.once("exit", (code, signal) => {
+    exitCode = code ?? (signal ? 1 : 0);
+  });
+  while (Date.now() - started < timeoutMs) {
+    if (exitCode !== null) throw new Error(`设置预览进程提前退出，code=${exitCode}`);
+    try {
+      const response = await fetch(url);
+      if (response.ok) return;
+    } catch {
+      // 预览尚未监听
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  throw new Error(`设置预览未就绪：${url}`);
+}
 
 test.beforeAll(async () => {
-  const output = join(root, "dist-settings");
+  await execFileAsync(
+    process.execPath,
+    [astro, "build", "--force", "--config", "scripts/fixtures/astro-blog-settings.config.mjs"],
+    { cwd: root, env: settingsEnv },
+  );
+  await execFileAsync(pagefind, ["--site", "dist-settings", "--glob", "posts/**/*.html"], {
+    cwd: root,
+  });
+  built = {
+    rss: await readFile(join(output, "rss.xml"), "utf8"),
+    sitemap: await readFile(join(output, "sitemap-0.xml"), "utf8"),
+    html: (
+      await Promise.all(
+        [
+          "index.html",
+          "about/index.html",
+          "shuoshuo/index.html",
+          "tags/index.html",
+          "archives/index.html",
+          "posts/visual/index.html",
+        ].map(path => readFile(join(output, path), "utf8")),
+      )
+    ).join(""),
+  };
+  preview = spawn(
+    process.execPath,
+    [
+      astro,
+      "preview",
+      "--config",
+      "scripts/fixtures/astro-blog-settings.config.mjs",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      String(settingsPort),
+    ],
+    { cwd: root, env: settingsEnv, stdio: ["ignore", "pipe", "pipe"] },
+  );
   try {
-    await execFileAsync(
-      process.execPath,
-      [astro, "build", "--force", "--config", "scripts/fixtures/astro-blog-settings.config.mjs"],
-      {
-        cwd: root,
-        env: { ...fixtureEnvironment, BLOG_SETTINGS_FIXTURE: "settings" },
-      },
-    );
-    const assets = join(output, "_astro");
-    const css = await Promise.all(
-      (await readdir(assets))
-        .filter(file => file.endsWith(".css"))
-        .map(file => readFile(join(assets, file), "utf8")),
-    );
-    fixture = {
-      home: await readFile(join(output, "index.html"), "utf8"),
-      about: await readFile(join(output, "about/index.html"), "utf8"),
-      shuoshuo: await readFile(join(output, "shuoshuo/index.html"), "utf8"),
-      tags: await readFile(join(output, "tags/index.html"), "utf8"),
-      archives: await readFile(join(output, "archives/index.html"), "utf8"),
-      post: await readFile(join(output, "posts/visual/index.html"), "utf8"),
-      rss: await readFile(join(output, "rss.xml"), "utf8"),
-      sitemap: await readFile(join(output, "sitemap-0.xml"), "utf8"),
-      css: css.join("\n"),
-    };
-  } finally {
-    await rm(output, { recursive: true, force: true });
+    await waitForPreview(preview, `${settingsHost}/`);
+  } catch (error) {
+    preview.kill("SIGTERM");
+    preview = undefined;
+    throw error;
   }
 });
 
+test.afterAll(async () => {
+  if (preview) {
+    preview.kill("SIGTERM");
+    await new Promise(resolve => preview?.once("exit", resolve));
+  }
+  await rm(output, { recursive: true, force: true });
+});
+
 test("首页读取集中博客设置", async ({ page }) => {
-  await page.setContent(fixture.home);
+  await page.goto(settingsHost, { waitUntil: "networkidle" });
   assert.equal(await page.title(), fixtureSettings.site.title);
   assert.equal(await page.locator(".brand").textContent(), fixtureSettings.site.headerTitle);
   assert.equal(
@@ -127,7 +172,7 @@ test("首页读取集中博客设置", async ({ page }) => {
 });
 
 test("各页元信息读取集中博客设置", async ({ page }) => {
-  await page.setContent(fixture.about);
+  await page.goto(`${settingsHost}/about/`);
   assert.equal(
     await page.locator('meta[name="description"]').getAttribute("content"),
     `关于 ${fixtureSettings.author.name} 与 ${fixtureSettings.site.title}。`,
@@ -137,19 +182,19 @@ test("各页元信息读取集中博客设置", async ({ page }) => {
     new URL("/about/", fixtureSettings.site.url).href,
   );
 
-  for (const [html, description] of [
-    [fixture.shuoshuo, `${fixtureSettings.author.name} 发布的轻量文字与照片内容。`],
-    [fixture.tags, `按标签浏览 ${fixtureSettings.author.name} 的技术文章。`],
-    [fixture.archives, `按时间浏览 ${fixtureSettings.author.name} 的技术文章。`],
+  for (const [path, description] of [
+    ["/shuoshuo/", `${fixtureSettings.author.name} 发布的轻量文字与照片内容。`],
+    ["/tags/", `按标签浏览 ${fixtureSettings.author.name} 的技术文章。`],
+    ["/archives/", `按时间浏览 ${fixtureSettings.author.name} 的技术文章。`],
   ]) {
-    await page.setContent(html);
+    await page.goto(`${settingsHost}${path}`);
     assert.equal(
       await page.locator('meta[name="description"]').getAttribute("content"),
       description,
     );
   }
 
-  await page.setContent(fixture.post);
+  await page.goto(`${settingsHost}/posts/visual/`);
   const postDataText = await page.locator('script[type="application/ld+json"]').textContent();
   assert.ok(postDataText, "技术文章应输出结构化数据");
   const structuredData = JSON.parse(postDataText);
@@ -161,20 +206,18 @@ test("各页元信息读取集中博客设置", async ({ page }) => {
 });
 
 test("RSS 与站点地图读取集中博客设置", async () => {
-  assert.ok(fixture.rss.includes(`<title>${escapeXml(fixtureSettings.site.title)}</title>`));
-  assert.ok(fixture.rss.includes(`<link>${escapeXml(fixtureSettings.site.url)}</link>`));
+  assert.ok(built.rss.includes(`<title>${escapeXml(fixtureSettings.site.title)}</title>`));
+  assert.ok(built.rss.includes(`<link>${escapeXml(fixtureSettings.site.url)}</link>`));
   assert.ok(
-    fixture.rss.includes(
-      `<description>${escapeXml(fixtureSettings.site.description)}</description>`,
-    ),
+    built.rss.includes(`<description>${escapeXml(fixtureSettings.site.description)}</description>`),
   );
-  const rssLinks = [...fixture.rss.matchAll(/<link>([^<]+)<\/link>/g)].map(match => match[1]);
+  const rssLinks = [...built.rss.matchAll(/<link>([^<]+)<\/link>/g)].map(match => match[1]);
   assert.ok(rssLinks.every(link => link.startsWith(fixtureSettings.site.url)));
-  const sitemapUrls = [...fixture.sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
+  const sitemapUrls = [...built.sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
   assert.ok(sitemapUrls.length > 1);
   assert.ok(sitemapUrls.every(url => url.startsWith(fixtureSettings.site.url)));
   assert.equal(
-    Object.values(fixture).join("").includes(expectedSite.url),
+    `${built.html}${built.rss}${built.sitemap}`.includes(expectedSite.url),
     false,
     "自定义设置 fixture 不得泄漏当前博客正式网址",
   );
@@ -184,12 +227,14 @@ for (const width of [1440, 375]) {
   for (const theme of ["light", "dark"] as const) {
     test(`${width}px ${theme} 页脚读取集中设置且不溢出`, async ({ browser }) => {
       const copyright = `© ${shanghaiYear()} ${fixtureSettings.author.name}. 保留所有权利。`;
-      const context = await browser.newContext({ viewport: { width, height: 960 } });
+      const context = await browser.newContext({
+        viewport: { width, height: 960 },
+        colorScheme: theme,
+      });
       const page = await context.newPage();
-      await page.setContent(fixture.home);
-      await page.addStyleTag({ content: fixture.css });
-      await page.evaluate(theme => {
-        document.documentElement.dataset.theme = theme;
+      await page.goto(settingsHost, { waitUntil: "networkidle" });
+      await page.evaluate(nextTheme => {
+        document.documentElement.dataset.theme = nextTheme;
       }, theme);
       assert.equal(await page.locator(".footer-content").textContent(), copyright);
       assert.deepEqual(await footerLinks(page), expectedFooterLinks(fixtureSettings.author));

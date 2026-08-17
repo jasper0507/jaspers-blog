@@ -11,6 +11,8 @@ export const root = fileURLToPath(new URL("../../", import.meta.url));
 export const astro = join(root, "node_modules/astro/bin/astro.mjs");
 export const pagefind = join(root, "node_modules/.bin/pagefind");
 export const host = "http://127.0.0.1:4321";
+export const settingsPort = 4322;
+export const settingsHost = `http://127.0.0.1:${settingsPort}`;
 export const {
   site: expectedSite,
   author: expectedAuthor,
