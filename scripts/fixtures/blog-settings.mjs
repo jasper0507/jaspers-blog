@@ -12,7 +12,12 @@ export const fixtureSettings = {
     email: "fixture@example.com",
   },
   home: {
-    headline: "集中设置已生效",
+    hero: {
+      caption: "集中设置已生效",
+      lightImage: "/images/hero-dark.svg",
+      darkImage: undefined,
+      alt: "",
+    },
   },
   footer: {
     text: "© {year} {author}. 保留所有权利。",

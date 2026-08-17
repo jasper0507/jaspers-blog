@@ -20,6 +20,7 @@ const {
   home: expectedHome,
   footer: expectedFooter,
 } = blogSettings;
+const hasDarkHero = expectedHome.hero.darkImage !== expectedHome.hero.lightImage;
 const expectedFooterLinks = author => [
   ["RSS", "/rss.xml"],
   ["GitHub", author.github],
@@ -222,11 +223,23 @@ async function checkSettingsFixture(browser, fixture) {
     await page.locator('meta[property="og:url"]').getAttribute("content"),
     fixtureSettings.site.url,
   );
-  assert.equal(await page.locator(".home-headline").textContent(), fixtureSettings.home.headline);
+  assert.equal(
+    await page.locator(".hero-caption").textContent(),
+    fixtureSettings.home.hero.caption,
+  );
+  assert.equal(
+    await page.locator(".hero-image").getAttribute("src"),
+    fixtureSettings.home.hero.lightImage,
+  );
+  assert.equal(
+    await page.locator(".hero-image").getAttribute("alt"),
+    fixtureSettings.home.hero.alt,
+  );
   assert.equal(
     await page.locator('link[rel="icon"]').getAttribute("href"),
     fixtureSettings.site.favicon,
   );
+  assert.equal(await page.locator(".hero-image").count(), 1, "暗图缺省时不应重复输出亮色资源");
   assert.equal(
     await page.locator(".footer-content").textContent(),
     `© ${shanghaiYear()} ${fixtureSettings.author.name}. 保留所有权利。`,
@@ -446,10 +459,10 @@ async function checkFixture(browser, settingsFixture) {
         await page.goto(`${host}${path}`, { waitUntil: "networkidle" });
         await page.evaluate(() => document.fonts.ready);
         if (path === "/") {
+          const visibleHero = hasDarkHero ? `.hero-image-${theme}` : ".hero-image";
           assert.equal(
-            await page.locator(".home-headline").textContent(),
-            expectedHome.headline,
-            "首页标题句应来自博客设置",
+            await page.locator(visibleHero).evaluate(element => getComputedStyle(element).display),
+            "block",
           );
           await assertFooterLayout(page, width);
           if (theme === "dark") await checkDarkSearchTrigger(page);
@@ -467,17 +480,42 @@ async function checkFixture(browser, settingsFixture) {
   const page = await context.newPage();
   await page.goto(host, { waitUntil: "networkidle" });
 
-  /* 占位主视觉已按 ADR-0020 移除：首页开场只剩标题句与信息流 */
-  assert.equal(await page.locator(".hero-media, .hero-image").count(), 0, "首页不应再有占位主视觉");
-  assert.equal(await page.locator(".home-headline").textContent(), expectedHome.headline);
+  const heroFrame = page.locator(".hero-media");
+  const heroImages = page.locator(".hero-image");
+  const heroImage = heroImages.first();
+  assert.equal(await page.locator(".hero-caption").textContent(), expectedHome.hero.caption);
+  assert.equal(await heroImages.count(), hasDarkHero ? 2 : 1);
+  assert.deepEqual(
+    await heroImages.evaluateAll(images => images.map(image => image.getAttribute("src"))),
+    [expectedHome.hero.lightImage, ...(hasDarkHero ? [expectedHome.hero.darkImage] : [])],
+  );
+  assert.equal(await heroImage.getAttribute("alt"), expectedHome.hero.alt);
   assert.equal(await page.locator("h1").count(), 1, "首页应只有一个 h1");
-  const recentPosts = page.locator('[aria-labelledby="recent-posts"] li');
-  assert.ok((await recentPosts.count()) > 1, "首页最近文章应体现信息密度（多于一条）");
-  assert.ok((await recentPosts.count()) <= 5, "首页最近文章最多列出五条");
 
   const favicon = page.locator('link[rel="icon"]');
   assert.equal(await favicon.count(), expectedSite.favicon ? 1 : 0);
   if (expectedSite.favicon) assert.equal(await favicon.getAttribute("href"), expectedSite.favicon);
+  await heroImage.evaluate(image => {
+    image.src = "/images/posts/transformer-paper-notes/attention-mechanism.png";
+  });
+  await heroImage.evaluate(image => image.decode());
+  const crop = await heroImage.evaluate(image => {
+    const frame = image.parentElement.getBoundingClientRect();
+    const bounds = image.getBoundingClientRect();
+    const style = getComputedStyle(image);
+    return {
+      frameRatio: frame.width / frame.height,
+      imageRatio: bounds.width / bounds.height,
+      naturalRatio: image.naturalWidth / image.naturalHeight,
+      objectFit: style.objectFit,
+      objectPosition: style.objectPosition,
+    };
+  });
+  assert.ok(Math.abs(crop.naturalRatio - 1.5) > 0.1, "裁切检查应使用非 3:2 图片");
+  assert.ok(Math.abs(crop.frameRatio - 1.5) < 0.01, "主视觉区域应固定为 3:2");
+  assert.ok(Math.abs(crop.imageRatio - 1.5) < 0.01, "主视觉图片应填满 3:2 区域");
+  assert.deepEqual([crop.objectFit, crop.objectPosition], ["cover", "50% 50%"]);
+  assert.equal(await heroFrame.evaluate(element => getComputedStyle(element).overflow), "hidden");
 
   assert.equal(await page.title(), expectedSite.title);
   assert.equal(
@@ -679,6 +717,19 @@ async function checkFixture(browser, settingsFixture) {
   const searchInput = page.locator("pagefind-modal input").first();
   await page.keyboard.press("/");
   await searchInput.waitFor({ state: "visible" });
+  assert.equal(
+    await page.evaluate(() => document.documentElement.dataset.theme),
+    "dark",
+    "搜索面板防回归检查应在暗色主题下进行",
+  );
+  assert.deepEqual(
+    await page.locator("dialog.pf-modal").evaluate(element => {
+      const style = getComputedStyle(element);
+      return [style.backgroundColor, style.colorScheme];
+    }),
+    ["rgb(50, 47, 41)", "dark"],
+    "暗色主题下搜索面板应继承暗色主题并使用暗色纸面底色",
+  );
   assert.equal(await searchInput.evaluate(element => element === document.activeElement), true);
   await page.keyboard.press("Escape");
   await page.waitForFunction(

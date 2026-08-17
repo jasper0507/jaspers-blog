@@ -18,6 +18,7 @@ const { readFileSync, realpathSync, statSync } = process.getBuiltinModule("fs");
 const { isAbsolute, relative, sep } = process.getBuiltinModule("path");
 const aboutMarkdownPath = "src/content/about.md";
 const publicImageDirectory = realpathSync("public/images");
+const heroImageExtensions = ["svg", "png", "jpg", "jpeg", "webp", "avif", "gif"];
 const faviconExtensions = ["svg", "png", "ico"];
 const footerYearFormatter = new Intl.DateTimeFormat("en", {
   timeZone: "Asia/Shanghai",
@@ -129,6 +130,17 @@ const localImage = (label: string, extensions: string[]) =>
     }
   });
 
+const imageDescription = z.string().superRefine((value, context) => {
+  if (value !== "" && !value.trim()) {
+    context.addIssue({
+      code: "custom",
+      message: "主视觉图片说明若用于装饰图，必须明确填写空字符串。",
+    });
+  } else if (value !== value.trim()) {
+    context.addIssue({ code: "custom", message: "主视觉图片说明首尾不能有空白。" });
+  }
+});
+
 function getUrlError(value: string) {
   let url: URL;
   try {
@@ -207,7 +219,12 @@ const blogSettingsSchema = z
       ),
     }),
     home: z.strictObject({
-      headline: requiredText("首页标题句"),
+      hero: z.strictObject({
+        caption: requiredText("首页 caption"),
+        lightImage: localImage("亮色主视觉", heroImageExtensions),
+        darkImage: localImage("暗色主视觉", heroImageExtensions).optional(),
+        alt: imageDescription,
+      }),
     }),
     footer: z.strictObject({
       text: z.string(),
@@ -222,7 +239,10 @@ const blogSettingsSchema = z
       }),
       author: Object.freeze(settings.author),
       home: Object.freeze({
-        headline: settings.home.headline,
+        hero: Object.freeze({
+          ...settings.home.hero,
+          darkImage: settings.home.hero.darkImage ?? settings.home.hero.lightImage,
+        }),
       }),
       footer: Object.freeze(settings.footer),
     }),
@@ -242,7 +262,11 @@ const settingNames = new Map([
   ["author.github", "GitHub 地址"],
   ["author.email", "邮箱地址"],
   ["home", "首页设置"],
-  ["home.headline", "首页标题句"],
+  ["home.hero", "首页主视觉"],
+  ["home.hero.caption", "首页 caption"],
+  ["home.hero.lightImage", "亮色主视觉"],
+  ["home.hero.darkImage", "暗色主视觉"],
+  ["home.hero.alt", "主视觉图片说明"],
   ["footer", "页脚设置"],
   ["footer.text", "页脚文本"],
 ]);

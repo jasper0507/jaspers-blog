@@ -135,6 +135,26 @@ html[data-theme="dark"] {
 }
 
 /*
+ * Pagefind 组件样式表对每个宿主元素声明 all: initial，color-scheme 一并被重置为
+ * normal，顶层对话框因此永远解析 light-dark() 的亮色分支（暗色下面板发白）。
+ * 让宿主继承站点主题；导航触发钮的补丁由下方 .nav-search 规则单独承担。
+ */
+body pagefind-config,
+body pagefind-filter-dropdown,
+body pagefind-filter-pane,
+body pagefind-input,
+body pagefind-keyboard-hints,
+body pagefind-modal,
+body pagefind-modal-body,
+body pagefind-modal-footer,
+body pagefind-modal-header,
+body pagefind-results,
+body pagefind-searchbox,
+body pagefind-summary {
+  color-scheme: inherit;
+}
+
+/*
  * Pagefind 的 live region 自带 position:absolute + 1×1，但未钉坐标也无负 margin。
  * 静态位置落在文档流末尾时，1px 盒子会把 scrollHeight 撑出视口（假纵向滚动）。
  * 钉到视口原点，保留可读性语义、不参与可滚动溢出。
