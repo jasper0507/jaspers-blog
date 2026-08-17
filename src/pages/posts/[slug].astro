@@ -62,7 +62,7 @@ const structuredData = JSON.stringify({
 <style>
   /* 编辑长文壳：居中阅读栏，无纸面卡片 */
   .post-article {
-    max-width: var(--container-reading);
+    max-width: var(--reading-width);
     margin-inline: auto;
     min-width: 0;
   }
@@ -121,6 +121,7 @@ const structuredData = JSON.stringify({
 
 <style is:global>
   .post-page {
+    --reading-width: 47.5rem;
     max-width: var(--shell-width);
     padding: clamp(4rem, 8vw, 6.5rem) 0 clamp(5rem, 9vw, 7.5rem);
   }
