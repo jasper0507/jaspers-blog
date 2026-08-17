@@ -6,24 +6,18 @@ import { build, draftTagCollisionEnvironment, tagCollisionEnvironment } from "..
 test.describe.configure({ mode: "serial" });
 test.setTimeout(300_000);
 
-test("重复 tag 生成相同网址时应使构建失败", async () => {
-  let error: ExecFileException | undefined;
-  try {
-    await build(tagCollisionEnvironment);
-  } catch (caught) {
-    error = caught as ExecFileException;
-  }
-  assert.ok(error, "无效技术文章应使构建失败");
-  assert.match(`${error.stdout ?? ""}${error.stderr ?? ""}`, /生成了相同的网址/);
-});
-
-test("草稿中的重复 tag 生成相同网址时也应使构建失败", async () => {
-  let error: ExecFileException | undefined;
-  try {
-    await build(draftTagCollisionEnvironment);
-  } catch (caught) {
-    error = caught as ExecFileException;
-  }
-  assert.ok(error, "无效草稿技术文章应使构建失败");
-  assert.match(`${error.stdout ?? ""}${error.stderr ?? ""}`, /生成了相同的网址/);
-});
+for (const [name, environment] of [
+  ["不同标签生成相同网址时应使构建失败", tagCollisionEnvironment],
+  ["草稿中的不同标签生成相同网址时也应使构建失败", draftTagCollisionEnvironment],
+] as const) {
+  test(name, async () => {
+    let error: ExecFileException | undefined;
+    try {
+      await build(environment);
+    } catch (caught) {
+      error = caught as ExecFileException;
+    }
+    assert.ok(error, "标签网址冲突应使构建失败");
+    assert.match(`${error.stdout ?? ""}${error.stderr ?? ""}`, /生成了相同的网址/);
+  });
+}
