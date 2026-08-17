@@ -82,6 +82,8 @@ try {
   await build();
   assert.match(await readFile(join(root, `dist/posts/${slug}/index.html`), "utf8"), /新技术文章/);
 
+  await rejectsBuild(validSource.replace(`"${publishedAt}"`, publishedAt));
+
   for (const invalidTime of [
     "2026-08-13",
     "2026-08-13T12:00:00Z",

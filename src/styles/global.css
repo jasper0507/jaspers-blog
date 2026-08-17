@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@plugin "@tailwindcss/typography";
-
 /*
  * 官方主题机制（Tailwind 4 @theme）承接纸面 token：
  * 颜色经 inline 透传到 :root 上的 light-dark() 变量（bg-surface / text-muted /
@@ -47,7 +45,7 @@
   --text: light-dark(#292520, #e9e6dd);
   --muted: light-dark(#6e675b, #b8b2a5);
   --line: light-dark(#ded7c7, #423d34);
-  --accent: light-dark(#b05c3f, #d97757);
+  --accent: light-dark(#a14d2e, #d97757);
   --focus: light-dark(#8f3f2d, #f39a79);
   --shell-width: 70rem;
   --gutter: 2rem;

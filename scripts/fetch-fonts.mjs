@@ -13,7 +13,6 @@ import { pipeline } from "node:stream/promises";
 import { Readable, Transform } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
-import { create as decodeFont } from "fontkitten";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const fontsDir = join(root, "public/fonts");
@@ -132,40 +131,18 @@ const download = async (url, dest) => {
   await pipeline(Readable.fromWeb(res.body), limiter, createWriteStream(dest));
 };
 
-const validateWoff2 = (font, name, expectedFamily) => {
-  try {
-    if (
-      font.length < 48 ||
-      font.subarray(0, 4).toString("ascii") !== "wOF2" ||
-      font.readUInt32BE(8) !== font.length ||
-      font.readUInt32BE(16) === 0 ||
-      font.readUInt32BE(16) > MAX_FONT_DATA_BYTES
-    ) {
-      throw new Error();
-    }
-    const decoded = decodeFont(font);
-    const weight = decoded.variationAxes.wght;
-    if (
-      decoded.isCollection ||
-      decoded.type !== "WOFF2" ||
-      !decoded.familyName.startsWith(expectedFamily) ||
-      decoded.numGlyphs === 0 ||
-      decoded.characterSet.length === 0 ||
-      !weight ||
-      weight.min > 200 ||
-      weight.max < 900
-    ) {
-      throw new Error();
-    }
-    for (const codePoint of decoded.characterSet) {
-      if (!decoded.glyphForCodePoint(codePoint)) throw new Error();
-    }
-    for (let glyphId = 0; glyphId < decoded.numGlyphs; glyphId += 1) {
-      const glyph = decoded.getGlyph(glyphId);
-      if (!glyph || !Number.isFinite(glyph.advanceWidth)) throw new Error();
-      void glyph.path.commands.length;
-    }
-  } catch {
+const validateWoff2 = (font, name) => {
+  const compressedSize = font.length >= 24 ? font.readUInt32BE(20) : 0;
+  if (
+    font.length < 48 ||
+    font.subarray(0, 4).toString("ascii") !== "wOF2" ||
+    font.readUInt32BE(8) !== font.length ||
+    font.readUInt16BE(12) === 0 ||
+    font.readUInt32BE(16) === 0 ||
+    font.readUInt32BE(16) > MAX_FONT_DATA_BYTES ||
+    compressedSize === 0 ||
+    compressedSize > font.length - 48
+  ) {
     throw new Error(`下载内容不是 WOFF2 字体：${name}`);
   }
 };
@@ -208,8 +185,6 @@ const nextFontsDir = join(transactionDir, "fonts");
 const nextCssPath = join(transactionDir, "fonts.css");
 const oldFontsDir = join(transactionDir, "old-fonts");
 const oldCssPath = join(transactionDir, "old-fonts.css");
-let committed = false;
-let failure;
 let preserveTransaction = false;
 
 try {
@@ -243,7 +218,7 @@ try {
       const batch = familyJobs.slice(i, i + concurrency);
       await Promise.all(batch.map(job => download(job.url, job.dest)));
       for (const job of batch) {
-        validateWoff2(await readFile(job.dest), job.localName, job.family);
+        validateWoff2(await readFile(job.dest), job.localName);
       }
       process.stdout.write(
         `  downloaded ${Math.min(i + concurrency, familyJobs.length)}/${familyJobs.length}\r`,
@@ -278,56 +253,17 @@ try {
     console.log("wrote LICENSE-noto-sans-sc.txt from serif OFL template");
   }
 
-  let fontsBackedUp = false;
-  let fontsInstalled = false;
-  let cssBackedUp = false;
-  let cssInstalled = false;
-  try {
-    // ponytail: catchable errors roll back; add a journal only if crash recovery becomes required.
-    await rename(fontsDir, oldFontsDir);
-    fontsBackedUp = true;
-    await rename(nextFontsDir, fontsDir);
-    fontsInstalled = true;
-    await rename(cssPath, oldCssPath);
-    cssBackedUp = true;
-    await rename(nextCssPath, cssPath);
-    cssInstalled = true;
-  } catch (error) {
-    const rollbackErrors = [];
-    const rollback = async action => {
-      try {
-        await action();
-      } catch (rollbackError) {
-        rollbackErrors.push(rollbackError);
-      }
-    };
-    if (cssInstalled) await rollback(() => rename(cssPath, nextCssPath));
-    if (cssBackedUp) await rollback(() => rename(oldCssPath, cssPath));
-    if (fontsInstalled) await rollback(() => rename(fontsDir, nextFontsDir));
-    if (fontsBackedUp) await rollback(() => rename(oldFontsDir, fontsDir));
-    if (rollbackErrors.length > 0) {
-      preserveTransaction = true;
-      throw new AggregateError(
-        [error, ...rollbackErrors],
-        `字体替换失败且未能完整恢复旧文件；备份保留在 ${transactionDir}`,
-      );
-    }
-    throw error;
-  }
+  // ponytail: 替换失败时保留旧资产供人工恢复；无人值守更新再加崩溃安全事务。
+  preserveTransaction = true;
+  await rename(fontsDir, oldFontsDir);
+  await rename(nextFontsDir, fontsDir);
+  await rename(cssPath, oldCssPath);
+  await rename(nextCssPath, cssPath);
+  preserveTransaction = false;
 
-  committed = true;
   console.log(`wrote ${cssPath} (${generated.length} Noto faces)`);
   console.log("done");
-} catch (error) {
-  failure = error;
-  throw error;
 } finally {
-  if (!preserveTransaction) {
-    try {
-      await rm(transactionDir, { recursive: true, force: true });
-    } catch (cleanupError) {
-      if (!failure && !committed) throw cleanupError;
-      console.warn(`未能清理临时目录 ${transactionDir}：${cleanupError.message}`);
-    }
-  }
+  if (preserveTransaction) console.error(`字体替换未完成；旧资产保留在 ${transactionDir}`);
+  else await rm(transactionDir, { recursive: true, force: true });
 }

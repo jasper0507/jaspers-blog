@@ -1,7 +1,7 @@
 ---
 title: "Transformer论文逐段精读"
 description: "这是一份基于李沐讲解《Attention Is All You Need》整理的Transformer模型深度解析个人笔记。笔记结构进行了逻辑梳理，重点突出了模型架构、核心组件原理及李沐的深度见解，便于日后复习查阅。"
-publishedAt: 2026-04-02T17:36:50+08:00
+publishedAt: "2026-04-02T17:36:50+08:00"
 tags:
   - "人工智能"
   - "模型架构"

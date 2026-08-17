@@ -1,33 +1,5 @@
-/*
- * 正文内容层（ADR-0014 / ADR-0020）：.post-body 套上官方 @tailwindcss/typography
- * 引擎（MarkdownBody.astro 上的 prose 类），排版基线交给插件，纸面 Kraft 亮暗
- * token 通过官方 --tw-prose-* 变量注入；出厂默认（裸 prose 外观）一律在下方
- * 显式覆盖：链接去下划线、引用去斜体去引号、行内代码去反引号、表格保持
- * 行底边线、代码块保持暖纸面板。亮暗由 light-dark() + color-scheme 决定，
- * 不使用 prose-invert。外壳 token（--background / --text / …）保持不动。
- * 选择器按真实 DOM（.post-body / .astro-code / .katex）映射。
- */
-.post-body.prose {
-  /* 官方排版 token ← 纸面内容色板 */
-  --tw-prose-body: var(--body-text);
-  --tw-prose-headings: var(--body-heading);
-  --tw-prose-lead: var(--body-muted);
-  --tw-prose-links: var(--body-accent);
-  --tw-prose-bold: var(--body-heading);
-  --tw-prose-counters: var(--body-muted);
-  --tw-prose-bullets: var(--body-muted);
-  --tw-prose-hr: var(--body-border);
-  --tw-prose-quotes: var(--body-quote);
-  --tw-prose-quote-borders: var(--body-quote-border);
-  --tw-prose-captions: var(--body-muted);
-  --tw-prose-code: var(--body-inline-color);
-  --tw-prose-pre-code: var(--code-foreground);
-  --tw-prose-pre-bg: var(--body-code-bg);
-  --tw-prose-th-borders: var(--body-table-strong);
-  --tw-prose-td-borders: var(--body-table-row);
-  --tw-prose-kbd: var(--body-text);
-  --tw-prose-kbd-shadows: var(--body-border);
-
+/* 正文内容层（ADR-0014 / ADR-0020）：本地 CSS 映射 Kraft 亮暗色板与排版。 */
+.post-body {
   /* Kraft 内容色板 */
   --body-text: light-dark(#2b2621, #e8e6de);
   --body-heading: light-dark(#1c1815, #f5f3ec);
@@ -35,8 +7,8 @@
   --body-quote: light-dark(#625950, #b5ac9f);
   --body-quote-border: light-dark(#c15f3c, #d97757);
   --body-border: light-dark(#ddd5ca, #3e3b36);
-  --body-accent: light-dark(#c15f3c, #d97757);
-  --body-accent-hover: light-dark(#a14d2e, #e69373);
+  --body-accent: light-dark(#a14d2e, #d97757);
+  --body-accent-hover: light-dark(#8f3f2d, #e69373);
   --body-inline-color: light-dark(#a34a3a, #e39a82);
   --body-inline-bg: light-dark(#f2eeea, #363430);
   --body-inline-border: light-dark(#d7cec5, #47443e);
@@ -46,15 +18,14 @@
   --body-table-row: light-dark(#c9bfb2, #4a463f);
   --body-table-soft: light-dark(#e4dcd0, #3a3733);
   --body-table-hover: light-dark(rgb(193 95 60 / 5%), rgb(217 119 87 / 7%));
-  --body-mark-bg: light-dark(#f2e3c2, #5c4726);
   --body-details-bg: light-dark(#f4efe7, #2c2a25);
 
   /* Shiki 语法色：正文作用域内对齐 Kraft 代码 token */
   --code-background: var(--body-code-bg);
   --code-foreground: light-dark(#1c1815, #e8e6de);
-  --code-comment: light-dark(#8a7f73, #978f82);
-  --code-string: light-dark(#4e7e3c, #9cbd84);
-  --code-constant: light-dark(#b4622d, #e0a175);
+  --code-comment: light-dark(#766c61, #9b9386);
+  --code-string: light-dark(#477436, #9cbd84);
+  --code-constant: light-dark(#9f5225, #e0a175);
   --code-keyword: light-dark(#7e4fb5, #af95de);
   --code-function: light-dark(#3c6aa8, #85aedc);
   --code-parameter: light-dark(#886c32, #d3b46f);
@@ -135,6 +106,14 @@
 
 .post-body :is(ul, ol) {
   padding-left: 1.4em;
+}
+
+.post-body ul {
+  list-style-type: disc;
+}
+
+.post-body ol {
+  list-style-type: decimal;
 }
 
 .post-body li {
@@ -280,25 +259,6 @@
 .post-body :not(pre) > code::before,
 .post-body :not(pre) > code::after {
   content: none;
-}
-
-.post-body kbd {
-  padding: 0.1em 0.45em;
-  border: 1px solid var(--body-border);
-  border-bottom-width: 2px;
-  border-radius: 0.25rem;
-  background: light-dark(#fcfaf6, #32312d);
-  color: var(--body-text);
-  font-family: var(--font-mono);
-  font-size: 0.85em;
-  box-shadow: none;
-}
-
-.post-body mark {
-  padding: 0.05em 0.15em;
-  border-radius: 0.15rem;
-  background: var(--body-mark-bg);
-  color: inherit;
 }
 
 .post-body .astro-code {

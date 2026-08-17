@@ -86,7 +86,7 @@ try {
 
   const unquotedSource = validSource.replace(`"${publishedAt}"`, publishedAt);
   await writeFile(join(directory, files[0]), unquotedSource);
-  await build(environment);
+  await assert.rejects(build(environment));
 
   await writeFile(
     join(directory, files[0]),

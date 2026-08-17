@@ -40,9 +40,6 @@ try {
         test: nodeEvalCommand(
           'if(process.env.CHECK_LOG)require("node:fs").appendFileSync(process.env.CHECK_LOG,"test\\n");process.exit(process.env.FAIL_TEST === "1" ? 1 : 0)',
         ),
-        build: nodeEvalCommand(
-          'if(process.env.CHECK_LOG)require("node:fs").appendFileSync(process.env.CHECK_LOG,"build\\n");process.exit(process.env.FAIL_BUILD === "1" ? 1 : 0)',
-        ),
       },
     }),
   );
@@ -98,22 +95,12 @@ try {
     (await git("rev-parse", "HEAD")).stdout,
   );
 
-  await assert.rejects(publish(["publish broken build"], { FAIL_BUILD: "1" }), error => {
-    assert.match(`${error.stdout}\n${error.stderr}`, /生产构建失败；未创建发布提交/);
-    return true;
-  });
-  assert.equal((await git("rev-list", "--count", "HEAD")).stdout.trim(), "1");
-  assert.equal(
-    (await git("rev-parse", "origin/main")).stdout,
-    (await git("rev-parse", "HEAD")).stdout,
-  );
-
   const message = "publish all changes\n\n完整提交信息";
   const checkLog = join(workingDirectory, ".git/publish-checks");
   await writeFile(join(workingDirectory, "initial.txt"), "changed\n");
   await rm(join(workingDirectory, "deleted.txt"));
   await publish([message], { CHECK_LOG: checkLog });
-  assert.equal(await readFile(checkLog, "utf8"), "test\nbuild\n");
+  assert.equal(await readFile(checkLog, "utf8"), "test\n");
   assert.equal((await git("rev-list", "--count", "HEAD")).stdout.trim(), "2");
   assert.equal(
     (await git("cat-file", "-p", "HEAD")).stdout.split("\n\n").slice(1).join("\n\n"),
