@@ -6,20 +6,20 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Pagefind](https://img.shields.io/badge/Search-Pagefind-FFB400?style=for-the-badge)](https://pagefind.app/)
 
-一个以技术文章为核心、以说说承载轻量表达的中文个人网站。项目使用 Astro 生成静态页面，内置全文搜索、标签、归档、RSS 与站点地图，可部署到 Cloudflare Pages。
+一个以技术文章为核心、以说说承载轻量表达的中文个人网站。项目使用 Astro 生成静态页面，内容随 Git 推送到 Cloudflare Pages；站内搜索、标签、归档、RSS 与站点地图都在构建时生成。
 
 访问 [Jasper's Blog](https://blog.jasper0507.cc.cd/)。
 
 ## 🔥 Features
 
-- [x] 技术文章与说说两种内容类型
-- [x] 基于 Astro Content Collections 的内容校验与草稿过滤
+- [x] 技术文章与说说两种内容类型；说说没有独立详情页，用稳定锚点分享
+- [x] 基于 Astro Content Collections 的内容校验与草稿过滤；`draft` 是唯一公开开关
 - [x] 集中配置博客身份、公开联系方式、首页主视觉、浏览器图标与页脚文本
-- [x] 响应式布局、亮色/暗色主题，以及键盘可访问的导航与搜索
-- [x] Pagefind 静态全文搜索
-- [x] 文章标签、按年归档及自动目录
-- [x] RSS、Sitemap、Canonical URL、Open Graph 与结构化数据
-- [x] GFM、KaTeX 数学公式、提示块及 Shiki 代码高亮
+- [x] 响应式布局、亮色/暗色主题（首次跟随系统，选择写入本地），以及键盘可访问的导航与搜索
+- [x] Pagefind 弹层搜索：`/` 打开，只索引已发布技术文章，公式不进入索引
+- [x] 文章标签、按年归档；宽屏文章目录，长文可回到顶部
+- [x] RSS（技术文章摘要 + 说说摘要）、Sitemap、Canonical URL、Open Graph 文本与结构化数据
+- [x] GFM、KaTeX、提示块、中文脚注，以及带文件名 / 行高亮 / diff 的 Shiki 代码块
 - [x] 自托管中西文字体，不依赖运行时字体 CDN
 - [x] 技术文章与说说创建命令，以及面向 Cloudflare Pages 的一键站点发布
 
@@ -27,14 +27,15 @@
 
 ```text
 /
-├── docs/                   # 部署说明与架构决策记录
+├── docs/                   # 部署说明、架构决策记录与调研
 ├── public/
 │   ├── fonts/              # 自托管字体
 │   └── images/             # 站点主视觉与现有图片
 ├── scripts/                # 内容创建、字体更新与验收脚本
 ├── src/
-│   ├── components/         # 文章目录、标签等组件
+│   ├── components/         # 正文、目录、标签与回到顶部
 │   ├── content/
+│   │   ├── about.md        # 「关于我」正文
 │   │   ├── posts/          # 技术文章 Markdown
 │   │   └── shuoshuo/       # 说说 Markdown
 │   ├── layouts/            # 页面公共布局
@@ -43,13 +44,30 @@
 │   ├── styles/             # 全局、文章与说说样式
 │   └── content.config.ts   # Content Collections 数据结构
 ├── tests/
-│   ├── fixtures/          # 构建验收用内容
-│   └── site/              # Playwright 整站验收用例
+│   ├── fixtures/           # 构建验收用内容
+│   └── site/               # Playwright 整站验收用例
 ├── blog.config.ts          # 博客设置的唯一日常入口
 ├── astro.config.mjs        # Astro、Markdown 与代码高亮配置
+├── pagefind.yml            # 搜索索引排除规则（公式）
+├── playwright.config.ts    # 站点验收配置
 ├── package.json            # 依赖与命令
 └── tsconfig.json           # TypeScript 严格模式
 ```
+
+### 公开页面
+
+| 路径 | 内容 |
+| :---------------- | :----------------------------------------------------------- |
+| `/` | 首页：主视觉、最近 1 篇技术文章、最近 1 条说说 |
+| `/archives/` | 按年归档全部已发布技术文章 |
+| `/tags/` | 标签云 |
+| `/tags/:slug/` | 该标签下的技术文章 |
+| `/posts/:slug/` | 技术文章正文 |
+| `/shuoshuo/` | 说说时间流；单条链接为 `/shuoshuo/#稳定ID` |
+| `/about/` | 关于我 |
+| `/rss.xml` | RSS：技术文章摘要与说说摘要，不含草稿 |
+
+`/posts` 与 `/posts/2` 重定向到归档；旧搜索页 `/search` 重定向到首页。导航是「文章」（归档 / 标签）· 说说 · 关于 · 搜索放大镜。
 
 ## ✍️ 日常使用
 
@@ -63,7 +81,7 @@ git pull --ff-only origin main
 ```
 
 1. 按下方说明创建技术文章、说说，或修改博客设置。
-2. 运行 `npm run dev`，打开 `http://localhost:4321` 检查页面。验收完整搜索时先停止开发服务器，再运行 `npm run build` 和 `npm run preview`。
+2. 运行 `npm run dev`，打开 `http://localhost:4321` 检查页面。验收完整搜索时先停止开发服务器，再运行 `npm run build` 和 `npm run preview`；搜索入口是导航放大镜，焦点不在输入框时按 `/` 也可打开。
 3. 确认内容的 `draft`：`false` 会出现在本地预览并随下一次站点发布公开，`true` 会从页面、搜索、RSS 和站点地图中排除；草稿仍须填写完整字段和正文。
 4. 确认工作树中的全部改动都应该进入同一发布快照，然后运行 `npm run publish -- "<完整提交信息>"`。命令会自行完成校验、生产构建、提交和推送。
 
@@ -75,7 +93,7 @@ git pull --ff-only origin main
 npm run new:post -- my-first-post
 ```
 
-命令会安全创建 `src/content/posts/my-first-post.md`，且不会覆盖同名文章或自动追加编号。文件名会生成 `/posts/my-first-post/`，手动重命名会改变公开网址。
+命令会安全创建 `src/content/posts/my-first-post.md`，且不会覆盖同名文章或自动追加编号。文件名会生成 `/posts/my-first-post/`，手动重命名会改变公开网址，旧网址不会保留或重定向。
 
 ```md
 ---
@@ -93,10 +111,11 @@ draft: true
 
 - 模板自动填写当前上海时间、`tags: []` 和 `draft: false`，标题、摘要与正文留空；补完这些内容前构建会失败。
 - `title`、`description`、`publishedAt`、`draft` 必填；文章不维护更新时间，`updatedAt` 和其他未知字段会使构建失败。
-- `tags` 可省略或留空，标签不得重复，也不需要预先登记。
+- `tags` 可省略或留空，同一篇文章内标签不得重复，也不需要预先登记。不同标签若生成相同网址，构建会失败（草稿也参与检查）。
 - `publishedAt` 必须是加引号的有效上海时间字符串 `"YYYY-MM-DDTHH:mm:ss+08:00"`；未加引号的 YAML 日期值、UTC `Z` 和其他时区均无效。
 - `draft: true` 不进入公开页面；准备发布时改为 `false`。发布时间只用于显示和排序，不提供定时发布。
 - 正文不能为空。文章图片使用外部图床，并以普通 Markdown 图片语法引用。
+- 正文可用 GFM（表格、任务列表、删除线、自动链接、脚注）、`$...$` / `$$...$$` 公式、GitHub 提示块（`> [!NOTE]` 等）和原生 `<details>`。代码块支持 `title="file.js"`、行高亮与 diff 标记。
 - 保存后按通用流程预览；准备公开时确认 `draft: false`，再运行下方的站点发布命令。
 
 ### 发布说说
@@ -118,9 +137,12 @@ draft: false
 今天完成了博客的日常发布流程。
 ```
 
-- 说说没有标题，可以只有文字、只有 Markdown 图片，或两者都有，但正文不能为空。
-- `publishedAt` 和文件名由命令按当前上海时间生成；可修改发布时间，但不要修改稳定 ID。发布时间格式要求与技术文章相同。
+- 说说没有标题，也没有独立详情页；只出现在 `/shuoshuo/` 时间流里，过长内容在卡片内原地展开。
+- 可以只有文字、只有 Markdown 图片，或两者都有，但正文不能为空。纯图说说在首页和 RSS 里用 `N Image(s)` 作为摘要。
+- 说说只允许 `publishedAt` 和 `draft` 两个字段；标题、摘要、标签等额外字段会使构建失败。
+- `publishedAt` 和文件名由命令按当前上海时间生成；可修改发布时间，但不要修改稳定 ID。发布时间格式要求与技术文章相同。同一秒内重复创建会因文件已存在而失败，下一秒重试即可。
 - 想暂不公开时改为 `draft: true`；准备公开时恢复为 `false`，再按通用流程预览和发布。
+- RSS 收录说说摘要，不含完整正文；说说不进入站内搜索、标签或归档。
 
 ### 更新博客设置
 
@@ -133,7 +155,7 @@ draft: false
 | `home.hero` | 首页文案、必需的亮色主视觉、可选暗色主视觉和图片说明           |
 | `footer`    | 左侧纯文本，可留空；支持 `{year}`、`{author}`，不支持 Markdown |
 
-页脚右侧仍是固定的 RSS、GitHub 与邮箱。
+页脚右侧仍是固定的 RSS、GitHub 与邮箱。页头短名称只用于顶栏；省略时使用博客名称。
 
 设置文件通过 TypeScript 检查字段和类型，网址由原生 `URL` 解析；`npm run check` 或构建会直接报告这些原生错误，不再维护额外的自定义诊断矩阵。图片路径由作者维护，应指向 `public/images/` 中的现有文件。
 
@@ -160,12 +182,12 @@ npm run publish -- "发布新的技术文章"
 
 | 用途           | 技术                                                        |
 | :------------- | :---------------------------------------------------------- |
-| 框架与静态生成 | [Astro](https://astro.build/)                               |
+| 框架与静态生成 | [Astro](https://astro.build/) 7，静态输出                   |
 | 类型检查       | [TypeScript](https://www.typescriptlang.org/) + Astro Check |
 | 内容           | Markdown + Astro Content Collections                        |
-| Markdown 扩展  | GFM、Remark、Rehype、KaTeX、Shiki                           |
+| Markdown       | [Sätteri](https://docs.astro.build/en/guides/markdown-content/)（GFM、KaTeX、提示块）+ Shiki |
 | 样式           | Tailwind CSS 4、原生 CSS 与 CSS Custom Properties           |
-| 搜索           | [Pagefind](https://pagefind.app/)                           |
+| 搜索           | [Pagefind](https://pagefind.app/) 弹层，仅已发布技术文章    |
 | 格式化         | [Prettier](https://prettier.io/)                            |
 | 验收           | [Playwright Test](https://playwright.dev/)                  |
 | 部署           | [Cloudflare Pages](https://pages.cloudflare.com/)           |
@@ -188,24 +210,26 @@ npm run build
 npm run preview
 ```
 
+源码仓库保持私有；构建产物不得依赖 Google Fonts 等第三方字体 CDN。
+
 ## 🧞 Commands
 
 所有命令均在项目根目录执行。
 
-| 命令                          | 作用                                       |
-| :---------------------------- | :----------------------------------------- |
-| `npm ci`                      | 按 `package-lock.json` 安装依赖            |
-| `npm run dev`                 | 启动本地开发服务器                         |
-| `npm run build`               | 构建静态站点并为技术文章生成 Pagefind 索引 |
-| `npm run preview`             | 本地预览 `dist` 生产构建                   |
-| `npm run check`               | 运行 Astro 与 TypeScript 检查              |
-| `npm run format`              | 使用 Prettier 格式化项目文件               |
-| `npm run format:check`        | 检查项目文件格式，不修改文件               |
-| `npm test`                    | 运行格式、类型、脚本和站点验收             |
-| `npm run new:post -- <slug>`  | 创建带当前上海时间的技术文章 Markdown      |
-| `npm run new:shuoshuo`        | 创建带上海时间稳定 ID 的说说 Markdown      |
-| `npm run publish -- "<信息>"` | 验收、构建并发布全部改动到 `origin/main`   |
-| `npm run fonts:fetch`         | 下载 Noto 字体分包并更新字体 CSS           |
+| 命令                          | 作用                                                         |
+| :---------------------------- | :----------------------------------------------------------- |
+| `npm ci`                      | 按 `package-lock.json` 安装依赖                              |
+| `npm run dev`                 | 启动本地开发服务器                                           |
+| `npm run build`               | 构建静态站点，并为已发布技术文章生成 Pagefind 索引           |
+| `npm run preview`             | 本地预览 `dist` 生产构建                                     |
+| `npm run check`               | 运行 Astro 与 TypeScript 检查                                |
+| `npm run format`              | 使用 Prettier 格式化项目文件                                 |
+| `npm run format:check`        | 检查项目文件格式，不修改文件                                 |
+| `npm test`                    | 运行格式、类型、脚本和站点验收（含生产构建）                 |
+| `npm run new:post -- <slug>`  | 创建带当前上海时间的技术文章 Markdown                        |
+| `npm run new:shuoshuo`        | 创建带上海时间稳定 ID 的说说 Markdown                        |
+| `npm run publish -- "<信息>"` | 验收、构建并发布全部改动到 `origin/main`                     |
+| `npm run fonts:fetch`         | 下载 Noto 中文字体分包并更新字体 CSS（拉丁字体文件保持不动） |
 
 ## ✨ Feedback & Suggestions
 
