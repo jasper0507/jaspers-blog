@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test, type Locator } from "@playwright/test";
+import { test, type Locator, type Page } from "@playwright/test";
 import { expectedAuthor, host } from "../helpers.ts";
 
 function relativeLuminance(color: string) {
@@ -196,4 +196,81 @@ test("目录按正文顺序包含 h2/h3 并跟随滚动", async ({ page }) => {
     `#${secondHeadingId}`,
     "滚到页尾后应保持末节为当前项",
   );
+});
+
+function boxesOverlap(
+  left: { x: number; y: number; width: number; height: number },
+  right: { x: number; y: number; width: number; height: number },
+) {
+  return !(
+    left.x + left.width <= right.x ||
+    right.x + right.width <= left.x ||
+    left.y + left.height <= right.y ||
+    right.y + right.height <= left.y
+  );
+}
+
+async function showBackToTop(page: Page) {
+  await page
+    .locator(".post-body h2")
+    .nth(1)
+    .evaluate(element => {
+      element.scrollIntoView({ block: "start", behavior: "instant" });
+    });
+  await page.waitForFunction(
+    () => document.querySelector("#back-to-top")?.getAttribute("data-visible") === "true",
+  );
+}
+
+for (const width of [1440, 375]) {
+  test(`${width}px 单篇长文滚过标题后可回到顶部`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 960 });
+    await page.goto(`${host}/posts/visual/`);
+    const button = page.locator("#back-to-top");
+    const themeToggle = page.locator("#theme-toggle");
+    assert.equal(await button.count(), 1);
+    assert.equal(await button.getAttribute("data-visible"), "false");
+    assert.equal(await button.evaluate(element => element.hasAttribute("inert")), true);
+    assert.equal(await button.evaluate(element => getComputedStyle(element).pointerEvents), "none");
+
+    await showBackToTop(page);
+    assert.equal(await button.getAttribute("aria-label"), "回到顶部");
+    assert.equal(await button.evaluate(element => getComputedStyle(element).pointerEvents), "auto");
+    const [buttonBox, themeBox] = await Promise.all([
+      button.boundingBox(),
+      themeToggle.boundingBox(),
+    ]);
+    assert.ok(buttonBox, "回到顶部按钮应有布局盒");
+    assert.ok(themeBox, "主题切换钮应有布局盒");
+    assert.equal(boxesOverlap(buttonBox, themeBox), false, "回到顶部不得与主题切换重叠");
+
+    await button.click();
+    await page.waitForFunction(() => {
+      const backToTop = document.querySelector("#back-to-top");
+      return (
+        scrollY < 8 &&
+        backToTop?.getAttribute("data-visible") === "false" &&
+        document.activeElement?.id === "post-title"
+      );
+    });
+  });
+}
+
+test("短技术文章不显示回到顶部", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.goto(`${host}/posts/alpha/`);
+  const button = page.locator("#back-to-top");
+  assert.equal(await button.getAttribute("data-visible"), "false");
+  await page.evaluate(() =>
+    scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" }),
+  );
+  await page.waitForTimeout(200);
+  assert.equal(await button.getAttribute("data-visible"), "false");
+});
+
+test("首页与说说没有回到顶部", async ({ page }) => {
+  for (const path of ["/", "/shuoshuo/"]) {
+    await page.goto(`${host}${path}`);
+    assert.equal(await page.locator("#back-to-top").count(), 0, `${path} 不应有回到顶部`);
+  }
 });

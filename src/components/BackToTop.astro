@@ -1,0 +1,98 @@
+---
+
+---
+
+<button
+  class="back-to-top"
+  id="back-to-top"
+  type="button"
+  aria-label="回到顶部"
+  title="回到顶部"
+  data-visible="false"
+  inert={true}
+>
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M6 14.5 12 8.5 18 14.5"></path>
+  </svg>
+</button>
+
+<script is:inline>
+  (() => {
+    const button = document.querySelector("#back-to-top");
+    const header = document.querySelector(".post-header");
+    const title = document.querySelector("#post-title");
+    if (!(button instanceof HTMLButtonElement) || !(header instanceof HTMLElement)) return;
+
+    const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const setVisible = visible => {
+      button.dataset.visible = visible ? "true" : "false";
+      button.toggleAttribute("inert", !visible);
+      if (!visible && document.activeElement === button && title instanceof HTMLElement) {
+        title.focus();
+      }
+    };
+
+    button.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: reduceMotion() ? "auto" : "smooth" });
+    });
+
+    if (!("IntersectionObserver" in window)) return;
+
+    const observer = new IntersectionObserver(([entry]) => setVisible(!entry.isIntersecting));
+    observer.observe(header);
+  })();
+</script>
+
+<style>
+  .back-to-top {
+    position: fixed;
+    right: max(1rem, env(safe-area-inset-right, 0px));
+    bottom: calc(max(1rem, env(safe-area-inset-bottom, 0px)) + 3.5rem);
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: var(--surface);
+    box-shadow: 0 0.35rem 1.25rem rgb(0 0 0 / 8%);
+    color: inherit;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(0.4rem);
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease,
+      background-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .back-to-top[data-visible="true"] {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  .back-to-top:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0.45rem 1.4rem rgb(0 0 0 / 12%);
+  }
+
+  .back-to-top svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+</style>

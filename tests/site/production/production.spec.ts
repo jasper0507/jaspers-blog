@@ -6,6 +6,7 @@ import {
   assertChineseFootnotes,
   assertRenderedKatex,
   build,
+  pagefindFragmentText,
   productionEnvironment,
   root,
 } from "../helpers.ts";
@@ -50,4 +51,10 @@ test("论文笔记与 Markdown 教程的正文渲染", async () => {
   );
   assertRenderedKatex(quickStart, "Markdown 教程");
   assertChineseFootnotes(quickStart, "Markdown 教程");
+});
+
+test("Pagefind 排除 KaTeX 后仍能检索正文", async () => {
+  const corpus = await pagefindFragmentText();
+  assert.match(corpus, /多头自注意力/, "索引应保留论文笔记正文");
+  assert.doesNotMatch(corpus, /N=6/, "索引不得包含仅出现在公式中的 TeX");
 });

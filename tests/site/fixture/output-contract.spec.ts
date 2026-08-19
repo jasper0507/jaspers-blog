@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "@playwright/test";
-import { assertInOrder, expectedSite, root } from "../helpers.ts";
+import { assertInOrder, expectedSite, pagefindFragmentText, root } from "../helpers.ts";
 
 const readDist = (path: string) => readFile(join(root, "dist", path), "utf8");
 
@@ -75,4 +75,10 @@ test("站点地图收录范围", async () => {
 test("Pagefind 只覆盖已发布技术文章", async () => {
   const searchIndex = JSON.parse(await readDist("pagefind/pagefind-entry.json"));
   assert.equal(searchIndex.languages["zh-cn"].page_count, 3);
+});
+
+test("Pagefind 索引不含公式源，仍含文章标题", async () => {
+  const corpus = await pagefindFragmentText();
+  assert.match(corpus, /视觉验收专用技术文章/, "索引应保留技术文章标题");
+  assert.doesNotMatch(corpus, /mc\^2/, "索引不得包含 KaTeX 公式源");
 });

@@ -1,0 +1,4 @@
+# 公式渲染字符不进站内搜索（KaTeX MathML / TeX annotation / glyphs）。
+exclude_selectors:
+  - ".katex"
+  - ".katex-display"

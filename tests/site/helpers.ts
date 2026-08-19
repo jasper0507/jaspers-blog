@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { gunzipSync } from "node:zlib";
 import type { Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -84,6 +87,17 @@ export function assertRenderedKatex(html: string, message: string) {
 export function assertChineseFootnotes(html: string, message: string) {
   assert.match(html, /id="footnote-label"[^>]*>脚注</, `${message}：脚注标题应为中文`);
   assert.match(html, /aria-label="返回脚注引用"/, `${message}：脚注返回文案应为中文`);
+}
+
+export async function pagefindFragmentText() {
+  const fragmentDir = join(root, "dist/pagefind/fragment");
+  const names = await readdir(fragmentDir);
+  const chunks = await Promise.all(
+    names
+      .filter(name => name.endsWith(".pf_fragment"))
+      .map(async name => gunzipSync(await readFile(join(fragmentDir, name))).toString("utf8")),
+  );
+  return chunks.join("\n").replaceAll("\u200b", "");
 }
 
 export function footerLinks(page: Page) {
