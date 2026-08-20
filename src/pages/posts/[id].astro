@@ -13,7 +13,7 @@ interface Props {
 
 export async function getStaticPaths() {
   return (await getPublishedPostCatalog()).posts.map(post => ({
-    params: { slug: post.slug },
+    params: { id: String(post.id) },
     props: { post },
   }));
 }

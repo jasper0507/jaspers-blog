@@ -16,7 +16,7 @@
 ## 所有者首次上线清单
 
 1. 在 Cloudflare 控制台进入 **Workers & Pages**，创建 Pages 项目并授权读取私有 GitHub 仓库 `jasper0507/jaspers-blog`。
-2. 选择 `main` 为正式分支，按上方配置保存并部署；构建日志应显示 Astro 静态构建成功，随后 Pagefind 索引数量与当前公开技术文章数量一致。
+2. 选择 `main` 为正式分支，按上方配置保存并部署；构建日志应显示 Astro 静态构建成功，随后 Pagefind 能完成索引（没有已发布技术文章时索引可以为空或仅含占位，有文章时页数应与公开篇数一致）。
 3. 在项目的 **Custom domains** 中选择 **Set up a domain**，输入 `jasper0507.me` 并激活。必须先在 Pages 项目中关联域名；若 DNS 不在同一 Cloudflare 账户，再按向导添加指向项目 `<project>.pages.dev` 地址的 CNAME。详见 [Cloudflare 自定义域名文档](https://developers.cloudflare.com/pages/configuration/custom-domains/)。
 4. 等待域名状态变为 **Active**，然后执行：
 
@@ -31,8 +31,8 @@
 
 ## 日常发布
 
-- 技术文章：运行 `npm run new:post -- "<标题>"` 创建 Markdown。命令只接受标题，公开网址为 `/posts/<正整数>/`，号码创建时冻结。命令不会覆盖同名文章；创建失败不占用号码。文件名取标题快照，之后改标题不改文件名或网址。
-- 文章时间：创建命令自动填写当前上海时间；`publishedAt` 只接受加引号的完整字符串 `"YYYY-MM-DDTHH:mm:ss+08:00"`，文章不维护 `updatedAt`。标题、摘要或正文未完成时构建失败。
+- 技术文章：运行 `npm run new:post -- "<标题>"` 创建 Markdown。命令只接受标题，公开网址为 `/posts/<正整数>/`，号码创建时冻结并写入 frontmatter `id`。命令不会覆盖同名文章；创建失败不占用号码。文件名取标题快照，之后改标题不改文件名或网址。不要手改 `id` 或 `src/content/post-next-id.json`。
+- 文章时间：创建命令自动填写当前上海时间；`publishedAt` 只接受加引号的完整字符串 `"YYYY-MM-DDTHH:mm:ss+08:00"`，文章不维护 `updatedAt`。标题、摘要、`id` 或正文未完成时构建失败。数字网址不是发布时间顺序。
 - 设置图片：浏览器图标必须为 1:1，优先方形 SVG，PNG/ICO 至少提供 32×32 表示；亮暗主视觉均为 3:2，推荐 960×640 或更高且尺寸、主体位置一致，非 3:2 图片居中裁切且不拉伸。
 - 图片：技术文章图片使用外部图床；仓库不校验图片是否存在或内容是否变化。
 - 说说：运行 `npm run new:shuoshuo`，再编辑生成的 Markdown。

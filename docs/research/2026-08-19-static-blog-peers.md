@@ -27,6 +27,8 @@
 
 ## 2. 本项目现状（基于代码）
 
+> 本节是 2026-08-19 的代码快照。技术文章网址已改为 `/posts/<稳定ID>/`（ADR-0024）；下列 ASCII slug、网址跟随文件名、构建命令直调 Pagefind、以及「时间降序 + slug 升序」不再是现行规则。
+
 ### 2.1 信息架构
 
 中文单语（ADR-0002）。两种内容：技术文章 `/posts/:slug/`、说说 `/shuoshuo/#稳定ID`（ADR-0003）。导航：文章（归档 / 标签）· 说说 · 关于 · 搜索放大镜。归档是完整时间索引，`/posts` 重定向到 `/archives`（ADR-0012，`astro.config.mjs` `redirects`）。搜索是居中弹层，没有 `/search/` 内容页。首页最近文章、最近说说各 1 条（ADR-0013，`src/pages/index.astro`）。
@@ -203,7 +205,7 @@ RSS：本站文章只出 `description`，说说只出摘要且不含全文（ADR
 - **缺口**：`BaseLayout.astro` 只有 OG 文本；文章 JSON-LD 有 `datePublished`，没有 `article:published_time`。聊天软件/Telegram 展开时无图。
 - **对照**：官方 blog 用一张 FallbackImage 填 `og:image` + `twitter:card=summary_large_image`；Cactus `BaseHead.astro` 还有 `og:image:width/height` 和 `article:published_time`；AstroPaper `PostLayout.astro` 写 article 时间。
 - **值得**：链接预览是元数据，不是分享按钮。用 `public/images/hero-light.svg`（或一张专用 1200×630 PNG）做**全站默认图**即可。
-- **落地**：`blog.config.ts` 增加可选 `site.ogImage`；`BaseLayout` 输出 `og:image` / `twitter:*`；`src/pages/posts/[slug].astro` 的 head 槽加 `article:published_time`。不引入 Satori，不按篇生成。
+- **落地**：`blog.config.ts` 增加可选 `site.ogImage`；`BaseLayout` 输出 `og:image` / `twitter:*`；`src/pages/posts/[id].astro` 的 head 槽加 `article:published_time`。不引入 Satori，不按篇生成。
 - **风险**：ADR-0009 措辞是「基础 Open Graph **文本**」且禁止「分享图片或逐篇文章的动态 OG」。全站一张静态图是灰区，但更接近「链接识别元数据」。若作者把「任何 og:image」都视为分享图，则降级为只加 `twitter:card=summary`（无图）和 `article:published_time`。
 - **不要做**：AstroPaper / Cactus / Pure 的逐篇 Satori 图。
 
@@ -238,8 +240,8 @@ RSS：本站文章只出 `description`，说说只出摘要且不含全文（ADR
 - **缺口**：单篇页渲染完就是正文 + TOC，没有时间线上的邻篇。长笔记之间只能回归档。
 - **对照**：AstroPaper `AdjacentPostNav.astro` 在 `getStaticPaths` 里用排序后的 index±1；Fuwari `getSortedPosts()` 写 prev/next；Icarus `article.jsx` 底部 `page.prev/page.next`；Pure `ArticleBottom.astro`。
 - **值得**：15 篇时收益中等，以后只增不减；实现可以完全待在 `posts.ts` 快照里，不改 schema。
-- **落地**：`PublishedPost` 增加可选 `previous` / `next`（slug、title、href），在 catalog 排序后一次填好。`src/pages/posts/[slug].astro` 文末输出两个链，`data-pagefind-ignore`。样式用现有文字链，不要做成 Icarus 大卡片。合同：`visual` 的邻篇是 `alpha`（更新）和 `older`（更旧）。
-- **风险**：低。不要按标签「相关文章」冒充邻篇（那是另一条）。排序必须复用 catalog 的「时间降序 + slug 升序」。
+- **落地**：`PublishedPost` 增加可选 `previous` / `next`（id、title、href），在 catalog 排序后一次填好。`src/pages/posts/[id].astro` 文末输出两个链，`data-pagefind-ignore`。样式用现有文字链，不要做成 Icarus 大卡片。合同：`visual` 的邻篇是 `alpha`（更新）和 `older`（更旧）。
+- **风险**：低。不要按标签「相关文章」冒充邻篇（那是另一条）。排序必须复用 catalog 的「时间降序 + 稳定 ID 升序」。
 
 **7. 中文阅读时间（可选展示，不进 frontmatter）**
 
@@ -262,7 +264,7 @@ RSS：本站文章只出 `description`，说说只出摘要且不含全文（ADR
 - **缺口**：长笔记只能靠浏览器手势回去。目录在手机上又是隐藏的。
 - **对照**：Cactus `BlogPost.astro` 用 IntersectionObserver 看 hero 是否离开视口再显示圆钮；Fuwari / AstroPaper 也有 BackToTop。
 - **值得**：实现小，和现有右下主题钮（`#theme-toggle`）不要抢位置。
-- **落地**：只在 `src/pages/posts/[slug].astro` 加，默认 `left` 或主题钮上方，`aria-label="回到顶部"`，`prefers-reduced-motion` 时瞬时滚动。观察 `.post-header`。
+- **落地**：只在 `src/pages/posts/[id].astro` 加，默认 `left` 或主题钮上方，`aria-label="回到顶部"`，`prefers-reduced-motion` 时瞬时滚动。观察 `.post-header`。
 - **风险**：两个悬浮钮的视觉要一起验收（亮暗、375 / 1440）。不要做成全站组件。
 
 **10. 外链 `rel`（默认不加 `target=_blank`）**

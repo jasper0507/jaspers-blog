@@ -23,7 +23,7 @@ export interface PublishedTag {
 }
 
 export interface PublishedPost {
-  slug: string;
+  id: number;
   href: string;
   title: string;
   description: string;
@@ -99,7 +99,7 @@ export async function getPublishedPostCatalog() {
     .map(entry => {
       const date = isoDateFormatter.format(entry.data.publishedAt);
       return {
-        slug: String(entry.data.id),
+        id: entry.data.id,
         href: `/posts/${entry.data.id}/`,
         title: entry.data.title,
         description: entry.data.description,
