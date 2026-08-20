@@ -8,7 +8,7 @@ export default {
     /** 可选页头短名称；省略时使用博客名称，建议最终名称不超过 16 个字符。 */
     headerTitle: "JaspersBlog",
     /** 正式网址：填写完整的 HTTPS 域名根地址。 */
-    url: "https://blog.jasper0507.cc.cd",
+    url: "https://jasper0507.me",
     /** 默认简介：用于没有单独简介的页面元信息和 RSS。 */
     description: "Jasper 的个人技术博客，记录技术文章与说说。",
     /** 可选 1:1 浏览器图标；优先方形 SVG，PNG/ICO 至少包含 32×32 表示。 */

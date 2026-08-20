@@ -8,7 +8,7 @@
 
 一个以技术文章为核心、以说说承载轻量表达的中文个人网站。项目使用 Astro 生成静态页面，内容随 Git 推送到 Cloudflare Pages；站内搜索、标签、归档、RSS 与站点地图都在构建时生成。
 
-访问 [Jasper's Blog](https://blog.jasper0507.cc.cd/)。
+访问 [Jasper's Blog](https://jasper0507.me/)。
 
 ## 🔥 Features
 
