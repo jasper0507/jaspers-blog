@@ -294,7 +294,8 @@ npm run publish -- "发布内容发布教程"
 ### 3. 图片
 
 - 技术文章图片放在外部图床，不要指望仓库替你托管正文配图。
-- 首页主视觉和浏览器图标才放在 `public/images/`，并在 `blog.config.ts` 里填写路径。
+- 首页主视觉放在 `public/images/`，在 `blog.config.ts` 里填写以 `/images/` 开头的路径。
+- 浏览器图标推荐 `public/favicon.svg`；也可以放在 `public/` 内其它 svg、png、ico，并在 `blog.config.ts` 填写对应路径。
 
 ### 4. 搜索
 

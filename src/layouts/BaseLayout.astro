@@ -16,6 +16,7 @@ const {
   description: defaultDescription,
   url,
   favicon,
+  faviconType,
 } = blogSettings.site;
 const { github, email } = blogSettings.author;
 const footerCopyright = blogSettings.footer.copyright;
@@ -58,7 +59,7 @@ const structuredData = JSON.stringify(
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
-    {favicon && <link rel="icon" href={favicon} type="image/svg+xml" />}
+    {favicon && <link rel="icon" href={favicon} type={faviconType} />}
     <link rel="canonical" href={canonical} />
     <link
       rel="alternate"
@@ -81,7 +82,8 @@ const structuredData = JSON.stringify(
     <script is:inline type="module" src="/pagefind/pagefind-component-ui.js"></script>
     <script is:inline>
       (() => {
-        const key = "jasper-theme";
+        const key = "theme";
+        const legacyKey = "jasper-theme";
         const root = document.documentElement;
         const themeColors = { light: "#f5f2ea", dark: "#272421" };
 
@@ -94,7 +96,7 @@ const structuredData = JSON.stringify(
           matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 
         try {
-          const saved = localStorage.getItem(key);
+          const saved = localStorage.getItem(key) ?? localStorage.getItem(legacyKey);
           if (saved === "light" || saved === "dark") root.dataset.theme = saved;
         } catch (error) {
           console.warn("无法读取主题设置，将跟随系统主题。", error);
@@ -122,6 +124,7 @@ const structuredData = JSON.stringify(
             root.dataset.theme = next;
             try {
               localStorage.setItem(key, next);
+              localStorage.removeItem(legacyKey);
             } catch (error) {
               console.warn("无法保存主题设置。", error);
             }

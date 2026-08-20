@@ -26,7 +26,10 @@ test("首页主视觉资源与标题结构", async ({ page }) => {
 
   const favicon = page.locator('link[rel="icon"]');
   assert.equal(await favicon.count(), expectedSite.favicon ? 1 : 0);
-  if (expectedSite.favicon) assert.equal(await favicon.getAttribute("href"), expectedSite.favicon);
+  if (expectedSite.favicon) {
+    assert.equal(await favicon.getAttribute("href"), expectedSite.favicon);
+    assert.equal(await favicon.getAttribute("type"), expectedSite.faviconType);
+  }
 });
 
 test("主视觉固定为 3:2 并居中裁切", async ({ page }) => {
@@ -120,9 +123,21 @@ test("文章菜单弹层可键盘关闭并归还焦点", async ({ page }) => {
   assert.equal(await menuTrigger.evaluate(element => element === document.activeElement), true);
 });
 
-test("主题切换在重载后保持", async ({ page }) => {
+test("主题切换写入 theme 并在重载后保持", async ({ page }) => {
   await page.goto(host, { waitUntil: "networkidle" });
   await page.locator("#theme-toggle").click();
+  assert.equal(await page.evaluate(() => localStorage.getItem("theme")), "dark");
+  assert.equal(await page.evaluate(() => localStorage.getItem("jasper-theme")), null);
   await page.reload();
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
+});
+
+test("仍读取旧键 jasper-theme", async ({ page }) => {
+  await page.goto(host, { waitUntil: "networkidle" });
+  await page.evaluate(() => {
+    localStorage.removeItem("theme");
+    localStorage.setItem("jasper-theme", "dark");
+  });
+  await page.reload({ waitUntil: "networkidle" });
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
 });
