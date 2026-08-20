@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { initRepoWithOrigin } from "./lib/test-git.mjs";
 
 const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -14,6 +15,7 @@ const workingDirectory = await mkdtemp(join(tmpdir(), "newblog-post-"));
 const slug = "new-post";
 const directory = join(workingDirectory, "src/content/posts");
 const path = join(directory, `${slug}.md`);
+const { remoteDirectory } = await initRepoWithOrigin(workingDirectory);
 
 function run(...args) {
   return execFileAsync(process.execPath, [script, ...args], {
@@ -106,6 +108,7 @@ try {
   );
 } finally {
   await rm(workingDirectory, { recursive: true, force: true });
+  await rm(remoteDirectory, { recursive: true, force: true });
 }
 
 console.log("技术文章创建命令验收通过");

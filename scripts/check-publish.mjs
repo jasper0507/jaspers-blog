@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { ERROR_CODE, userMessage } from "./lib/repo-sync.mjs";
 
 const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -26,6 +27,10 @@ function publish(args = [], env = {}) {
     encoding: "utf8",
     env: { ...process.env, ...env },
   });
+}
+
+function output(error) {
+  return `${error.stdout ?? ""}\n${error.stderr ?? ""}`;
 }
 
 try {
@@ -52,7 +57,7 @@ try {
   await git("commit", "-m", "initial");
 
   await assert.rejects(publish(), error => {
-    assert.match(`${error.stdout}\n${error.stderr}`, /用法：npm run publish -- "<commit message>"/);
+    assert.match(output(error), /用法：npm run publish -- "<commit message>"/);
     return true;
   });
   await assert.rejects(publish(["   "]));
@@ -61,14 +66,14 @@ try {
 
   await git("switch", "-c", "draft");
   await assert.rejects(publish(["publish draft"]), error => {
-    assert.match(`${error.stdout}\n${error.stderr}`, /站点发布只允许在 main 分支运行/);
+    assert.ok(output(error).includes(userMessage("publish", ERROR_CODE.NOT_ON_MAIN)));
     return true;
   });
   assert.equal((await git("rev-list", "--count", "HEAD")).stdout.trim(), "1");
 
   await git("switch", "main");
   await assert.rejects(publish(["publish without remote"]), error => {
-    assert.match(`${error.stdout}\n${error.stderr}`, /找不到目标 remote：origin/);
+    assert.ok(output(error).includes(userMessage("publish", ERROR_CODE.NO_ORIGIN)));
     return true;
   });
   assert.equal((await git("rev-list", "--count", "HEAD")).stdout.trim(), "1");
@@ -79,14 +84,14 @@ try {
   await git("remote", "add", "origin", remoteDirectory);
   await git("push", "origin", "main:main");
   await assert.rejects(publish(["publish nothing"]), error => {
-    assert.match(`${error.stdout}\n${error.stderr}`, /没有可提交的改动/);
+    assert.ok(output(error).includes(userMessage("publish", ERROR_CODE.NO_CHANGES)));
     return true;
   });
   assert.equal((await git("rev-list", "--count", "HEAD")).stdout.trim(), "1");
 
   await writeFile(join(workingDirectory, "new.txt"), "new\n");
   await assert.rejects(publish(["publish invalid site"], { FAIL_TEST: "1" }), error => {
-    assert.match(`${error.stdout}\n${error.stderr}`, /完整校验失败；未创建发布提交/);
+    assert.ok(output(error).includes(userMessage("publish", ERROR_CODE.TEST_FAILED)));
     return true;
   });
   assert.equal((await git("rev-list", "--count", "HEAD")).stdout.trim(), "1");
@@ -99,7 +104,8 @@ try {
   const checkLog = join(workingDirectory, ".git/publish-checks");
   await writeFile(join(workingDirectory, "initial.txt"), "changed\n");
   await rm(join(workingDirectory, "deleted.txt"));
-  await publish([message], { CHECK_LOG: checkLog });
+  const published = await publish([message], { CHECK_LOG: checkLog });
+  assert.match(published.stdout, /已发布到网上/);
   assert.equal(await readFile(checkLog, "utf8"), "test\n");
   assert.equal((await git("rev-list", "--count", "HEAD")).stdout.trim(), "2");
   assert.equal(
@@ -131,25 +137,64 @@ try {
     });
     await execFileAsync("git", ["push", "origin", "main"], { cwd: remoteAuthorDirectory });
 
-    const remoteHead = (
-      await execFileAsync("git", ["--git-dir", remoteDirectory, "rev-parse", "main"])
-    ).stdout;
     await writeFile(join(workingDirectory, "local.txt"), "local\n");
-    await assert.rejects(publish(["local publish"]), error => {
-      assert.match(
-        `${error.stdout}\n${error.stderr}`,
-        /推送到 origin\/main 失败；本地发布提交已保留，请手动同步远程并处理冲突后再推送/,
-      );
-      return true;
-    });
-    assert.equal((await git("log", "-1", "--format=%s")).stdout, "local publish\n");
+    const forwarded = await publish(["local publish"]);
+    assert.match(forwarded.stdout, /已与网上对齐/);
+    assert.match(forwarded.stdout, /已发布到网上/);
+    assert.equal((await git("show", "HEAD:local.txt")).stdout, "local\n");
+    assert.equal((await git("show", "HEAD:remote.txt")).stdout, "remote\n");
     assert.equal(
-      (await execFileAsync("git", ["--git-dir", remoteDirectory, "rev-parse", "main"])).stdout,
-      remoteHead,
+      (await git("rev-parse", "origin/main")).stdout,
+      (await git("rev-parse", "HEAD")).stdout,
     );
   } finally {
     await rm(remoteAuthorDirectory, { recursive: true, force: true });
   }
+
+  const divergeAuthorDirectory = await mkdtemp(join(tmpdir(), "newblog-publish-diverge-"));
+  try {
+    await writeFile(join(workingDirectory, "ahead.txt"), "ahead\n");
+    await git("add", "-A");
+    await git("commit", "-m", "unpublished local");
+    const unpublished = (await git("rev-parse", "HEAD")).stdout;
+
+    await execFileAsync("git", ["clone", remoteDirectory, divergeAuthorDirectory]);
+    await execFileAsync("git", ["config", "user.name", "Diverge Author"], {
+      cwd: divergeAuthorDirectory,
+    });
+    await execFileAsync("git", ["config", "user.email", "diverge@example.com"], {
+      cwd: divergeAuthorDirectory,
+    });
+    await writeFile(join(divergeAuthorDirectory, "other.txt"), "other\n");
+    await execFileAsync("git", ["add", "-A"], { cwd: divergeAuthorDirectory });
+    await execFileAsync("git", ["commit", "-m", "remote diverge"], {
+      cwd: divergeAuthorDirectory,
+    });
+    await execFileAsync("git", ["push", "origin", "main"], { cwd: divergeAuthorDirectory });
+
+    await writeFile(join(workingDirectory, "pending.txt"), "pending\n");
+    await assert.rejects(publish(["diverged publish"]), error => {
+      assert.ok(output(error).includes(userMessage("publish", ERROR_CODE.DIVERGED)));
+      return true;
+    });
+    assert.equal((await git("rev-parse", "HEAD")).stdout, unpublished);
+    assert.equal(await readFile(join(workingDirectory, "pending.txt"), "utf8"), "pending\n");
+  } finally {
+    await rm(divergeAuthorDirectory, { recursive: true, force: true });
+  }
+
+  await git("reset", "--hard", "origin/main");
+  const hook = join(remoteDirectory, "hooks/pre-receive");
+  await writeFile(hook, "#!/bin/sh\nexit 1\n");
+  await chmod(hook, 0o755);
+  const beforePush = (await git("rev-parse", "HEAD")).stdout;
+  await writeFile(join(workingDirectory, "fail.txt"), "fail\n");
+  await assert.rejects(publish(["rejected push"]), error => {
+    assert.ok(output(error).includes(userMessage("publish", ERROR_CODE.PUSH_FAILED)));
+    return true;
+  });
+  assert.equal((await git("rev-parse", "HEAD")).stdout, beforePush);
+  assert.equal(await readFile(join(workingDirectory, "fail.txt"), "utf8"), "fail\n");
 } finally {
   await rm(workingDirectory, { recursive: true, force: true });
   await rm(remoteDirectory, { recursive: true, force: true });

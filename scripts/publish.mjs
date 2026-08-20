@@ -1,5 +1,15 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import {
+  ERROR_CODE,
+  RepoError,
+  alignMain,
+  commitAll,
+  pushMain,
+  undoCommitIf,
+  userMessage,
+  workingTreeChanges,
+} from "./lib/repo-sync.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -22,29 +32,22 @@ if (args.length !== 1 || !args[0].trim()) {
   throw new Error('用法：npm run publish -- "<commit message>"');
 }
 
-const branch = (await execFileAsync("git", ["branch", "--show-current"])).stdout.trim();
-if (branch !== "main") throw new Error(`站点发布只允许在 main 分支运行；当前分支：${branch}`);
+const cwd = process.cwd();
+const aligned = await alignMain(cwd, "publish");
+if (aligned.status === "fast-forwarded") console.log("已与网上对齐");
 
-try {
-  await execFileAsync("git", ["remote", "get-url", "origin"]);
-} catch (error) {
-  throw new Error("找不到目标 remote：origin", { cause: error });
+if (!(await workingTreeChanges(cwd))) {
+  throw new RepoError(ERROR_CODE.NO_CHANGES, "publish");
 }
 
-const changes = (await execFileAsync("git", ["status", "--porcelain", "--untracked-files=all"]))
-  .stdout;
-if (!changes) throw new Error("没有可提交的改动");
+await runNpm(["test"], userMessage("publish", ERROR_CODE.TEST_FAILED));
 
-await runNpm(["test"], "完整校验失败；未创建发布提交");
-
-await execFileAsync("git", ["add", "-A"]);
-await execFileAsync("git", ["commit", "-m", args[0]]);
+const { before, after } = await commitAll(cwd, args[0]);
 try {
-  await execFileAsync("git", ["push", "origin", "main:main"]);
+  await pushMain(cwd);
 } catch (error) {
   process.stderr.write(error.stderr ?? "");
-  throw new Error("推送到 origin/main 失败；本地发布提交已保留，请手动同步远程并处理冲突后再推送", {
-    cause: error,
-  });
+  await undoCommitIf(cwd, before, after);
+  throw new RepoError(ERROR_CODE.PUSH_FAILED, "publish", error);
 }
-console.log("已推送站点发布到 origin/main");
+console.log("已发布到网上");

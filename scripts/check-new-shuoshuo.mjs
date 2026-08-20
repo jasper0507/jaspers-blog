@@ -5,12 +5,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { initRepoWithOrigin } from "./lib/test-git.mjs";
 
 const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("..", import.meta.url));
 const astro = join(root, "node_modules/astro/bin/astro.mjs");
 const script = fileURLToPath(new URL("new-shuoshuo.mjs", import.meta.url));
 const workingDirectory = await mkdtemp(join(tmpdir(), "newblog-shuoshuo-"));
+const { remoteDirectory } = await initRepoWithOrigin(workingDirectory);
 
 function build(environment) {
   return execFileAsync(process.execPath, [astro, "build", "--force"], {
@@ -99,6 +101,7 @@ try {
   await assert.rejects(build(environment));
 } finally {
   await rm(workingDirectory, { recursive: true, force: true });
+  await rm(remoteDirectory, { recursive: true, force: true });
 }
 
 console.log("说说创建命令验收通过");

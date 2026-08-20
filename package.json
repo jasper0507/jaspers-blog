@@ -19,9 +19,10 @@
     "publish": "node scripts/publish.mjs",
     "test:post:command": "node scripts/check-new-post.mjs",
     "test:publish:command": "node scripts/check-publish.mjs",
+    "test:repo-sync:command": "node scripts/check-repo-sync.mjs",
     "test:shuoshuo:command": "node scripts/check-new-shuoshuo.mjs",
     "test:site": "playwright test",
-    "test": "npm run format:check && npm run check && node scripts/check-fetch-fonts.mjs && npm run test:post:command && npm run test:publish:command && npm run test:shuoshuo:command && npm run test:site"
+    "test": "npm run format:check && npm run check && node scripts/check-fetch-fonts.mjs && npm run test:post:command && npm run test:shuoshuo:command && npm run test:repo-sync:command && npm run test:publish:command && npm run test:site"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",

@@ -56,16 +56,16 @@
 
 ### 公开页面
 
-| 路径 | 内容 |
-| :---------------- | :----------------------------------------------------------- |
-| `/` | 首页：主视觉、最近 1 篇技术文章、最近 1 条说说 |
-| `/archives/` | 按年归档全部已发布技术文章 |
-| `/tags/` | 标签云 |
-| `/tags/:slug/` | 该标签下的技术文章 |
-| `/posts/:slug/` | 技术文章正文 |
-| `/shuoshuo/` | 说说时间流；单条链接为 `/shuoshuo/#稳定ID` |
-| `/about/` | 关于我 |
-| `/rss.xml` | RSS：技术文章摘要与说说摘要，不含草稿 |
+| 路径            | 内容                                           |
+| :-------------- | :--------------------------------------------- |
+| `/`             | 首页：主视觉、最近 1 篇技术文章、最近 1 条说说 |
+| `/archives/`    | 按年归档全部已发布技术文章                     |
+| `/tags/`        | 标签云                                         |
+| `/tags/:slug/`  | 该标签下的技术文章                             |
+| `/posts/:slug/` | 技术文章正文                                   |
+| `/shuoshuo/`    | 说说时间流；单条链接为 `/shuoshuo/#稳定ID`     |
+| `/about/`       | 关于我                                         |
+| `/rss.xml`      | RSS：技术文章摘要与说说摘要，不含草稿          |
 
 `/posts` 与 `/posts/2` 重定向到归档；旧搜索页 `/search` 重定向到首页。导航是「文章」（归档 / 标签）· 说说 · 关于 · 搜索放大镜。
 
@@ -73,17 +73,12 @@
 
 ### 通用流程
 
-每次开始编辑前先同步正式分支；命令只接受快进，不会自动创建合并提交：
-
-```sh
-git switch main
-git pull --ff-only origin main
-```
+日常在 `main` 上创建内容和发布即可。创建与发布命令会先快进对齐网上的版本，不必先手动 `git pull`。
 
 1. 按下方说明创建技术文章、说说，或修改博客设置。
 2. 运行 `npm run dev`，打开 `http://localhost:4321` 检查页面。验收完整搜索时先停止开发服务器，再运行 `npm run build` 和 `npm run preview`；搜索入口是导航放大镜，焦点不在输入框时按 `/` 也可打开。
 3. 确认内容的 `draft`：`false` 会出现在本地预览并随下一次站点发布公开，`true` 会从页面、搜索、RSS 和站点地图中排除；草稿仍须填写完整字段和正文。
-4. 确认工作树中的全部改动都应该进入同一发布快照，然后运行 `npm run publish -- "<完整提交信息>"`。命令会自行完成校验、生产构建、提交和推送。
+4. 确认工作树中的全部改动都应该进入同一发布快照，然后运行 `npm run publish -- "<完整提交信息>"`。命令会先对齐网上版本，再校验、提交并推送；推送失败时会撤掉刚才那一次提交，文件仍留在本地。
 
 ### 发布技术文章
 
@@ -174,23 +169,23 @@ draft: false
 npm run publish -- "发布新的技术文章"
 ```
 
-命令先运行包含生产构建的 `npm test`；成功后才会暂存全部 tracked 变更、删除及未忽略的新文件，创建一个提交并正常推送到 `origin/main`。技术文章、说说、博客设置和文档可进入同一站点发布快照，`draft` 仍是内容是否公开的唯一开关。命令不会自动格式化、同步分支、解决冲突、改写历史或直接调用 Cloudflare API。
+命令先快进对齐 `origin/main`，再运行包含生产构建的 `npm test`；成功后才会暂存全部 tracked 变更、删除及未忽略的新文件，创建一个提交并推送到 `origin/main`。技术文章、说说、博客设置和文档可进入同一站点发布快照，`draft` 仍是内容是否公开的唯一开关。命令不会自动格式化、合并分叉、改写更早的历史或直接调用 Cloudflare API。
 
-若远程 `main` 已领先，正常推送会失败，本地发布提交会保留且远程不变。请手动同步 `origin/main`、处理冲突并验收后，再自行推送或重新执行发布命令；不要 force-push。
+若网上已有更新且不能快进，命令会停下且不创建提交。若检查通过但推送失败，会撤掉刚才那一次提交，文件仍在本地，可以改完再发布；不要 force-push。
 
 ## 💻 技术栈
 
-| 用途           | 技术                                                        |
-| :------------- | :---------------------------------------------------------- |
-| 框架与静态生成 | [Astro](https://astro.build/) 7，静态输出                   |
-| 类型检查       | [TypeScript](https://www.typescriptlang.org/) + Astro Check |
-| 内容           | Markdown + Astro Content Collections                        |
+| 用途           | 技术                                                                                         |
+| :------------- | :------------------------------------------------------------------------------------------- |
+| 框架与静态生成 | [Astro](https://astro.build/) 7，静态输出                                                    |
+| 类型检查       | [TypeScript](https://www.typescriptlang.org/) + Astro Check                                  |
+| 内容           | Markdown + Astro Content Collections                                                         |
 | Markdown       | [Sätteri](https://docs.astro.build/en/guides/markdown-content/)（GFM、KaTeX、提示块）+ Shiki |
-| 样式           | Tailwind CSS 4、原生 CSS 与 CSS Custom Properties           |
-| 搜索           | [Pagefind](https://pagefind.app/) 弹层，仅已发布技术文章    |
-| 格式化         | [Prettier](https://prettier.io/)                            |
-| 验收           | [Playwright Test](https://playwright.dev/)                  |
-| 部署           | [Cloudflare Pages](https://pages.cloudflare.com/)           |
+| 样式           | Tailwind CSS 4、原生 CSS 与 CSS Custom Properties                                            |
+| 搜索           | [Pagefind](https://pagefind.app/) 弹层，仅已发布技术文章                                     |
+| 格式化         | [Prettier](https://prettier.io/)                                                             |
+| 验收           | [Playwright Test](https://playwright.dev/)                                                   |
+| 部署           | [Cloudflare Pages](https://pages.cloudflare.com/)                                            |
 
 ## 👨🏻‍💻 本地运行
 
@@ -228,7 +223,7 @@ npm run preview
 | `npm test`                    | 运行格式、类型、脚本和站点验收（含生产构建）                 |
 | `npm run new:post -- <slug>`  | 创建带当前上海时间的技术文章 Markdown                        |
 | `npm run new:shuoshuo`        | 创建带上海时间稳定 ID 的说说 Markdown                        |
-| `npm run publish -- "<信息>"` | 验收、构建并发布全部改动到 `origin/main`                     |
+| `npm run publish -- "<信息>"` | 对齐网上版本后验收、构建并发布全部改动                       |
 | `npm run fonts:fetch`         | 下载 Noto 中文字体分包并更新字体 CSS（拉丁字体文件保持不动） |
 
 ## ✨ Feedback & Suggestions

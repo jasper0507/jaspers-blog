@@ -41,6 +41,16 @@ test("Pagefind 页数与已发布技术文章一致", async () => {
   assert.equal(searchIndex.languages["zh-cn"].page_count, postDirectories.length);
 });
 
+test("现行内容教程不禁止手动拉取网上版本", async () => {
+  const html = await readDist("posts/jaspers-blog-content-guide/index.html");
+  assert.doesNotMatch(
+    html,
+    /不要自己执行[\s\S]{0,40}git pull/,
+    "教程不得禁止作者在分叉后手动 git pull",
+  );
+  assert.match(html, /不必先手动[\s\S]{0,40}git pull/, "教程应说明不必先手动 git pull");
+});
+
 test("论文笔记与 Markdown 教程的正文渲染", async () => {
   const paperNotes = await readDist("posts/transformer-paper-notes/index.html");
   const quickStart = await readDist("posts/markdown-quick-start/index.html");
