@@ -67,6 +67,7 @@ test("现行完整设置可以归一化", async () => {
     assert.equal(resolved.site.faviconType, "image/svg+xml");
     assert.equal(resolved.home.hero.darkImage, "/images/hero.jpg");
     assert.equal(resolved.footer.copyright, `© ${year} 作者`);
+    assert.equal("text" in resolved.footer, false);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -112,6 +113,27 @@ test("favicon 支持 public 内 png，并给出 MIME", async () => {
     const resolved = resolveBlogSettings(settings, root);
     assert.equal(resolved.site.favicon, "/images/icon.png");
     assert.equal(resolved.site.faviconType, "image/png");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("主视觉允许 /images/./ 落到现存文件，拒绝 .. 穿越", async () => {
+  const root = await prepareRoot();
+  try {
+    const settings = sample();
+    settings.home.hero.lightImage = "/images/./hero.jpg";
+    const resolved = resolveBlogSettings(settings, root);
+    assert.equal(resolved.home.hero.lightImage, "/images/./hero.jpg");
+
+    assertFails(
+      {
+        ...sample(),
+        home: { hero: { ...sample().home.hero, lightImage: "/images/../favicon.svg" } },
+      },
+      root,
+      /亮色主视觉只接受 public\/images\//,
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }

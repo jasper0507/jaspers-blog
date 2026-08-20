@@ -54,6 +54,14 @@ function required(label: string, value: string) {
   return value;
 }
 
+function rethrowSettingsOrFs(error: unknown, missing: string, loop?: string): never {
+  if (error instanceof Error && error.message.startsWith("博客设置无效：")) throw error;
+  const code = (error as { code?: string }).code;
+  if (code === "ENOENT" || code === "ENOTDIR") fail(missing);
+  if (code === "ELOOP") fail(loop ?? missing);
+  throw error;
+}
+
 function assertLocalPublicFile(
   label: string,
   value: string,
@@ -61,12 +69,11 @@ function assertLocalPublicFile(
   options: { folder: string; prefix: string; area: string; extensions?: string[] },
 ) {
   const { folder, prefix, area, extensions } = options;
-  const segments = value.split("/");
   if (
     !value.startsWith(prefix) ||
     value.includes("\\") ||
     /[%?#]/.test(value) ||
-    segments.some(segment => segment === "." || segment === "..")
+    value.split("/").includes("..")
   ) {
     fail(`${label}只接受 ${area} 中以 ${prefix} 开头的本地路径，不能使用外部 URL 或路径穿越。`);
   }
@@ -91,15 +98,11 @@ function assertLocalPublicFile(
       fail(`${label}文件不存在；请检查 public${value}。`);
     }
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith("博客设置无效：")) throw error;
-    const code = (error as { code?: string }).code;
-    if (code === "ENOENT" || code === "ENOTDIR") {
-      fail(`${label}文件不存在；请检查 public${value}。`);
-    }
-    if (code === "ELOOP") {
-      fail(`${label}文件路径包含循环符号链接；请改用普通文件。`);
-    }
-    throw error;
+    rethrowSettingsOrFs(
+      error,
+      `${label}文件不存在；请检查 public${value}。`,
+      `${label}文件路径包含循环符号链接；请改用普通文件。`,
+    );
   }
 }
 
@@ -158,12 +161,7 @@ export function resolveBlogSettings(settings: BlogSettings, root = repoRoot) {
       fail("“关于我” Markdown 文件缺失；请恢复固定文件 src/content/about.md。");
     }
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith("博客设置无效：")) throw error;
-    const code = (error as { code?: string }).code;
-    if (code === "ENOENT" || code === "ENOTDIR") {
-      fail("“关于我” Markdown 文件缺失；请恢复固定文件 src/content/about.md。");
-    }
-    throw error;
+    rethrowSettingsOrFs(error, "“关于我” Markdown 文件缺失；请恢复固定文件 src/content/about.md。");
   }
 
   const year = new Intl.DateTimeFormat("en", {
@@ -194,7 +192,6 @@ export function resolveBlogSettings(settings: BlogSettings, root = repoRoot) {
       },
     },
     footer: {
-      text: footerText,
       copyright: isBlank(footerText)
         ? ""
         : footerText.replaceAll("{year}", year).replaceAll("{author}", name),
