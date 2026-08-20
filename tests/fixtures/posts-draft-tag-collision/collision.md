@@ -6,6 +6,7 @@ tags:
   - C++
   - C#
 draft: true
+id: 6
 ---
 
 草稿标签网址冲突正文。

@@ -44,5 +44,5 @@ test("搜索弹层键盘生命周期与结果范围", async ({ page }) => {
     .filter({ hasText: "视觉验收专用技术文章" })
     .first();
   await result.waitFor({ state: "visible" });
-  assert.equal(new URL((await result.getAttribute("href")) ?? "", host).pathname, "/posts/visual/");
+  assert.equal(new URL((await result.getAttribute("href")) ?? "", host).pathname, "/posts/2/");
 });

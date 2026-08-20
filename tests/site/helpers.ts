@@ -25,7 +25,7 @@ export const expectedFooterLinks = (author: typeof expectedAuthor) => [
 ];
 export const routes = [
   "/",
-  "/posts/visual/",
+  "/posts/2/",
   "/shuoshuo/",
   "/tags/",
   "/tags/astro/",
@@ -34,7 +34,7 @@ export const routes = [
 ];
 export const visualRoutes = [
   ["home", "/"],
-  ["post", "/posts/visual/"],
+  ["post", "/posts/2/"],
   ["shuoshuo", "/shuoshuo/"],
   ["tags", "/tags/"],
   ["tag", "/tags/astro/"],

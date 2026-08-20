@@ -31,12 +31,12 @@ async function contrastRatio(foreground: Locator, background: Locator) {
 }
 
 test("无 h2/h3 的技术文章不渲染目录", async ({ page }) => {
-  await page.goto(`${host}/posts/alpha/`);
+  await page.goto(`${host}/posts/1/`);
   assert.equal(await page.locator(".post-toc").count(), 0, "无 h2/h3 时不应渲染目录");
 });
 
 test("技术文章元信息与结构化数据", async ({ page }) => {
-  await page.goto(`${host}/posts/visual/`);
+  await page.goto(`${host}/posts/2/`);
   const structuredDataText = await page.locator('script[type="application/ld+json"]').textContent();
   assert.ok(structuredDataText, "技术文章应输出结构化数据");
   const structuredData = JSON.parse(structuredDataText);
@@ -54,7 +54,7 @@ test("技术文章元信息与结构化数据", async ({ page }) => {
 });
 
 test("正文渲染：公式、脚注、提示块与代码块附加", async ({ page }) => {
-  await page.goto(`${host}/posts/visual/`);
+  await page.goto(`${host}/posts/2/`);
   const katex = page.locator(".post-body .katex").first();
   assert.ok(await katex.count(), "公式应渲染为 KaTeX");
   assert.match(
@@ -80,7 +80,7 @@ test("正文渲染：公式、脚注、提示块与代码块附加", async ({ pa
 });
 
 test("正文行距与强调不伪粗、不压掉粗斜体", async ({ page }) => {
-  await page.goto(`${host}/posts/visual/`);
+  await page.goto(`${host}/posts/2/`);
   const body = page.locator(".post-body");
   const ratio = await body.evaluate(element => {
     const style = getComputedStyle(element);
@@ -111,7 +111,7 @@ test("正文行距与强调不伪粗、不压掉粗斜体", async ({ page }) => 
 });
 
 test("正文列表保留标记", async ({ page }) => {
-  await page.goto(`${host}/posts/visual/`);
+  await page.goto(`${host}/posts/2/`);
   assert.equal(
     await page
       .locator(".post-body ul")
@@ -131,7 +131,7 @@ test("正文列表保留标记", async ({ page }) => {
 test("亮暗主题普通文本颜色满足 WCAG AA 对比度", async ({ page }) => {
   for (const theme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: theme });
-    await page.goto(`${host}/posts/visual/`);
+    await page.goto(`${host}/posts/2/`);
     await page.evaluate(nextTheme => {
       document.documentElement.dataset.theme = nextTheme;
     }, theme);
@@ -169,7 +169,7 @@ test("亮暗主题普通文本颜色满足 WCAG AA 对比度", async ({ page }) 
 });
 
 test("目录按正文顺序包含 h2/h3 并跟随滚动", async ({ page }) => {
-  await page.goto(`${host}/posts/visual/`);
+  await page.goto(`${host}/posts/2/`);
   const toc = page.locator(".post-toc");
   const tocLinks = toc.locator('a[href^="#"]');
   assert.deepEqual(
@@ -256,7 +256,7 @@ async function showBackToTop(page: Page) {
 for (const width of [1440, 375]) {
   test(`${width}px 单篇长文滚过标题后可回到顶部`, async ({ page }) => {
     await page.setViewportSize({ width, height: 960 });
-    await page.goto(`${host}/posts/visual/`);
+    await page.goto(`${host}/posts/2/`);
     const button = page.locator("#back-to-top");
     const themeToggle = page.locator("#theme-toggle");
     assert.equal(await button.count(), 1);
@@ -289,7 +289,7 @@ for (const width of [1440, 375]) {
 
 test("短技术文章不显示回到顶部", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 });
-  await page.goto(`${host}/posts/alpha/`);
+  await page.goto(`${host}/posts/1/`);
   const button = page.locator("#back-to-top");
   assert.equal(await button.getAttribute("data-visible"), "false");
   await page.evaluate(() =>

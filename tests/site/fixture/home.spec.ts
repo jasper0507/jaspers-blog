@@ -37,7 +37,7 @@ test("主视觉固定为 3:2 并居中裁切", async ({ page }) => {
   const heroFrame = page.locator(".hero-media");
   const heroImage = page.locator(".hero-image").first();
   await heroImage.evaluate<void, HTMLImageElement>(image => {
-    image.src = "/images/posts/transformer-paper-notes/attention-mechanism.png";
+    image.src = "/images/crop-probe.png";
   });
   await heroImage.evaluate<void, HTMLImageElement>(image => image.decode());
   const crop = await heroImage.evaluate<

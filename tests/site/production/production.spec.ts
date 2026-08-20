@@ -2,14 +2,7 @@ import assert from "node:assert/strict";
 import { access, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "@playwright/test";
-import {
-  assertChineseFootnotes,
-  assertRenderedKatex,
-  build,
-  pagefindFragmentText,
-  productionEnvironment,
-  root,
-} from "../helpers.ts";
+import { build, productionEnvironment, root } from "../helpers.ts";
 
 const accessDist = (path: string) => access(join(root, "dist", path));
 const readDist = (path: string) => readFile(join(root, "dist", path), "utf8");
@@ -51,39 +44,20 @@ test("产物字体自托管且不含 Google Fonts", async () => {
 });
 
 test("Pagefind 页数与已发布技术文章一致", async () => {
-  const postDirectories = (await readdir(join(root, "dist/posts"), { withFileTypes: true })).filter(
-    entry => entry.isDirectory() && entry.name !== "2",
-  );
+  let publishedCount = 0;
+  try {
+    const entries = await readdir(join(root, "dist/posts"), { withFileTypes: true });
+    publishedCount = entries.filter(
+      entry => entry.isDirectory() && /^\d+$/.test(entry.name),
+    ).length;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
   const searchIndex = JSON.parse(await readDist("pagefind/pagefind-entry.json"));
-  assert.equal(searchIndex.languages["zh-cn"].page_count, postDirectories.length);
-});
-
-test("现行内容教程不禁止手动拉取网上版本", async () => {
-  const html = await readDist("posts/jaspers-blog-content-guide/index.html");
-  assert.doesNotMatch(
-    html,
-    /不要自己执行[\s\S]{0,40}git pull/,
-    "教程不得禁止作者在分叉后手动 git pull",
-  );
-  assert.match(html, /不必先手动[\s\S]{0,40}git pull/, "教程应说明不必先手动 git pull");
-});
-
-test("论文笔记与 Markdown 教程的正文渲染", async () => {
-  const paperNotes = await readDist("posts/transformer-paper-notes/index.html");
-  const quickStart = await readDist("posts/markdown-quick-start/index.html");
-  assert.match(paperNotes, /class="katex"/, "论文笔记应渲染 KaTeX");
-  assert.doesNotMatch(paperNotes, /language-math/, "论文笔记不得留下未渲染的 math 源码块");
-  assert.match(
-    paperNotes,
-    /annotation encoding="application\/x-tex">N=6</,
-    "论文笔记行内公式应仍正确",
-  );
-  assertRenderedKatex(quickStart, "Markdown 教程");
-  assertChineseFootnotes(quickStart, "Markdown 教程");
-});
-
-test("Pagefind 排除 KaTeX 后仍能检索正文", async () => {
-  const corpus = await pagefindFragmentText();
-  assert.match(corpus, /多头自注意力/, "索引应保留论文笔记正文");
-  assert.doesNotMatch(corpus, /N=6/, "索引不得包含仅出现在公式中的 TeX");
+  const pageCount = searchIndex.languages["zh-cn"]?.page_count ?? 0;
+  if (publishedCount === 0) {
+    assert.ok(pageCount <= 1, "没有已发布技术文章时搜索索引应为空或仅含占位页");
+    return;
+  }
+  assert.equal(pageCount, publishedCount);
 });

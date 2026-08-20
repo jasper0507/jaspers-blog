@@ -30,12 +30,12 @@ test("说说时间线按发布时间降序、同时间按稳定 ID 降序", asyn
   );
 });
 
-test("归档按发布时间降序、同时间按 slug 升序", async () => {
+test("归档按发布时间降序、同时间按稳定 ID 升序", async () => {
   const archive = await readDist("archives/index.html");
   assertInOrder(
     archive,
-    ["/posts/alpha/", "/posts/visual/", "/posts/older/"],
-    "归档应按发布时间降序、同时间按 slug 升序",
+    ["/posts/1/", "/posts/2/", "/posts/3/"],
+    "归档应按发布时间降序、同时间按稳定 ID 升序",
   );
   assert.match(archive, /datetime="2026-01-01T16:00:00.000Z"[^>]*>\s*2026-01-02/);
 });
@@ -63,7 +63,7 @@ test("RSS 合并技术文章与说说并保持排序", async () => {
 test("站点地图收录范围", async () => {
   const sitemap = await readDist("sitemap-0.xml");
   assert.ok(sitemap.includes(`<loc>${expectedSite.url}</loc>`));
-  assert.match(sitemap, /\/posts\/alpha\//);
+  assert.match(sitemap, /\/posts\/1\//);
   assert.match(sitemap, /\/tags\/astro\//);
   assert.doesNotMatch(
     sitemap,

@@ -5,6 +5,7 @@ publishedAt: "2025-12-31T23:30:00+08:00"
 tags:
   - Astro
 draft: false
+id: 3
 ---
 
 较早文章正文。

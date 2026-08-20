@@ -1,7 +1,7 @@
 import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
-import { isPostSlug, POST_CONTENT_DIRECTORY } from "./lib/post-rules.js";
+import { isPostFilename, POST_CONTENT_DIRECTORY } from "./lib/post-rules.js";
 import { isShanghaiDateTime } from "./lib/shanghai-time.js";
 import { isShuoshuoStableId, SHUOSHUO_CONTENT_DIRECTORY } from "./lib/shuoshuo-rules.js";
 import { getTagError } from "./lib/tags";
@@ -20,7 +20,7 @@ const postFiles = glob({
   pattern: "**/*.md",
   generateId: ({ entry }) => {
     const id = entry.match(/^(.+)\.md$/)?.[1] ?? "";
-    if (!isPostSlug(id)) throw new Error(`技术文章文件名必须是小写 ASCII slug：${entry}`);
+    if (!isPostFilename(id)) throw new Error(`技术文章文件名无效：${entry}`);
     return id;
   },
 });
@@ -30,6 +30,7 @@ const posts = defineCollection({
     .object({
       title: z.string().trim().min(1),
       description: z.string().trim().min(1),
+      id: z.number().int().positive(),
       publishedAt,
       tags: z
         .array(

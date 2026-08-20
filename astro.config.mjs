@@ -69,7 +69,6 @@ export default defineConfig({
   ],
   redirects: {
     "/posts": "/archives",
-    "/posts/2": "/archives",
     "/search": "/",
   },
   vite: {

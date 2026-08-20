@@ -62,12 +62,12 @@
 | `/archives/`    | 按年归档全部已发布技术文章                     |
 | `/tags/`        | 标签云                                         |
 | `/tags/:slug/`  | 该标签下的技术文章                             |
-| `/posts/:slug/` | 技术文章正文                                   |
+| `/posts/:id/`   | 技术文章正文，`:id` 为创建时分配的稳定数字     |
 | `/shuoshuo/`    | 说说时间流；单条链接为 `/shuoshuo/#稳定ID`     |
 | `/about/`       | 关于我                                         |
 | `/rss.xml`      | RSS：技术文章摘要与说说摘要，不含草稿          |
 
-`/posts` 与 `/posts/2` 重定向到归档；旧搜索页 `/search` 重定向到首页。导航是「文章」（归档 / 标签）· 说说 · 关于 · 搜索放大镜。
+`/posts` 重定向到归档；旧搜索页 `/search` 重定向到首页。导航是「文章」（归档 / 标签）· 说说 · 关于 · 搜索放大镜。
 
 ## ✍️ 日常使用
 
@@ -82,33 +82,35 @@
 
 ### 发布技术文章
 
-运行项目命令创建技术文章；参数只写由小写 ASCII 字母、数字和短横线组成的路径名，不带扩展名：
+运行项目命令创建技术文章；只提供标题（有空格时加引号）。公开网址由系统分配数字稳定 ID，不必也不允许指定号码：
 
 ```sh
-npm run new:post -- my-first-post
+npm run new:post -- "深度学习笔记"
 ```
 
-命令会安全创建 `src/content/posts/my-first-post.md`，且不会覆盖同名文章或自动追加编号。文件名会生成 `/posts/my-first-post/`，手动重命名会改变公开网址，旧网址不会保留或重定向。
+命令会把标题写入模板，按标题生成 `src/content/posts/深度学习笔记.md`（去掉文件系统非法字符），并分配 `/posts/1/` 这类网址。同名文件不会被覆盖；创建失败时不会占用号码。改标题不会改文件名或网址。
 
 ```md
 ---
-title: "文章标题"
+title: "深度学习笔记"
 description: "用于列表、搜索与页面元信息的简短摘要。"
 publishedAt: "2026-08-11T10:00:00+08:00"
 tags:
   - "Astro"
   - "前端开发"
 draft: true
+id: 1
 ---
 
 从这里开始写正文。
 ```
 
-- 模板自动填写当前上海时间、`tags: []` 和 `draft: false`，标题、摘要与正文留空；补完这些内容前构建会失败。
-- `title`、`description`、`publishedAt`、`draft` 必填；文章不维护更新时间，`updatedAt` 和其他未知字段会使构建失败。
+- 模板自动填写标题、当前上海时间、`tags: []`、`draft: false` 和系统分配的 `id`；摘要与正文留空，补完前构建会失败。
+- `title`、`description`、`publishedAt`、`draft`、`id` 必填；文章不维护更新时间，`updatedAt` 和其他未知字段会使构建失败。
+- `id` 是正整数稳定身份，由创建命令写入，不要手改；计数器文件 `src/content/post-next-id.json` 也不要手改。
 - `tags` 可省略或留空，同一篇文章内标签不得重复，也不需要预先登记。不同标签若生成相同网址，构建会失败（草稿也参与检查）。
 - `publishedAt` 必须是加引号的有效上海时间字符串 `"YYYY-MM-DDTHH:mm:ss+08:00"`；未加引号的 YAML 日期值、UTC `Z` 和其他时区均无效。
-- `draft: true` 不进入公开页面；准备发布时改为 `false`。发布时间只用于显示和排序，不提供定时发布。
+- `draft: true` 不进入公开页面；准备发布时改为 `false`。发布时间只用于显示和排序，不提供定时发布。数字网址也不是发布时间顺序。
 - 正文不能为空。文章图片使用外部图床，并以普通 Markdown 图片语法引用。
 - 正文可用 GFM（表格、任务列表、删除线、自动链接、脚注）、`$...$` / `$$...$$` 公式、GitHub 提示块（`> [!NOTE]` 等）和原生 `<details>`。代码块支持 `title="file.js"`、行高亮与 diff 标记。
 - 保存后按通用流程预览；准备公开时确认 `draft: false`，再运行下方的站点发布命令。
@@ -222,7 +224,7 @@ npm run preview
 | `npm run format`              | 使用 Prettier 格式化项目文件                                 |
 | `npm run format:check`        | 检查项目文件格式，不修改文件                                 |
 | `npm test`                    | 运行格式、类型、脚本和站点验收（含生产构建）                 |
-| `npm run new:post -- <slug>`  | 创建带当前上海时间的技术文章 Markdown                        |
+| `npm run new:post -- "<标题>"` | 按标题创建技术文章 Markdown，并分配数字网址                  |
 | `npm run new:shuoshuo`        | 创建带上海时间稳定 ID 的说说 Markdown                        |
 | `npm run publish -- "<信息>"` | 对齐网上版本后验收、构建并发布全部改动                       |
 | `npm run fonts:fetch`         | 下载 Noto 中文字体分包并更新字体 CSS（拉丁字体文件保持不动） |

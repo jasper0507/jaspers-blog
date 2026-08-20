@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,9 +12,8 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const astro = join(root, "node_modules/astro/bin/astro.mjs");
 const script = fileURLToPath(new URL("new-post.mjs", import.meta.url));
 const workingDirectory = await mkdtemp(join(tmpdir(), "newblog-post-"));
-const slug = "new-post";
 const directory = join(workingDirectory, "src/content/posts");
-const path = join(directory, `${slug}.md`);
+const nextIdPath = join(workingDirectory, "src/content/post-next-id.json");
 const { remoteDirectory } = await initRepoWithOrigin(workingDirectory);
 
 function run(...args) {
@@ -37,30 +36,38 @@ function build() {
   });
 }
 
-async function rejectsBuild(source) {
+async function writeNext(next) {
+  await mkdir(join(workingDirectory, "src/content"), { recursive: true });
+  await writeFile(nextIdPath, `{"next": ${next}}\n`);
+}
+
+async function readNext() {
+  return JSON.parse(await readFile(nextIdPath, "utf8")).next;
+}
+
+async function rejectsBuild(source, path = join(directory, "深度学习笔记.md")) {
   await writeFile(path, source);
   await assert.rejects(build());
 }
 
 try {
   await assert.rejects(run());
-  for (const invalid of [
-    "New-post",
-    "new_post",
-    "new-post.md",
-    "-new-post",
-    "new-post-",
-    "new--post",
-  ]) {
-    await assert.rejects(run(invalid));
-  }
+  await assert.rejects(run("   "));
+  await assert.rejects(run("???"));
+  await assert.rejects(run(".hidden"));
   await assert.rejects(run("one", "two"));
+  await assert.rejects(run("深度学习笔记"));
 
+  await writeNext(1);
   const before = new Date();
-  await run(slug);
+  const created = await run("深度学习笔记");
   const after = new Date();
-  assert.deepEqual(await readdir(directory), [`${slug}.md`]);
+  assert.match(created.stdout, /已创建 src\/content\/posts\/深度学习笔记\.md/);
+  assert.match(created.stdout, /公开网址 \/posts\/1\//);
+  assert.deepEqual(await readdir(directory), ["深度学习笔记.md"]);
+  assert.equal(await readNext(), 2);
 
+  const path = join(directory, "深度学习笔记.md");
   const source = await readFile(path, "utf8");
   const publishedAt = source.match(/^publishedAt: "(.+)"$/m)?.[1];
   assert.ok(publishedAt, "应生成发布时间");
@@ -69,20 +76,35 @@ try {
   assert.ok(publishedTime >= before.getTime() - 1_000 && publishedTime <= after.getTime() + 1_000);
   assert.equal(
     source,
-    `---\ntitle: ""\ndescription: ""\npublishedAt: "${publishedAt}"\ntags: []\ndraft: false\n---\n`,
+    `---\ntitle: "深度学习笔记"\ndescription: ""\npublishedAt: "${publishedAt}"\ntags: []\ndraft: false\nid: 1\n---\n`,
   );
 
-  await assert.rejects(run(slug));
+  await assert.rejects(run("深度学习笔记"));
   assert.equal(await readFile(path, "utf8"), source, "冲突时不得覆盖文章");
+  assert.equal(await readNext(), 2, "冲突时不得占用号码");
+
+  await assert.rejects(run("???"));
+  assert.equal(await readNext(), 2, "创建失败时不得占用号码");
+
+  const stripped = await run("问答?");
+  assert.match(stripped.stdout, /已创建 src\/content\/posts\/问答\.md/);
+  assert.match(stripped.stdout, /公开网址 \/posts\/2\//);
+  assert.equal(await readNext(), 3);
+  const strippedSource = await readFile(join(directory, "问答.md"), "utf8");
+  assert.match(strippedSource, /^title: "问答\?"$/m);
+  assert.match(strippedSource, /^id: 2$/m);
+
+  await rm(join(directory, "问答.md"));
+  await writeNext(2);
+
   await assert.rejects(build(), "未完成模板不得通过构建");
 
   const validSource = source
-    .replace('title: ""', 'title: "新技术文章"')
     .replace('description: ""', 'description: "技术文章创建命令验收。"')
     .concat("\n正文。\n");
   await writeFile(path, validSource);
   await build();
-  assert.match(await readFile(join(root, `dist/posts/${slug}/index.html`), "utf8"), /新技术文章/);
+  assert.match(await readFile(join(root, "dist/posts/1/index.html"), "utf8"), /深度学习笔记/);
 
   await rejectsBuild(validSource.replace(`"${publishedAt}"`, publishedAt));
 
@@ -98,7 +120,7 @@ try {
     validSource.replace("draft: false", "updatedAt: 2026-08-13T12:00:00+08:00\ndraft: false"),
   );
   await rejectsBuild(validSource.replace("draft: false", "extra: true\ndraft: false"));
-  await rejectsBuild(validSource.replace('title: "新技术文章"', 'title: ""'));
+  await rejectsBuild(validSource.replace('title: "深度学习笔记"', 'title: ""'));
   await rejectsBuild(
     validSource.replace('description: "技术文章创建命令验收。"', 'description: ""'),
   );
@@ -106,6 +128,13 @@ try {
   await rejectsBuild(
     validSource.replace("draft: false", "draft: true").replace("\n正文。\n", "\n"),
   );
+  await rejectsBuild(validSource.replace("id: 1", "id: 0"));
+  await rejectsBuild(validSource.replace(/\nid: 1\n/, "\n"));
+  await writeNext(1);
+  await rejectsBuild(validSource);
+  await writeNext(3);
+  await writeFile(path, validSource);
+  await rejectsBuild(validSource, join(directory, "另一篇.md"));
 } finally {
   await rm(workingDirectory, { recursive: true, force: true });
   await rm(remoteDirectory, { recursive: true, force: true });
