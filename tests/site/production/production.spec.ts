@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { access, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "@playwright/test";
+import { countPublishedPostPages } from "../../../scripts/lib/index-published-posts.mjs";
 import { build, productionEnvironment, root } from "../helpers.ts";
 
 const accessDist = (path: string) => access(join(root, "dist", path));
@@ -44,15 +45,7 @@ test("产物字体自托管且不含 Google Fonts", async () => {
 });
 
 test("Pagefind 页数与已发布技术文章一致", async () => {
-  let publishedCount = 0;
-  try {
-    const entries = await readdir(join(root, "dist/posts"), { withFileTypes: true });
-    publishedCount = entries.filter(
-      entry => entry.isDirectory() && /^\d+$/.test(entry.name),
-    ).length;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-  }
+  const publishedCount = await countPublishedPostPages(join(root, "dist"));
   const searchIndex = JSON.parse(await readDist("pagefind/pagefind-entry.json"));
   const pageCount = searchIndex.languages["zh-cn"]?.page_count ?? 0;
   if (publishedCount === 0) {
