@@ -157,6 +157,18 @@ test("无记忆暗色时 theme-color 跟随纸色，切换钮与已解析主题�
   await assertResolvedThemeColor(page, "dark");
 });
 
+test("主题无法持久化时当前页仍可切换", async ({ page }) => {
+  await page.addInitScript(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException("无法持久化", "QuotaExceededError");
+    };
+  });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto(host, { waitUntil: "load" });
+  await page.locator("#theme-toggle").click();
+  await assertResolvedThemeColor(page, "dark");
+});
+
 test("主题切换写入 theme 并在重载后保持", async ({ page }) => {
   await page.goto(host, { waitUntil: "networkidle" });
   await page.locator("#theme-toggle").click();

@@ -98,15 +98,15 @@ const structuredData = JSON.stringify(
           }
         };
 
-        const applyResolved = () => {
-          root.dataset.theme = savedTheme() ?? systemTheme();
+        const applyResolved = (theme = savedTheme() ?? systemTheme()) => {
+          root.dataset.theme = theme;
           const meta = document.querySelector('meta[name="theme-color"]');
           const color = getComputedStyle(root).getPropertyValue("--background").trim();
           if (meta && color) meta.setAttribute("content", color);
         };
 
-        const syncControls = () => {
-          applyResolved();
+        const syncControls = theme => {
+          applyResolved(theme);
           const button = document.querySelector("#theme-toggle");
           if (!(button instanceof HTMLButtonElement)) return;
           const current = root.dataset.theme;
@@ -117,7 +117,7 @@ const structuredData = JSON.stringify(
         };
 
         applyResolved();
-        matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncControls);
+        matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => syncControls());
         document.addEventListener("DOMContentLoaded", () => {
           const button = document.querySelector("#theme-toggle");
           if (button instanceof HTMLButtonElement) {
@@ -129,12 +129,12 @@ const structuredData = JSON.stringify(
               } catch (error) {
                 console.warn("无法保存主题设置。", error);
               }
-              syncControls();
+              syncControls(next);
             });
           }
           syncControls();
         });
-        addEventListener("load", syncControls);
+        addEventListener("load", () => syncControls());
       })();
     </script>
   </head>

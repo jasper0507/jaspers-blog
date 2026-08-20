@@ -47,6 +47,15 @@ try {
   assert.equal(await countPublishedPostPages(publishedDist), 1);
   await indexPublishedPosts(root, publishedDist);
   assert.equal(await pageCount(publishedDist), 1);
+
+  await mkdir(join(publishedDist, "posts/2"));
+  await writeFile(
+    join(publishedDist, "posts/2/index.html"),
+    `<!doctype html><html lang="zh-cn"><head><meta charset="utf-8"><title>另一篇公开文章</title></head><body data-pagefind-body><p>另一篇公开技术文章</p></body></html>\n`,
+  );
+  assert.equal(await countPublishedPostPages(publishedDist), 2);
+  await indexPublishedPosts(root, publishedDist);
+  assert.equal(await pageCount(publishedDist), 2);
 } finally {
   await rm(workingDirectory, { recursive: true, force: true });
 }

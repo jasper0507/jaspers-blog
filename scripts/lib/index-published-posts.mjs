@@ -26,8 +26,12 @@ export async function countPublishedPostPages(distDirectory) {
 export async function indexPublishedPosts(root, distDirectory = join(root, "dist")) {
   const seedDirectory = join(distDirectory, ".pagefind-seed");
   const names = await publishedPostDirectories(distDirectory);
-  const globs =
-    names.length > 0 ? names.map(name => `posts/${name}/**/*.html`) : [".pagefind-seed/**/*.html"];
+  const glob =
+    names.length === 0
+      ? ".pagefind-seed/**/*.html"
+      : names.length === 1
+        ? `posts/${names[0]}/**/*.html`
+        : `posts/{${names.join(",")}}/**/*.html`;
 
   if (names.length === 0) {
     await mkdir(seedDirectory, { recursive: true });
@@ -37,7 +41,7 @@ export async function indexPublishedPosts(root, distDirectory = join(root, "dist
   try {
     await execFileAsync(
       join(root, "node_modules/.bin/pagefind"),
-      ["--site", distDirectory, ...globs.flatMap(glob => ["--glob", glob])],
+      ["--site", distDirectory, "--glob", glob],
       { cwd: root, stdio: "inherit" },
     );
   } finally {
