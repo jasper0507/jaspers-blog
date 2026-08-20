@@ -48,6 +48,18 @@
   --focus: light-dark(#8f3f2d, #f39a79);
   --shell-width: 70rem;
   --gutter: 2rem;
+  --duration: 220ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --z-toc: 5;
+  --z-header: 10;
+  --z-float: 40;
+  --z-grain: 60;
+  --z-skip: 100;
+  --shadow-color: light-dark(rgb(61 42 28 / 12%), rgb(8 6 4 / 45%));
+  --shadow-color-strong: light-dark(rgb(61 42 28 / 16%), rgb(8 6 4 / 55%));
+  --shadow-float: 0 0.35rem 1.25rem var(--shadow-color);
+  --shadow-float-hover: 0 0.5rem 1.6rem var(--shadow-color-strong);
+  --shadow-menu: 0 0.8rem 2rem var(--shadow-color-strong);
 
   /* Pagefind 面板：对齐站内暖纸 token */
   --pf-text: var(--text);
@@ -108,6 +120,7 @@ html[data-theme="dark"] {
     text-decoration-color: var(--accent);
     text-decoration-thickness: 0.08em;
     text-underline-offset: 0.22em;
+    transition: color var(--duration) var(--ease-out);
   }
 
   a:hover {
@@ -124,11 +137,51 @@ html[data-theme="dark"] {
     color: inherit;
     font: inherit;
   }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 28%, var(--surface));
+    color: var(--text);
+  }
 }
 
 /* 跳链：平时收起，聚焦时落回视口内 */
 .skip-link {
-  @apply fixed top-3 left-3 z-[100] -translate-y-[160%] bg-text px-4 py-[0.7rem] text-background focus:translate-y-0;
+  @apply fixed top-3 left-3 z-[var(--z-skip)] -translate-y-[160%] bg-text px-4 py-[0.7rem] text-background focus:translate-y-0;
+  transition: transform var(--duration) var(--ease-out);
+}
+
+/* 纸面微粒：固定层，不参与滚动重绘 */
+.paper-grain {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-grain);
+  pointer-events: none;
+  opacity: 0.04;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+html[data-theme="dark"] .paper-grain {
+  opacity: 0.055;
+  mix-blend-mode: overlay;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .paper-grain {
+    opacity: 0.055;
+    mix-blend-mode: overlay;
+  }
 }
 
 /*
@@ -200,7 +253,7 @@ body pagefind-summary {
 
 /* 归档 / 标签 / 说说 / 关于共用的长文页壳 */
 .page-shell {
-  @apply mx-auto max-w-[48rem] pt-[clamp(4rem,8vw,6.5rem)] pb-[clamp(5rem,9vw,7.5rem)];
+  @apply mx-auto max-w-[48rem] pt-[clamp(3.5rem,7vw,6rem)] pb-[clamp(5rem,9vw,7.5rem)];
 }
 
 .empty-state {
@@ -217,5 +270,7 @@ body pagefind-summary {
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

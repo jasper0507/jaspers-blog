@@ -5,4 +5,13 @@
   border: 1px solid var(--line);
   border-radius: 0.75rem;
   background: var(--surface);
+  transition:
+    border-color var(--duration) var(--ease-out),
+    box-shadow var(--duration) var(--ease-out);
+}
+
+.shuoshuo-preview:hover,
+.shuoshuo-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  box-shadow: var(--shadow-float);
 }

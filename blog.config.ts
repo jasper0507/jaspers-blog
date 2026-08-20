@@ -12,7 +12,7 @@ export default {
     /** 默认简介：用于没有单独简介的页面元信息和 RSS。 */
     description: "Jasper 的个人技术博客，记录技术文章与说说。",
     /** 可选 1:1 浏览器图标；优先方形 SVG，PNG/ICO 至少包含 32×32 表示。 */
-    favicon: undefined,
+    favicon: "/favicon.svg",
   },
   /** 作者：显示名补全博客身份，并与固定公开联系方式集中填写。 */
   author: {
@@ -29,11 +29,11 @@ export default {
       /** 首页主视觉上方的一句话。 */
       caption: "喊黑夜吻白天。",
       /** 亮色主视觉：3:2，推荐 960×640 或更高；非 3:2 图片居中裁切且不拉伸。 */
-      lightImage: "/images/hero-light.svg",
+      lightImage: "/images/hero-light.jpg",
       /** 可选 3:2 暗色主视觉；应与亮图尺寸及主体位置一致，省略时复用亮图。 */
-      darkImage: "/images/hero-dark.svg",
+      darkImage: "/images/hero-dark.jpg",
       /** 图片有表达内容时填写说明；纯装饰图片明确填写空字符串。 */
-      alt: "Jasper 的博客主视觉",
+      alt: "暮色下的山脊，天光与夜色在地平线交界",
     },
   },
   /** 页脚：左侧纯文本；右侧 RSS、GitHub 与邮箱保持固定。 */

@@ -65,6 +65,16 @@ test("主视觉固定为 3:2 并居中裁切", async ({ page }) => {
   assert.equal(await heroFrame.evaluate(element => getComputedStyle(element).overflow), "hidden");
 });
 
+test("最近文章摘要为两行预览", async ({ page }) => {
+  await page.goto(host, { waitUntil: "networkidle" });
+  const description = page.locator(".post-preview-description");
+  assert.equal(await description.count(), 1);
+  assert.equal(
+    await description.evaluate(element => getComputedStyle(element).webkitLineClamp),
+    "2",
+  );
+});
+
 test("首页元信息、品牌与页脚", async ({ page }) => {
   await page.goto(host, { waitUntil: "networkidle" });
   assert.equal(await page.title(), expectedSite.title);

@@ -2,6 +2,19 @@ import assert from "node:assert/strict";
 import { test } from "@playwright/test";
 import { host, routes } from "../helpers.ts";
 
+test("未知路径显示站点 404", async ({ page }) => {
+  const response = await page.goto(`${host}/not-a-page/`, { waitUntil: "networkidle" });
+  assert.equal(response?.status(), 404);
+  assert.equal((await page.locator("h1").textContent())?.trim(), "没有找到这个页面");
+  assert.equal(await page.locator('.not-found-links a[href="/"]').count(), 1);
+  assert.equal(await page.locator('.not-found-links a[href="/archives/"]').count(), 1);
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  );
+});
+
 for (const width of [1440, 320]) {
   for (const theme of ["light", "dark"] as const) {
     for (const path of routes) {

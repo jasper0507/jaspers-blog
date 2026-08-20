@@ -26,6 +26,8 @@ test("生产构建产物覆盖固定栏位", async () => {
     accessDist("sitemap-index.xml"),
     accessDist("sitemap-0.xml"),
     accessDist("pagefind/pagefind.js"),
+    accessDist("404.html"),
+    accessDist("favicon.svg"),
   ]);
   await assert.rejects(accessDist("categories/index.html"));
   await assert.rejects(accessDist("prototype/warmth/index.html"));

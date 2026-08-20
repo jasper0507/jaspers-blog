@@ -26,10 +26,11 @@ test("标签云排列与悬停反馈", async ({ page }) => {
     "标签 chip 应使用纸面背景与细边框",
   );
   await tagChip.hover();
-  await page.waitForTimeout(200);
-  assert.match(
-    await tagChip.evaluate(element => getComputedStyle(element).transform),
-    /^matrix\(1\.04, 0, 0, 1\.04, 0, 0\)$/,
-    "标签 chip 悬停时应放大",
-  );
+  await page.waitForFunction(() => {
+    const chip = document.querySelector(".tag-cloud a");
+    return (
+      chip instanceof HTMLElement &&
+      getComputedStyle(chip).transform === "matrix(1.04, 0, 0, 1.04, 0, 0)"
+    );
+  });
 });

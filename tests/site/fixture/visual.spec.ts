@@ -21,7 +21,12 @@ for (const width of [1440, 375]) {
       const page = await context.newPage();
       for (const [name, path] of visualRoutes) {
         await page.goto(`${host}${path}`, { waitUntil: "networkidle" });
-        await page.evaluate(() => document.fonts.ready);
+        await page.evaluate(async () => {
+          await document.fonts.ready;
+          await Promise.all(
+            document.getAnimations().map(animation => animation.finished.catch(() => {})),
+          );
+        });
         if (path === "/") {
           const visibleHero = hasDarkHero ? `.hero-image-${theme}` : ".hero-image";
           assert.equal(

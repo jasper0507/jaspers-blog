@@ -1,6 +1,6 @@
 # Jasper's Blog 📝
 
-![Jasper's Blog](public/images/hero-light.svg)
+![Jasper's Blog](public/images/hero-light.jpg)
 
 [![Astro](https://img.shields.io/badge/Astro-7.1.6-BC52EE?style=for-the-badge&logo=astro&logoColor=white)](https://astro.build/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)

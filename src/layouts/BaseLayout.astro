@@ -58,8 +58,15 @@ const structuredData = JSON.stringify(
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
-    {favicon && <link rel="icon" href={favicon} />}
+    {favicon && <link rel="icon" href={favicon} type="image/svg+xml" />}
     <link rel="canonical" href={canonical} />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={siteTitle}
+      href={new URL("rss.xml", url).href}
+    />
+    <meta name="theme-color" content="#f5f2ea" />
     <meta property="og:type" content={pageData.ogType ?? "website"} />
     <meta property="og:locale" content="zh_CN" />
     <meta property="og:site_name" content={siteTitle} />
@@ -76,6 +83,15 @@ const structuredData = JSON.stringify(
       (() => {
         const key = "jasper-theme";
         const root = document.documentElement;
+        const themeColors = { light: "#f5f2ea", dark: "#272421" };
+
+        const applyThemeColor = theme => {
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", themeColors[theme]);
+        };
+
+        const systemTheme = () =>
+          matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 
         try {
           const saved = localStorage.getItem(key);
@@ -84,13 +100,13 @@ const structuredData = JSON.stringify(
           console.warn("无法读取主题设置，将跟随系统主题。", error);
         }
 
+        applyThemeColor(root.dataset.theme ?? systemTheme());
+
         document.addEventListener("DOMContentLoaded", () => {
           const button = document.querySelector("#theme-toggle");
           if (!(button instanceof HTMLButtonElement)) return;
 
-          const currentTheme = () =>
-            root.dataset.theme ??
-            (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          const currentTheme = () => root.dataset.theme ?? systemTheme();
 
           const updateButton = () => {
             const current = currentTheme();
@@ -98,6 +114,7 @@ const structuredData = JSON.stringify(
             button.dataset.theme = current;
             button.setAttribute("aria-label", label);
             button.title = label;
+            applyThemeColor(current);
           };
 
           button.addEventListener("click", () => {
@@ -119,7 +136,7 @@ const structuredData = JSON.stringify(
   </head>
   <body>
     <a class="skip-link" href="#main-content">跳到主要内容</a>
-    <header class="site-header relative z-10">
+    <header class="site-header relative z-[var(--z-header)]">
       <div
         class="header-inner shell-track grid min-h-[4.5rem] grid-cols-[1fr_auto] items-center gap-[0.2rem_1rem] border-b border-text py-3 min-[52rem]:gap-x-5 min-[52rem]:py-0"
       >
@@ -238,7 +255,7 @@ const structuredData = JSON.stringify(
       </pagefind-modal-footer>
     </pagefind-modal>
     <button
-      class="theme-toggle group fixed right-[max(1rem,env(safe-area-inset-right,0px))] bottom-[max(1rem,env(safe-area-inset-bottom,0px))] z-40 grid h-[2.75rem] w-[2.75rem] cursor-pointer place-items-center rounded-full border border-line bg-surface p-0 shadow-[0_0.35rem_1.25rem_rgb(0_0_0/8%)] transition-[border-color,color,background-color,box-shadow] duration-[180ms] ease-in hover:border-accent hover:bg-surface hover:text-accent hover:shadow-[0_0.45rem_1.4rem_rgb(0_0_0/12%)]"
+      class="theme-toggle group fixed right-[max(1rem,env(safe-area-inset-right,0px))] bottom-[max(1rem,env(safe-area-inset-bottom,0px))] z-[var(--z-float)] grid h-[2.75rem] w-[2.75rem] cursor-pointer place-items-center rounded-full border border-line bg-surface p-0 shadow-[var(--shadow-float)] transition-[border-color,color,background-color,box-shadow,transform] duration-[var(--duration)] ease-[var(--ease-out)] hover:border-accent hover:bg-surface hover:text-accent hover:shadow-[var(--shadow-float-hover)] active:scale-[0.96]"
       id="theme-toggle"
       type="button"
       aria-label="切换主题"
@@ -274,8 +291,9 @@ const structuredData = JSON.stringify(
         margin: 0;
         padding: 0.45rem;
         border: 1px solid var(--line);
+        border-radius: 0.65rem;
         background: var(--surface);
-        box-shadow: 0 0.8rem 2rem rgb(0 0 0 / 12%);
+        box-shadow: var(--shadow-menu);
         transform: translateX(-50%);
       }
 
@@ -298,12 +316,13 @@ const structuredData = JSON.stringify(
         stroke-linecap: round;
         stroke-linejoin: round;
         stroke-width: 1.5;
-        transition: transform 180ms ease;
+        transition: transform var(--duration) var(--ease-out);
       }
 
       .article-menu:has(.article-menu-list:popover-open) > button svg {
         transform: rotate(180deg);
       }
     </style>
+    <div class="paper-grain" aria-hidden="true"></div>
   </body>
 </html>

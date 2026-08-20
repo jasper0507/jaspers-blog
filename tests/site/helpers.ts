@@ -40,6 +40,7 @@ export const visualRoutes = [
   ["tag", "/tags/astro/"],
   ["archives", "/archives/"],
   ["about", "/about/"],
+  ["not-found", "/not-a-page/"],
 ] as const;
 export const productionEnvironment = {
   ...process.env,

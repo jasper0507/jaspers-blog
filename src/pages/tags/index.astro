@@ -55,17 +55,21 @@ const { tags } = await getPublishedPostCatalog();
     text-decoration: none;
     transform: scale(1);
     transition:
-      border-color 0.15s ease,
-      box-shadow 0.15s ease,
-      transform 0.15s ease,
-      color 0.15s ease;
+      border-color 150ms var(--ease-out),
+      box-shadow 150ms var(--ease-out),
+      transform 150ms var(--ease-out),
+      color 150ms var(--ease-out);
   }
 
   .tag-cloud a:hover {
     border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-    box-shadow: 0 0.3rem 0.85rem color-mix(in srgb, var(--text) 6%, transparent);
+    box-shadow: var(--shadow-float);
     color: var(--text);
     transform: scale(1.04);
+  }
+
+  .tag-cloud a:active {
+    transform: scale(0.99);
   }
 
   .tag-cloud a:focus-visible {

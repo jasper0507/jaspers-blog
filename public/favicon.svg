@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img">
+  <title>JaspersBlog</title>
+  <style>
+    .paper {
+      fill: #f5f2ea;
+    }
+    .ridge {
+      fill: #a14d2e;
+    }
+    .sun {
+      fill: #c9b49a;
+    }
+    @media (prefers-color-scheme: dark) {
+      .paper {
+        fill: #272421;
+      }
+      .ridge {
+        fill: #d97757;
+      }
+      .sun {
+        fill: #e0c4a8;
+      }
+    }
+  </style>
+  <rect class="paper" width="32" height="32" rx="7" />
+  <circle class="sun" cx="22" cy="11" r="4" />
+  <path class="ridge" d="M0 20c5-3 9-4 14-2 4 1.6 7 5 12 6 2 .4 4 .4 6 0V32H0V20z" />
+</svg>

@@ -1,0 +1,50 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="没有找到这个页面"
+  description="这个地址没有对应的内容。"
+  pageClass="page-shell not-found"
+>
+  <h1>没有找到这个页面</h1>
+  <p>这个地址没有对应的内容。可以从首页或归档继续读。</p>
+  <p class="not-found-links">
+    <a href="/">回首页</a>
+    <a href="/archives/">归档</a>
+  </p>
+</BaseLayout>
+
+<style>
+  h1 {
+    margin: 0 0 1.1rem;
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 4.5vw, 2.85rem);
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    line-height: 1.2;
+  }
+
+  p {
+    max-width: 36rem;
+    margin: 0;
+    color: var(--muted);
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    line-height: 1.65;
+  }
+
+  .not-found-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    margin-top: 1.75rem;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .not-found-links a {
+    color: var(--text);
+  }
+</style>

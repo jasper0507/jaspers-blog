@@ -78,7 +78,7 @@ if (toc.length === 0) return;
     max-height: 60vh;
     padding-left: 1.125rem;
     position: fixed;
-    z-index: 5;
+    z-index: var(--z-toc);
     top: 50%;
     left: calc(50% + var(--reading-width) / 2 + 2.5rem);
     overflow-x: hidden;
@@ -121,8 +121,8 @@ if (toc.length === 0) return;
     line-height: 1.4;
     text-decoration: none;
     transition:
-      color 160ms ease,
-      border-color 160ms ease;
+      color var(--duration) var(--ease-out),
+      border-color var(--duration) var(--ease-out);
   }
 
   .post-toc a:hover {

@@ -42,6 +42,14 @@ const description = `关于 ${blogSettings.author.name} 与 ${blogSettings.site.
     margin-block: 0 1.25rem;
   }
 
+  :global(.about-page p:first-of-type) {
+    margin-bottom: 1.75rem;
+    font-size: clamp(1.65rem, 3.2vw, 2.25rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.25;
+  }
+
   :global(.about-page ul) {
     padding-left: 1.25rem;
     /* Tailwind preflight 抹掉浏览器默认列表记号，这里显式恢复 */

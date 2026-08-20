@@ -105,13 +105,19 @@ const { archive } = await getPublishedPostCatalog();
     border-radius: 0.75rem;
     background: var(--surface);
     transition:
-      border-color 0.15s ease,
-      box-shadow 0.15s ease;
+      border-color var(--duration) var(--ease-out),
+      box-shadow var(--duration) var(--ease-out),
+      transform var(--duration) var(--ease-out);
   }
 
   .archive-card:hover {
     border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-    box-shadow: 0 0.35rem 1rem color-mix(in srgb, var(--text) 6%, transparent);
+    box-shadow: var(--shadow-float);
+    transform: translateY(-1px);
+  }
+
+  .archive-card:active {
+    transform: translateY(0);
   }
 
   .archive-card time {
