@@ -1,8 +1,7 @@
-import { readFile } from "node:fs/promises";
 import { getCollection, render } from "astro:content";
 import type { RenderResult } from "astro:content";
 import { isPublished } from "./content";
-import { POST_CONTENT_DIRECTORY, postNextIdPath, readPostNextId } from "./post-rules.js";
+import { POST_CONTENT_DIRECTORY, assertPostStableIds } from "./post-rules.js";
 import { getTag } from "./tags";
 
 const isoDateFormatter = new Intl.DateTimeFormat("en-CA", {
@@ -47,33 +46,12 @@ interface PublishedTagGroup extends PublishedTag {
   posts: PublishedPost[];
 }
 
-async function readNextPostId() {
-  const postsDirectory = process.env.POST_CONTENT_DIR ?? `./${POST_CONTENT_DIRECTORY}`;
-  const nextIdPath = postNextIdPath(postsDirectory);
-  try {
-    return readPostNextId(await readFile(nextIdPath, "utf8"));
-  } catch (error) {
-    if ((error as { code?: string }).code === "ENOENT") {
-      throw new Error("找不到技术文章号码计数器", { cause: error });
-    }
-    throw error;
-  }
-}
-
 export async function getPublishedPostCatalog() {
   const entries = await getCollection("posts");
   const tagHrefOwners = new Map<string, string>();
-  const idOwners = new Map<number, string>();
-  let maxId = 0;
 
   for (const entry of entries) {
     if (!entry.body?.trim()) throw new Error(`技术文章 ${entry.id} 的正文不能为空`);
-    const owner = idOwners.get(entry.data.id);
-    if (owner) {
-      throw new Error(`技术文章「${owner}」与「${entry.id}」使用了相同的稳定 ID：${entry.data.id}`);
-    }
-    idOwners.set(entry.data.id, entry.id);
-    if (entry.data.id > maxId) maxId = entry.data.id;
     for (const tagName of entry.data.tags) {
       const { href } = getTag(tagName);
       const tagOwner = tagHrefOwners.get(href);
@@ -84,10 +62,10 @@ export async function getPublishedPostCatalog() {
     }
   }
 
-  const nextId = await readNextPostId();
-  if (maxId >= nextId) {
-    throw new Error(`技术文章号码计数器过小：next=${nextId}，已用最大号=${maxId}`);
-  }
+  await assertPostStableIds(
+    process.env.POST_CONTENT_DIR ?? `./${POST_CONTENT_DIRECTORY}`,
+    entries.map(entry => ({ filename: entry.id, id: entry.data.id })),
+  );
 
   const posts: PublishedPost[] = entries
     .filter(isPublished)
