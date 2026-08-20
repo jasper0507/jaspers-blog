@@ -28,7 +28,7 @@
 
 ## 字体（#17 已落地）
 
-字体按角色自托管：中文正文/标题/粗体为 Noto Serif SC 400/600/700（可变 wght 200–900 的 unicode-range 分包，真字重而非伪粗），英文正文 Source Serif 4，界面 IBM Plex Sans 与 Noto Sans SC，代码 IBM Plex Mono，代码中文以 Sarasa Mono SC 为可选系统回退（不自托管）。禁止第三方字体 CDN；不为无关中文分段 preload。资源可用 `npm run fonts:fetch`（`scripts/fetch-fonts.mjs`）重生。验收落在 dist 合同与 visual 上；人工验收通过（`233f1cd`）。
+字体按角色自托管：中文正文/标题/粗体为 Noto Serif SC 400/600/700（可变 wght 200–900 的 unicode-range 分包，真字重而非伪粗），英文正文 Source Serif 4（可变 wght 200–900，另手维 italic 面；拉丁 woff2 不随 `fonts:fetch` 下载），界面 IBM Plex Sans 与 Noto Sans SC，代码 IBM Plex Mono，代码中文以 Sarasa Mono SC 为可选系统回退（不自托管）。禁止第三方字体 CDN；不为无关中文分段 preload。资源可用 `npm run fonts:fetch`（`scripts/fetch-fonts.mjs`）重生 Noto 分包；拉丁文件原样保留。验收落在 dist 合同与 visual 上；人工验收通过（`233f1cd`）。
 
 ## 第二轮范围（#9）
 

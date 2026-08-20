@@ -40,9 +40,8 @@
   font-family: var(--font-serif);
   font-size: 1.125rem;
   font-weight: 400;
-  line-height: var(--leading-body);
+  line-height: 1.62;
   font-optical-sizing: auto;
-  font-synthesis: none;
   hanging-punctuation: first last;
   /* 宽内容由 table/code/katex-display 自滚动；勿在根上 overflow-x 非 visible，
    * 否则 CSS 会把 overflow-y 算成 auto，可能裁切公式上下标 */
@@ -143,7 +142,6 @@
 .post-body em,
 .post-body i {
   font-style: italic;
-  font-weight: 500;
 }
 
 .post-body strong,

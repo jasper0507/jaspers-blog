@@ -28,9 +28,26 @@ test("生产构建产物覆盖固定栏位", async () => {
     accessDist("pagefind/pagefind.js"),
     accessDist("404.html"),
     accessDist("favicon.svg"),
+    accessDist("fonts/source-serif-4-latin.woff2"),
+    accessDist("fonts/source-serif-4-latin-italic.woff2"),
   ]);
   await assert.rejects(accessDist("categories/index.html"));
   await assert.rejects(accessDist("prototype/warmth/index.html"));
+});
+
+test("产物字体自托管且不含 Google Fonts", async () => {
+  const home = await readDist("index.html");
+  assert.doesNotMatch(home, /fonts\.googleapis\.com/);
+  const cssDirectory = join(root, "dist/_astro");
+  const css = (
+    await Promise.all(
+      (await readdir(cssDirectory))
+        .filter(name => name.endsWith(".css"))
+        .map(name => readFile(join(cssDirectory, name), "utf8")),
+    )
+  ).join("\n");
+  assert.doesNotMatch(css, /fonts\.googleapis\.com/);
+  assert.match(css, /source-serif-4-latin-italic\.woff2/);
 });
 
 test("Pagefind 页数与已发布技术文章一致", async () => {

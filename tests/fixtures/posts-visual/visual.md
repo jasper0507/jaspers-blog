@@ -18,7 +18,7 @@ draft: false
 
 1. 有序列表
 
-正文包含[链接](https://example.com)、`行内代码`、引用与脚注[^toc]：
+正文包含[链接](https://example.com)、`行内代码`、引用与脚注[^toc]，以及 *italic-latin*、**bold-latin**、***both-latin*** 与中文*强调*：
 
 > 引用内容。
 

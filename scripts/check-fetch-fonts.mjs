@@ -69,6 +69,7 @@ try {
   await writeFile(join(fontsDirectory, "noto-serif-sc-old.woff2"), "old serif");
   await writeFile(join(fontsDirectory, "noto-sans-sc-old.woff2"), "old sans");
   await writeFile(join(fontsDirectory, "source-serif-4-latin.woff2"), "old latin");
+  await writeFile(join(fontsDirectory, "source-serif-4-latin-italic.woff2"), "old italic");
   await writeFile(join(fontsDirectory, "LICENSE-noto-serif-sc.txt"), "serif license");
   await writeFile(join(fontsDirectory, "LICENSE-noto-sans-sc.txt"), "sans license");
   await writeFile(cssPath, "old css\n");
@@ -166,6 +167,11 @@ globalThis.fetch = async url => {
     after.fonts["source-serif-4-latin.woff2"],
     before.fonts["source-serif-4-latin.woff2"],
   );
+  assert.equal(
+    after.fonts["source-serif-4-latin-italic.woff2"],
+    before.fonts["source-serif-4-latin-italic.woff2"],
+  );
+  assert.match(after.css, /source-serif-4-latin-italic\.woff2/);
   assert.equal(after.fonts["LICENSE-noto-serif-sc.txt"], before.fonts["LICENSE-noto-serif-sc.txt"]);
   assert.equal(after.fonts["LICENSE-noto-sans-sc.txt"], before.fonts["LICENSE-noto-sans-sc.txt"]);
   assert.match(after.css, /noto-serif-sc-4\.woff2/);

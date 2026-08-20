@@ -79,6 +79,37 @@ test("正文渲染：公式、脚注、提示块与代码块附加", async ({ pa
   assert.ok(await page.locator(".astro-code .line.diff.remove").count());
 });
 
+test("正文行距与强调不伪粗、不压掉粗斜体", async ({ page }) => {
+  await page.goto(`${host}/posts/visual/`);
+  const body = page.locator(".post-body");
+  const ratio = await body.evaluate(element => {
+    const style = getComputedStyle(element);
+    return parseFloat(style.lineHeight) / parseFloat(style.fontSize);
+  });
+  assert.ok(Math.abs(ratio - 1.62) < 0.02, `正文行距比应为 1.62，实际为 ${ratio.toFixed(3)}`);
+
+  const italic = page.locator(".post-body em", { hasText: /^italic-latin$/ });
+  const bold = page.locator(".post-body strong", { hasText: /^bold-latin$/ });
+  const both = page
+    .locator(".post-body")
+    .locator("strong em, em strong", { hasText: /^both-latin$/ });
+  const chinese = page.locator(".post-body em", { hasText: /^强调$/ });
+  const [italicStyle, boldWeight, bothWeight, chineseStyle] = await Promise.all([
+    italic.evaluate(element => {
+      const style = getComputedStyle(element);
+      return { fontStyle: style.fontStyle, fontWeight: style.fontWeight };
+    }),
+    bold.evaluate(element => getComputedStyle(element).fontWeight),
+    both.evaluate(element => getComputedStyle(element).fontWeight),
+    chinese.evaluate(element => getComputedStyle(element).fontStyle),
+  ]);
+  assert.equal(italicStyle.fontStyle, "italic");
+  assert.equal(Number(italicStyle.fontWeight === "normal" ? 400 : italicStyle.fontWeight), 400);
+  assert.equal(Number(boldWeight === "bold" ? 700 : boldWeight), 700);
+  assert.equal(Number(bothWeight === "bold" ? 700 : bothWeight), 700);
+  assert.equal(chineseStyle, "italic");
+});
+
 test("正文列表保留标记", async ({ page }) => {
   await page.goto(`${host}/posts/visual/`);
   assert.equal(
