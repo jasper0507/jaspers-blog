@@ -50,7 +50,7 @@ const { tag } = Astro.props;
   }
 
   .tag-post-list > li {
-    padding-block: 0.95rem;
+    padding-block: 1.1rem;
     border-bottom: 1px solid var(--line);
   }
 
@@ -68,17 +68,21 @@ const { tag } = Astro.props;
   .tag-post-item time {
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 0.78rem;
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--track-meta);
     white-space: nowrap;
   }
 
   .tag-post-title {
     font-family: var(--font-serif);
-    font-size: 1.05rem;
+    font-size: 1.0625rem;
     font-weight: 600;
+    letter-spacing: -0.015em;
     line-height: 1.45;
     overflow-wrap: anywhere;
     text-decoration: none;
+    font-optical-sizing: auto;
   }
 
   .tag-post-title:hover {

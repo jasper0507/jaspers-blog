@@ -38,9 +38,12 @@
   box-shadow: none;
   color: var(--body-text);
   font-family: var(--font-serif);
-  font-size: 1.0625rem;
+  font-size: 1.125rem;
   font-weight: 400;
-  line-height: 1.68;
+  line-height: var(--leading-body);
+  font-optical-sizing: auto;
+  font-synthesis: none;
+  hanging-punctuation: first last;
   /* 宽内容由 table/code/katex-display 自滚动；勿在根上 overflow-x 非 visible，
    * 否则 CSS 会把 overflow-y 算成 auto，可能裁切公式上下标 */
   overflow: visible;
@@ -57,31 +60,36 @@
 
 .post-body :is(h2, h3, h4, h5, h6) {
   scroll-margin-top: 1.5rem;
-  margin: 1.6rem 0 0.7rem;
+  margin: 1.75rem 0 0.7rem;
   color: var(--body-heading);
   font-family: var(--font-serif);
   font-weight: 600;
+  letter-spacing: -0.018em;
   line-height: 1.3;
+  text-wrap: balance;
 }
 
 .post-body h2 {
-  margin-top: 1.75em;
-  margin-bottom: 0.75em;
-  font-size: 1.5em;
-  line-height: 1.25;
+  margin-top: 2.2em;
+  margin-bottom: 0.7em;
+  font-size: 1.42em;
+  line-height: 1.2;
 }
 
 .post-body h3 {
-  margin-top: 1.45em;
-  margin-bottom: 0.6em;
-  font-size: 1.25em;
-  line-height: 1.3;
+  margin-top: 1.7em;
+  margin-bottom: 0.55em;
+  font-size: 1.18em;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  line-height: 1.32;
 }
 
 .post-body h4 {
-  margin-top: 1.3em;
+  margin-top: 1.4em;
   margin-bottom: 0.5em;
-  font-size: 1.1em;
+  font-size: 1.08em;
+  font-weight: 500;
 }
 
 .post-body h5 {
@@ -97,15 +105,15 @@
 .post-body blockquote,
 .post-body :is(ul, ol),
 .post-body table {
-  margin: 0.9em 0;
+  margin: 0.78em 0;
 }
 
 .post-body :is(pre, details, .katex-display, .markdown-alert, hr) {
-  margin-block: 1.15em;
+  margin-block: 1.35em;
 }
 
 .post-body :is(ul, ol) {
-  padding-left: 1.4em;
+  padding-left: 1.5em;
 }
 
 .post-body ul {
@@ -117,11 +125,11 @@
 }
 
 .post-body li {
-  padding-left: 0.15em;
+  padding-left: 0.2em;
 }
 
 .post-body li + li {
-  margin-top: 0.18em;
+  margin-top: 0;
 }
 
 .post-body li::marker {
@@ -129,13 +137,23 @@
 }
 
 .post-body li > :is(ul, ol) {
-  margin: 0.35em 0;
+  margin: 0;
+}
+
+.post-body em,
+.post-body i {
+  font-style: italic;
+  font-weight: 500;
 }
 
 .post-body strong,
 .post-body b {
   color: var(--body-heading);
   font-weight: 700;
+}
+
+.post-body :is(code, kbd, pre, .astro-code) {
+  font-synthesis: weight;
 }
 
 .post-body :is(h2, h3, h4, h5, h6, pre, code, kbd) :is(strong, b) {
@@ -158,13 +176,13 @@
   max-width: 100%;
   height: auto;
   /* 独立成段的插图节奏；不吃 typography 出厂的 2em 边距 */
-  margin-block: 1.5em;
+  margin-block: 1.75em;
 }
 
 /* 引用：克制的珊瑚左边线 + 透明底，非色块；不吃 prose 的斜体与大引号 */
 .post-body blockquote {
-  margin-block: 1.6em;
-  padding: 0.1em 0 0.1em 1rem;
+  margin-block: 1.7em;
+  padding: 0.15em 0 0.15em 1.1rem;
   border-left: 3px solid var(--body-quote-border);
   background: transparent;
   color: var(--body-quote);
@@ -234,7 +252,7 @@
   font-family: var(--font-sans);
   font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
 }
 
 .post-body .markdown-alert-title svg {
@@ -264,8 +282,8 @@
 .post-body .astro-code {
   width: 100%;
   max-width: 100%;
-  margin-block: 0.95em 1.15em;
-  padding: 0.9rem 1rem 0.85rem;
+  margin-block: 1.1em 1.25em;
+  padding: 1rem 1.1rem 0.95rem;
   border: 1px solid var(--body-code-border);
   border-radius: 0.65rem;
   background: var(--body-code-bg) !important;
@@ -273,7 +291,7 @@
   overflow-x: auto;
   overflow-y: visible;
   font-family: var(--font-mono);
-  font-size: 0.88em;
+  font-size: 0.86em;
   font-variant-ligatures: none;
   line-height: 1.55;
 }
@@ -285,8 +303,8 @@
 
 .post-body .astro-code[data-title]::before {
   content: attr(data-title);
-  margin: -0.9rem -1rem 0.75rem;
-  padding: 0.45rem 1rem;
+  margin: -1rem -1.1rem 0.8rem;
+  padding: 0.5rem 1.1rem;
   border-bottom: 1px solid var(--body-code-border);
   display: block;
   color: var(--body-muted);
@@ -341,11 +359,11 @@
 
 .post-body :is(th, td) {
   min-width: 6rem;
-  padding: 0.75rem 1.125rem 0.75rem 0;
+  padding: 0.8rem 1.2rem 0.8rem 0;
   border: 0;
   text-align: left;
   vertical-align: top;
-  line-height: 1.52;
+  line-height: 1.56;
 }
 
 .post-body th {
@@ -367,7 +385,7 @@
 
 .post-body hr {
   height: 1px;
-  margin: 1.625rem 0;
+  margin: 2rem 0;
   padding: 0;
   border: 0;
   background: var(--body-border);
@@ -386,7 +404,7 @@
 
 /* details：同色系细边框，非厚重卡片（ADR-0008） */
 .post-body details {
-  padding: 0.7rem 0.9rem;
+  padding: 0.8rem 1rem;
   border: 1px solid var(--body-border);
   background: var(--body-details-bg);
   border-radius: 0.25rem;

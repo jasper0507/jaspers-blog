@@ -93,7 +93,7 @@ const shuoshuo = await Promise.all(
     padding: 0;
     list-style: none;
     display: grid;
-    gap: 1rem;
+    gap: 1.15rem;
   }
 
   .shuoshuo-list > li {
@@ -111,10 +111,12 @@ const shuoshuo = await Promise.all(
 
   .shuoshuo-anchor {
     display: inline-block;
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.9rem;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 0.78rem;
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--track-meta);
   }
 
   .shuoshuo-body[data-collapsed] {
@@ -123,12 +125,15 @@ const shuoshuo = await Promise.all(
   }
 
   .shuoshuo-toggle {
-    margin-top: 0.75rem;
+    margin-top: 0.85rem;
     padding: 0;
     border: 0;
     background: transparent;
     color: var(--accent);
     cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
     text-decoration: underline;
     text-decoration-thickness: 0.08em;
     text-underline-offset: 0.22em;
@@ -137,6 +142,6 @@ const shuoshuo = await Promise.all(
 
 <style is:global>
   .shuoshuo-body .post-body {
-    font-size: 1rem;
+    font-size: 1.0625rem;
   }
 </style>

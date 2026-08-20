@@ -70,27 +70,28 @@ const structuredData = JSON.stringify({
   }
 
   .post-header {
-    margin-bottom: 2.75rem;
-    padding-bottom: 1.6rem;
+    margin-bottom: 3rem;
+    padding-bottom: 1.75rem;
     border-bottom: 1px solid var(--line);
   }
 
   .post-header h1 {
     margin: 0;
     font-family: var(--font-serif);
-    font-size: clamp(2rem, 4vw, 2.6rem);
+    font-size: clamp(1.9rem, 3.6vw, 2.5rem);
     font-weight: 600;
-    letter-spacing: -0.035em;
-    line-height: 1.15;
+    letter-spacing: var(--track-display);
+    line-height: var(--leading-display);
+    font-optical-sizing: auto;
   }
 
   .post-description {
-    max-width: 42rem;
-    margin: 1.2rem 0 0;
+    max-width: 40rem;
+    margin: 0.9rem 0 0;
     color: var(--muted);
     font-family: var(--font-sans);
-    font-size: 1.05rem;
-    line-height: 1.65;
+    font-size: 1.0625rem;
+    line-height: 1.7;
   }
 
   .post-meta {
@@ -99,24 +100,27 @@ const structuredData = JSON.stringify({
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem 1.25rem;
-    margin-top: 1.75rem;
+    margin-top: 1.5rem;
     color: var(--muted);
     font-family: var(--font-mono);
-    font-size: 0.78rem;
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--track-meta);
   }
 
   @media (max-width: 52rem) {
     .post-header {
-      margin-bottom: 2rem;
-      padding-bottom: 1.25rem;
+      margin-bottom: 2.25rem;
+      padding-bottom: 1.35rem;
     }
 
     .post-header h1 {
-      font-size: 1.875rem;
+      font-size: 1.8rem;
+      line-height: 1.25;
     }
 
     .post-meta {
-      margin-top: 1.35rem;
+      margin-top: 1.25rem;
     }
   }
 </style>
@@ -125,7 +129,7 @@ const structuredData = JSON.stringify({
   .post-page {
     --reading-width: 47.5rem;
     max-width: var(--shell-width);
-    padding: clamp(3.5rem, 7vw, 6rem) 0 clamp(5rem, 9vw, 7.5rem);
+    padding: var(--space-page-top) 0 var(--space-page-bottom);
   }
 
   .post-meta .post-tags {

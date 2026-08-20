@@ -48,6 +48,13 @@
   --focus: light-dark(#8f3f2d, #f39a79);
   --shell-width: 70rem;
   --gutter: 2rem;
+  --text-meta: 0.78rem;
+  --leading-body: 1.62;
+  --leading-display: 1.22;
+  --track-display: -0.025em;
+  --track-meta: 0.04em;
+  --space-page-top: clamp(3.5rem, 7vw, 5.75rem);
+  --space-page-bottom: clamp(5.5rem, 9.5vw, 8rem);
   --duration: 220ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --z-toc: 5;
@@ -91,7 +98,7 @@ html[data-theme="dark"] {
 /* 手机上的壳留白收紧 */
 @media (max-width: 52rem) {
   :root {
-    --gutter: 1rem;
+    --gutter: 1.15rem;
   }
 }
 
@@ -100,6 +107,7 @@ html[data-theme="dark"] {
     min-width: 20rem;
     background: var(--background);
     font-family: var(--font-sans);
+    font-kerning: normal;
     scroll-behavior: smooth;
   }
 
@@ -111,7 +119,7 @@ html[data-theme="dark"] {
     display: flex;
     flex-direction: column;
     font-size: 1rem;
-    line-height: 1.7;
+    line-height: 1.75;
     text-rendering: optimizeLegibility;
   }
 
@@ -253,7 +261,7 @@ body pagefind-summary {
 
 /* 归档 / 标签 / 说说 / 关于共用的长文页壳 */
 .page-shell {
-  @apply mx-auto max-w-[48rem] pt-[clamp(3.5rem,7vw,6rem)] pb-[clamp(5rem,9vw,7.5rem)];
+  @apply mx-auto max-w-[48rem] pt-[var(--space-page-top)] pb-[var(--space-page-bottom)];
 }
 
 .empty-state {

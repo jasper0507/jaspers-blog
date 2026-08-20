@@ -1,7 +1,7 @@
 /* 首页最近说说与列表页：浅色纸面卡片，条目间距区分、无分割线 */
 .shuoshuo-preview,
 .shuoshuo-card {
-  padding: 1rem 1.15rem;
+  padding: 1.15rem 1.35rem;
   border: 1px solid var(--line);
   border-radius: 0.75rem;
   background: var(--surface);

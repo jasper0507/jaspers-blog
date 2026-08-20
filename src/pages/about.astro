@@ -17,15 +17,18 @@ const description = `关于 ${blogSettings.author.name} 与 ${blogSettings.site.
     font-family: var(--font-serif);
     font-size: clamp(2.5rem, 5vw, 3.5rem);
     font-weight: 400;
-    letter-spacing: -0.04em;
-    line-height: 1.1;
+    letter-spacing: var(--track-display);
+    line-height: 1.12;
+    font-optical-sizing: auto;
   }
 
   :global(.about-page p),
   :global(.about-page li) {
     color: var(--text);
     font-family: var(--font-serif);
-    font-size: clamp(1rem, 1.5vw, 1.12rem);
+    font-size: clamp(1.0625rem, 1.5vw, 1.125rem);
+    line-height: 1.85;
+    font-optical-sizing: auto;
   }
 
   :global(.about-page strong),
@@ -35,23 +38,23 @@ const description = `关于 ${blogSettings.author.name} 与 ${blogSettings.site.
 
   :global(.about-page p),
   :global(.about-page ul) {
-    max-width: 42rem;
+    max-width: 38rem;
   }
 
   :global(.about-page p) {
-    margin-block: 0 1.25rem;
+    margin-block: 0 1.4rem;
   }
 
   :global(.about-page p:first-of-type) {
-    margin-bottom: 1.75rem;
-    font-size: clamp(1.65rem, 3.2vw, 2.25rem);
+    margin-bottom: 1.85rem;
+    font-size: clamp(1.7rem, 3.2vw, 2.35rem);
     font-weight: 600;
-    letter-spacing: -0.03em;
-    line-height: 1.25;
+    letter-spacing: var(--track-display);
+    line-height: 1.2;
   }
 
   :global(.about-page ul) {
-    padding-left: 1.25rem;
+    padding-left: 1.35rem;
     /* Tailwind preflight 抹掉浏览器默认列表记号，这里显式恢复 */
     list-style: disc;
   }

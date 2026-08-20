@@ -17,31 +17,33 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 <style>
   h1 {
-    margin: 0 0 1.1rem;
+    margin: 0 0 1.15rem;
     font-family: var(--font-serif);
-    font-size: clamp(2rem, 4.5vw, 2.85rem);
+    font-size: clamp(1.95rem, 4.2vw, 2.7rem);
     font-weight: 600;
-    letter-spacing: -0.035em;
-    line-height: 1.2;
+    letter-spacing: var(--track-display);
+    line-height: var(--leading-display);
+    font-optical-sizing: auto;
   }
 
   p {
-    max-width: 36rem;
+    max-width: 34rem;
     margin: 0;
     color: var(--muted);
     font-family: var(--font-serif);
-    font-size: 1.05rem;
-    line-height: 1.65;
+    font-size: 1.0625rem;
+    line-height: 1.75;
   }
 
   .not-found-links {
     display: flex;
     flex-wrap: wrap;
-    gap: 1.25rem;
-    margin-top: 1.75rem;
+    gap: 1.35rem;
+    margin-top: 2rem;
     font-family: var(--font-sans);
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-weight: 600;
+    letter-spacing: 0.01em;
   }
 
   .not-found-links a {

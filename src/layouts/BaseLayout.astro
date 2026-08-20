@@ -27,10 +27,10 @@ const path = Astro.url.pathname;
 const inArticles = ["/posts/", "/tags/", "/archives/"].some(prefix => path.startsWith(prefix));
 /* 导航项（含文章菜单触发钮）：移动端更小的点按内边距，≥30rem 恢复桌面尺度 */
 const navItemClass =
-  "inline-flex min-h-[2.75rem] cursor-pointer items-center border-0 border-b-2 border-b-transparent bg-transparent px-[0.35rem] text-[0.9rem] font-semibold text-muted no-underline hover:border-b-accent hover:text-text min-[30rem]:px-[0.55rem] min-[30rem]:text-[0.95rem] is-current:border-b-accent is-current:text-text";
+  "inline-flex min-h-[2.75rem] cursor-pointer items-center border-0 border-b-2 border-b-transparent bg-transparent px-[0.35rem] text-[0.9rem] font-medium tracking-[0.01em] text-muted no-underline hover:border-b-accent hover:text-text min-[30rem]:px-[0.55rem] min-[30rem]:text-[0.9375rem] is-current:border-b-accent is-current:text-text";
 /* 文章菜单弹出层条目 */
 const menuLinkClass =
-  "flex min-h-[2.75rem] items-center px-3 text-[0.92rem] text-muted no-underline hover:bg-background hover:text-text";
+  "flex min-h-[2.75rem] items-center px-3 text-[0.9rem] font-medium tracking-[0.01em] text-muted no-underline hover:bg-background hover:text-text";
 const structuredData = JSON.stringify(
   path === "/"
     ? {
@@ -138,10 +138,10 @@ const structuredData = JSON.stringify(
     <a class="skip-link" href="#main-content">跳到主要内容</a>
     <header class="site-header relative z-[var(--z-header)]">
       <div
-        class="header-inner shell-track grid min-h-[4.5rem] grid-cols-[1fr_auto] items-center gap-[0.2rem_1rem] border-b border-text py-3 min-[52rem]:gap-x-5 min-[52rem]:py-0"
+        class="header-inner shell-track grid min-h-[4.25rem] grid-cols-[1fr_auto] items-center gap-[0.15rem_1rem] border-b border-text py-3 min-[52rem]:min-h-[4.5rem] min-[52rem]:gap-x-5 min-[52rem]:py-0"
       >
         <a
-          class="brand w-fit text-[1.15rem] font-bold tracking-[-0.02em] text-text no-underline"
+          class="brand w-fit text-[1.125rem] font-semibold tracking-[-0.018em] text-text no-underline"
           href="/"
           aria-label={`${headerTitle} 首页`}>{headerTitle}</a
         >
@@ -221,7 +221,7 @@ const structuredData = JSON.stringify(
     </main>
     <footer class="site-footer">
       <div
-        class="footer-inner shell-track flex min-h-[6rem] items-center justify-between gap-x-8 gap-y-4 border-t border-line py-6 text-[0.86rem] text-muted max-[30rem]:flex-col max-[30rem]:items-start [&_p]:m-0 [&_p+p]:mt-2"
+        class="footer-inner shell-track flex min-h-[6.25rem] items-center justify-between gap-x-8 gap-y-4 border-t border-line py-7 text-[0.82rem] tracking-[0.01em] text-muted max-[30rem]:flex-col max-[30rem]:items-start [&_p]:m-0 [&_p+p]:mt-2"
       >
         {
           footerCopyright && (
@@ -289,7 +289,7 @@ const structuredData = JSON.stringify(
         left: anchor(center);
         width: 9rem;
         margin: 0;
-        padding: 0.45rem;
+        padding: 0.5rem;
         border: 1px solid var(--line);
         border-radius: 0.65rem;
         background: var(--surface);
