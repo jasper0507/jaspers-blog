@@ -184,13 +184,6 @@ html[data-theme="dark"] .paper-grain {
   mix-blend-mode: overlay;
 }
 
-@media (prefers-color-scheme: dark) {
-  html:not([data-theme="light"]) .paper-grain {
-    opacity: 0.055;
-    mix-blend-mode: overlay;
-  }
-}
-
 /*
  * Pagefind 组件样式表对每个宿主元素声明 all: initial，color-scheme 一并被重置为
  * normal，顶层对话框因此永远解析 light-dark() 的亮色分支（暗色下面板发白）。

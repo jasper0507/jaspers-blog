@@ -123,6 +123,19 @@ test("文章菜单弹层可键盘关闭并归还焦点", async ({ page }) => {
   assert.equal(await menuTrigger.evaluate(element => element === document.activeElement), true);
 });
 
+test("无记忆时 html 仍有已解析主题，theme-color 跟随纸色", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto(host, { waitUntil: "networkidle" });
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "light");
+  assert.equal(await page.evaluate(() => localStorage.getItem("theme")), null);
+  const [themeColor, background] = await page.evaluate(() => [
+    document.querySelector('meta[name="theme-color"]')?.getAttribute("content"),
+    getComputedStyle(document.documentElement).getPropertyValue("--background").trim(),
+  ]);
+  assert.ok(background, "应能读到纸色 token");
+  assert.equal(themeColor, background);
+});
+
 test("主题切换写入 theme 并在重载后保持", async ({ page }) => {
   await page.goto(host, { waitUntil: "networkidle" });
   await page.locator("#theme-toggle").click();

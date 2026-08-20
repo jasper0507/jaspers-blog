@@ -145,7 +145,7 @@ const shuoshuoCount = publishedShuoshuo.length;
     object-position: center;
   }
 
-  /* 亮/暗双图：跟随 data-theme 与系统偏好 */
+  /* 亮/暗双图：跟随已解析 data-theme */
   .hero-image-dark {
     display: none;
   }
@@ -156,16 +156,6 @@ const shuoshuoCount = publishedShuoshuo.length;
 
   :global(html[data-theme="dark"]) .hero-image-dark {
     display: block;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :global(html:not([data-theme="light"])) .hero-image-light {
-      display: none;
-    }
-
-    :global(html:not([data-theme="light"])) .hero-image-dark {
-      display: block;
-    }
   }
 
   .home-feed {

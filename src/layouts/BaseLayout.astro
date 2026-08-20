@@ -85,43 +85,43 @@ const structuredData = JSON.stringify(
         const key = "theme";
         const legacyKey = "jasper-theme";
         const root = document.documentElement;
-        const themeColors = { light: "#f5f2ea", dark: "#272421" };
-
-        const applyThemeColor = theme => {
-          const meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute("content", themeColors[theme]);
-        };
 
         const systemTheme = () =>
           matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 
-        try {
-          const saved = localStorage.getItem(key) ?? localStorage.getItem(legacyKey);
-          if (saved === "light" || saved === "dark") root.dataset.theme = saved;
-        } catch (error) {
-          console.warn("无法读取主题设置，将跟随系统主题。", error);
-        }
+        const savedTheme = () => {
+          try {
+            const saved = localStorage.getItem(key) ?? localStorage.getItem(legacyKey);
+            if (saved === "light" || saved === "dark") return saved;
+          } catch (error) {
+            console.warn("无法读取主题设置，将跟随系统主题。", error);
+          }
+        };
 
-        applyThemeColor(root.dataset.theme ?? systemTheme());
+        const applyResolved = () => {
+          root.dataset.theme = savedTheme() ?? systemTheme();
+          const meta = document.querySelector('meta[name="theme-color"]');
+          const color = getComputedStyle(root).getPropertyValue("--background").trim();
+          if (meta && color) meta.setAttribute("content", color);
+        };
+
+        applyResolved();
 
         document.addEventListener("DOMContentLoaded", () => {
           const button = document.querySelector("#theme-toggle");
           if (!(button instanceof HTMLButtonElement)) return;
 
-          const currentTheme = () => root.dataset.theme ?? systemTheme();
-
           const updateButton = () => {
-            const current = currentTheme();
+            const current = root.dataset.theme;
             const label = current === "dark" ? "切换至亮色主题" : "切换至暗色主题";
             button.dataset.theme = current;
             button.setAttribute("aria-label", label);
             button.title = label;
-            applyThemeColor(current);
+            applyResolved();
           };
 
           button.addEventListener("click", () => {
-            const next = currentTheme() === "dark" ? "light" : "dark";
-            root.dataset.theme = next;
+            const next = root.dataset.theme === "dark" ? "light" : "dark";
             try {
               localStorage.setItem(key, next);
               localStorage.removeItem(legacyKey);
