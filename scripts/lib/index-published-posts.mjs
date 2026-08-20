@@ -7,23 +7,29 @@ const execFileAsync = promisify(execFile);
 const publishedPostDirectory = /^\d+$/;
 const seedPage = `<!doctype html><html lang="zh-cn"><head><meta charset="utf-8"><title>占位</title></head><body data-pagefind-body><p>占位</p></body></html>\n`;
 
-export async function countPublishedPostPages(distDirectory) {
+async function publishedPostDirectories(distDirectory) {
   try {
     const entries = await readdir(join(distDirectory, "posts"), { withFileTypes: true });
-    return entries.filter(entry => entry.isDirectory() && publishedPostDirectory.test(entry.name))
-      .length;
+    return entries
+      .filter(entry => entry.isDirectory() && publishedPostDirectory.test(entry.name))
+      .map(entry => entry.name);
   } catch (error) {
-    if (error?.code === "ENOENT") return 0;
+    if (error?.code === "ENOENT") return [];
     throw error;
   }
 }
 
+export async function countPublishedPostPages(distDirectory) {
+  return (await publishedPostDirectories(distDirectory)).length;
+}
+
 export async function indexPublishedPosts(root, distDirectory = join(root, "dist")) {
   const seedDirectory = join(distDirectory, ".pagefind-seed");
-  const count = await countPublishedPostPages(distDirectory);
-  const glob = count > 0 ? "posts/**/*.html" : ".pagefind-seed/**/*.html";
+  const names = await publishedPostDirectories(distDirectory);
+  const globs =
+    names.length > 0 ? names.map(name => `posts/${name}/**/*.html`) : [".pagefind-seed/**/*.html"];
 
-  if (count === 0) {
+  if (names.length === 0) {
     await mkdir(seedDirectory, { recursive: true });
     await writeFile(join(seedDirectory, "index.html"), seedPage);
   }
@@ -31,7 +37,7 @@ export async function indexPublishedPosts(root, distDirectory = join(root, "dist
   try {
     await execFileAsync(
       join(root, "node_modules/.bin/pagefind"),
-      ["--site", distDirectory, "--glob", glob],
+      ["--site", distDirectory, ...globs.flatMap(glob => ["--glob", glob])],
       { cwd: root, stdio: "inherit" },
     );
   } finally {

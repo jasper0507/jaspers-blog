@@ -5,7 +5,7 @@ import { formatShanghaiDateTime } from "./shanghai-time.js";
 export const POST_CONTENT_DIRECTORY = "src/content/posts";
 
 const POST_NEXT_ID_FILENAME = "post-next-id.json";
-const illegalInFilename = /[/\\:*?"<>|\r\n]/;
+const illegalInFilename = /[/\\:*?"<>|\r\n]/g;
 
 function postNextIdPath(postsDirectory) {
   return join(postsDirectory, "..", POST_NEXT_ID_FILENAME);
@@ -48,6 +48,7 @@ async function loadNextPostId(postsDirectory) {
 }
 
 export function isPostFilename(value) {
+  illegalInFilename.lastIndex = 0;
   return (
     typeof value === "string" &&
     value.length > 0 &&
@@ -60,7 +61,8 @@ export function isPostFilename(value) {
 
 function filenameFromTitle(title) {
   if (typeof title !== "string") return null;
-  const stem = title.trim().replaceAll(/[/\\:*?"<>|\r\n]/g, "");
+  illegalInFilename.lastIndex = 0;
+  const stem = title.trim().replaceAll(illegalInFilename, "");
   return isPostFilename(stem) ? stem : null;
 }
 
@@ -122,22 +124,20 @@ export async function createPost(postsDirectory, title) {
 
 /**
  * @param {string} postsDirectory
- * @param {readonly { filename: string, id: number }[]} articles
+ * @param {readonly { filename: string, id: number }[]} posts
  * @returns {Promise<void>}
  */
-export async function assertPostStableIds(postsDirectory, articles) {
+export async function assertPostStableIds(postsDirectory, posts) {
   const idOwners = new Map();
   let maxId = 0;
 
-  for (const article of articles) {
-    const owner = idOwners.get(article.id);
+  for (const post of posts) {
+    const owner = idOwners.get(post.id);
     if (owner) {
-      throw new Error(
-        `技术文章「${owner}」与「${article.filename}」使用了相同的稳定 ID：${article.id}`,
-      );
+      throw new Error(`技术文章「${owner}」与「${post.filename}」使用了相同的稳定 ID：${post.id}`);
     }
-    idOwners.set(article.id, article.filename);
-    if (article.id > maxId) maxId = article.id;
+    idOwners.set(post.id, post.filename);
+    if (post.id > maxId) maxId = post.id;
   }
 
   const next = await loadNextPostId(postsDirectory);

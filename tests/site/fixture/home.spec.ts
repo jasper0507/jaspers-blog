@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "@playwright/test";
+import { test, type Page } from "@playwright/test";
 import {
   expectedAuthor,
   expectedFooter,
@@ -123,17 +123,38 @@ test("文章菜单弹层可键盘关闭并归还焦点", async ({ page }) => {
   assert.equal(await menuTrigger.evaluate(element => element === document.activeElement), true);
 });
 
-test("无记忆时 html 仍有已解析主题，theme-color 跟随纸色", async ({ page }) => {
-  await page.emulateMedia({ colorScheme: "light" });
-  await page.goto(host, { waitUntil: "networkidle" });
-  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "light");
-  assert.equal(await page.evaluate(() => localStorage.getItem("theme")), null);
-  const [themeColor, background] = await page.evaluate(() => [
+async function assertResolvedThemeColor(page: Page, theme: "light" | "dark") {
+  await page.waitForFunction(
+    () => getComputedStyle(document.documentElement).getPropertyValue("--background").trim() !== "",
+  );
+  const [dataTheme, stored, themeColor, background] = await page.evaluate(() => [
+    document.documentElement.dataset.theme,
+    localStorage.getItem("theme"),
     document.querySelector('meta[name="theme-color"]')?.getAttribute("content"),
     getComputedStyle(document.documentElement).getPropertyValue("--background").trim(),
   ]);
+  assert.equal(dataTheme, theme);
+  assert.equal(stored, null);
   assert.ok(background, "应能读到纸色 token");
   assert.equal(themeColor, background);
+  const toggle = page.locator("#theme-toggle");
+  assert.equal(await toggle.getAttribute("data-theme"), theme);
+  assert.equal(
+    await toggle.getAttribute("aria-label"),
+    theme === "dark" ? "切换至亮色主题" : "切换至暗色主题",
+  );
+}
+
+test("无记忆亮色时 html 仍有已解析主题，theme-color 跟随纸色", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto(host, { waitUntil: "load" });
+  await assertResolvedThemeColor(page, "light");
+});
+
+test("无记忆暗色时 theme-color 跟随纸色，切换钮与已解析主题一致", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto(host, { waitUntil: "load" });
+  await assertResolvedThemeColor(page, "dark");
 });
 
 test("主题切换写入 theme 并在重载后保持", async ({ page }) => {

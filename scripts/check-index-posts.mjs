@@ -25,10 +25,20 @@ try {
 
   const publishedDist = join(workingDirectory, "published");
   await mkdir(join(publishedDist, "posts/1"), { recursive: true });
+  await mkdir(join(publishedDist, "posts/not-an-id"), { recursive: true });
+  await mkdir(join(publishedDist, "posts/1-draft"), { recursive: true });
   await mkdir(join(publishedDist, "about"), { recursive: true });
   await writeFile(
     join(publishedDist, "posts/1/index.html"),
     `<!doctype html><html lang="zh-cn"><head><meta charset="utf-8"><title>公开</title></head><body data-pagefind-body><p>公开技术文章</p></body></html>\n`,
+  );
+  await writeFile(
+    join(publishedDist, "posts/not-an-id/index.html"),
+    `<!doctype html><html lang="zh-cn"><head><meta charset="utf-8"><title>非数字目录</title></head><body data-pagefind-body><p>不应进入搜索</p></body></html>\n`,
+  );
+  await writeFile(
+    join(publishedDist, "posts/1-draft/index.html"),
+    `<!doctype html><html lang="zh-cn"><head><meta charset="utf-8"><title>数字前缀</title></head><body data-pagefind-body><p>不应进入搜索</p></body></html>\n`,
   );
   await writeFile(
     join(publishedDist, "about/index.html"),

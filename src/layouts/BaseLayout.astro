@@ -105,35 +105,36 @@ const structuredData = JSON.stringify(
           if (meta && color) meta.setAttribute("content", color);
         };
 
-        applyResolved();
-
-        document.addEventListener("DOMContentLoaded", () => {
+        const syncControls = () => {
+          applyResolved();
           const button = document.querySelector("#theme-toggle");
           if (!(button instanceof HTMLButtonElement)) return;
+          const current = root.dataset.theme;
+          const label = current === "dark" ? "切换至亮色主题" : "切换至暗色主题";
+          button.dataset.theme = current;
+          button.setAttribute("aria-label", label);
+          button.title = label;
+        };
 
-          const updateButton = () => {
-            const current = root.dataset.theme;
-            const label = current === "dark" ? "切换至亮色主题" : "切换至暗色主题";
-            button.dataset.theme = current;
-            button.setAttribute("aria-label", label);
-            button.title = label;
-            applyResolved();
-          };
-
-          button.addEventListener("click", () => {
-            const next = root.dataset.theme === "dark" ? "light" : "dark";
-            try {
-              localStorage.setItem(key, next);
-              localStorage.removeItem(legacyKey);
-            } catch (error) {
-              console.warn("无法保存主题设置。", error);
-            }
-            updateButton();
-          });
-
-          matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateButton);
-          updateButton();
+        applyResolved();
+        matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncControls);
+        document.addEventListener("DOMContentLoaded", () => {
+          const button = document.querySelector("#theme-toggle");
+          if (button instanceof HTMLButtonElement) {
+            button.addEventListener("click", () => {
+              const next = root.dataset.theme === "dark" ? "light" : "dark";
+              try {
+                localStorage.setItem(key, next);
+                localStorage.removeItem(legacyKey);
+              } catch (error) {
+                console.warn("无法保存主题设置。", error);
+              }
+              syncControls();
+            });
+          }
+          syncControls();
         });
+        addEventListener("load", syncControls);
       })();
     </script>
   </head>
