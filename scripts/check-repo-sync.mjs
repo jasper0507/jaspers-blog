@@ -66,9 +66,11 @@ try {
     await git(divergeAuthor, ["add", "-A"]);
     await git(divergeAuthor, ["commit", "-m", "remote diverge"]);
     await git(divergeAuthor, ["push", "origin", "main"]);
+    await writeFile(join(workingDirectory, "pending.txt"), "pending\n");
     await assert.rejects(alignMain(workingDirectory, "publish"), {
       message: userMessage("publish", ERROR_CODE.DIVERGED),
     });
+    assert.equal(await readFile(join(workingDirectory, "pending.txt"), "utf8"), "pending\n");
     assert.equal(
       (await git(workingDirectory, ["log", "-1", "--format=%s"])).stdout,
       "local ahead\n",

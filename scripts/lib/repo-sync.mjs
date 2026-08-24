@@ -42,6 +42,15 @@ export async function git(cwd, args) {
   return execFileAsync("git", args, { cwd, encoding: "utf8" });
 }
 
+async function isAncestor(cwd, ancestor, descendant) {
+  try {
+    await git(cwd, ["merge-base", "--is-ancestor", ancestor, descendant]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function alignMain(cwd, purpose) {
   try {
     await git(cwd, ["rev-parse", "--is-inside-work-tree"]);
@@ -73,6 +82,10 @@ export async function alignMain(cwd, purpose) {
   }
 
   if (head === remote) return { status: "same", head };
+  if (await isAncestor(cwd, remote, head)) return { status: "ahead", head };
+  if (!(await isAncestor(cwd, head, remote))) {
+    throw new Error(userMessage(purpose, ERROR_CODE.DIVERGED));
+  }
 
   try {
     await git(cwd, ["merge", "--ff-only", "origin/main"]);
@@ -82,9 +95,7 @@ export async function alignMain(cwd, purpose) {
   }
 
   const alignedHead = (await git(cwd, ["rev-parse", "HEAD"])).stdout.trim();
-  return alignedHead === head
-    ? { status: "ahead", head }
-    : { status: "fast-forwarded", head: alignedHead };
+  return { status: "fast-forwarded", head: alignedHead };
 }
 
 export async function workingTreeChanges(cwd) {
