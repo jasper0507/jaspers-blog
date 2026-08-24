@@ -32,16 +32,6 @@ export const routes = [
   "/archives/",
   "/about/",
 ];
-export const visualRoutes = [
-  ["home", "/"],
-  ["post", "/posts/2/"],
-  ["shuoshuo", "/shuoshuo/"],
-  ["tags", "/tags/"],
-  ["tag", "/tags/astro/"],
-  ["archives", "/archives/"],
-  ["about", "/about/"],
-  ["not-found", "/not-a-page/"],
-] as const;
 export const productionEnvironment = {
   ...process.env,
   POST_CONTENT_DIR: "./src/content/posts",
@@ -105,13 +95,4 @@ export function footerLinks(page: Page) {
   return page
     .locator(".site-footer ul a")
     .evaluateAll(links => links.map(link => [link.textContent?.trim(), link.getAttribute("href")]));
-}
-
-export async function assertFooterLayout(page: Page, width: number) {
-  assert.equal(
-    await page
-      .locator(".footer-inner")
-      .evaluate(element => getComputedStyle(element).flexDirection),
-    width <= 480 ? "column" : "row",
-  );
 }

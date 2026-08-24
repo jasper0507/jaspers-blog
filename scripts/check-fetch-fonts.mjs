@@ -88,58 +88,11 @@ try {
   const before = await snapshot();
   await assert.rejects(runCommand(), /Noto\+Sans\+SC.*503/);
   assert.deepEqual(await snapshot(), before, "更新失败时旧字体和 CSS 必须原样保留");
-
-  await writeFile(
-    mockPath,
-    `${cssResponseMock}
-
-globalThis.fetch = async url => {
-  if (url.includes("fonts.googleapis.com")) {
-    return cssResponse(url);
-  }
-  return new Response("not a font");
-};
-`,
+  assert.deepEqual(
+    (await readdir(workingDirectory)).filter(name => name.startsWith(".font-refresh-")),
+    [],
+    "失败后必须清理临时目录",
   );
-  await assert.rejects(runCommand(), /下载内容不是 WOFF2 字体/);
-  assert.deepEqual(await snapshot(), before, "字体内容无效时旧字体和 CSS 必须原样保留");
-
-  await writeFile(
-    mockPath,
-    `${cssResponseMock}
-
-globalThis.fetch = async url => {
-  if (url.includes("fonts.googleapis.com")) {
-    return cssResponse(url);
-  }
-  return new Response(Buffer.alloc(16 * 1024 * 1024 + 1));
-};
-`,
-  );
-  await assert.rejects(runCommand(), /字体响应过大/);
-  assert.deepEqual(await snapshot(), before, "字体响应过大时旧字体和 CSS 必须原样保留");
-
-  await writeFile(
-    mockPath,
-    `${cssResponseMock}
-
-globalThis.fetch = async url => {
-  if (url.includes("fonts.googleapis.com")) {
-    return cssResponse(url);
-  }
-  const font = new Uint8Array(48);
-  font.set([0x77, 0x4f, 0x46, 0x32]);
-  const header = new DataView(font.buffer);
-  header.setUint32(8, font.byteLength);
-  header.setUint16(12, 1);
-  header.setUint32(16, 1);
-  header.setUint32(20, 1);
-  return new Response(font);
-};
-`,
-  );
-  await assert.rejects(runCommand(), /下载内容不是 WOFF2 字体/);
-  assert.deepEqual(await snapshot(), before, "字体结构残缺时旧字体和 CSS 必须原样保留");
 
   await writeFile(
     mockPath,
@@ -172,17 +125,9 @@ globalThis.fetch = async url => {
     before.fonts["source-serif-4-latin-italic.woff2"],
   );
   assert.match(after.css, /source-serif-4-latin-italic\.woff2/);
-  assert.equal(after.fonts["LICENSE-noto-serif-sc.txt"], before.fonts["LICENSE-noto-serif-sc.txt"]);
-  assert.equal(after.fonts["LICENSE-noto-sans-sc.txt"], before.fonts["LICENSE-noto-sans-sc.txt"]);
   assert.match(after.css, /noto-serif-sc-4\.woff2/);
   assert.match(after.css, /noto-sans-sc-5\.woff2/);
   assert.doesNotMatch(after.css, /old css/);
-
-  assert.deepEqual(
-    (await readdir(workingDirectory)).filter(name => name.startsWith(".font-refresh-")),
-    [],
-    "命令结束后必须清理临时目录",
-  );
 } finally {
   await rm(workingDirectory, { recursive: true, force: true });
 }

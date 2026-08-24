@@ -30,22 +30,13 @@
   --code-function: light-dark(#3c6aa8, #85aedc);
   --code-parameter: light-dark(#886c32, #d3b46f);
 
-  /* 阅读栏宽度由 .post-article 控制，不用 prose 的 65ch */
-  max-width: none;
   min-width: 0;
-  padding: 0;
-  background: transparent;
-  box-shadow: none;
   color: var(--body-text);
   font-family: var(--font-serif);
   font-size: 1.125rem;
-  font-weight: 400;
   line-height: 1.62;
   font-optical-sizing: auto;
   hanging-punctuation: first last;
-  /* 宽内容由 table/code/katex-display 自滚动；勿在根上 overflow-x 非 visible，
-   * 否则 CSS 会把 overflow-y 算成 auto，可能裁切公式上下标 */
-  overflow: visible;
   overflow-wrap: break-word;
 }
 
@@ -107,7 +98,7 @@
   margin: 0.78em 0;
 }
 
-.post-body :is(pre, details, .katex-display, .markdown-alert, hr) {
+.post-body :is(pre, details, .katex-display, hr) {
   margin-block: 1.35em;
 }
 
@@ -177,23 +168,12 @@
   margin-block: 1.75em;
 }
 
-/* 引用：克制的珊瑚左边线 + 透明底，非色块；不吃 prose 的斜体与大引号 */
+/* 引用：克制的珊瑚左边线，非色块。 */
 .post-body blockquote {
   margin-block: 1.7em;
   padding: 0.15em 0 0.15em 1.1rem;
   border-left: 3px solid var(--body-quote-border);
-  background: transparent;
   color: var(--body-quote);
-  font-style: normal;
-  font-weight: inherit;
-  border-radius: 0;
-  box-shadow: none;
-  quotes: none;
-}
-
-.post-body blockquote p:first-of-type::before,
-.post-body blockquote p:last-of-type::after {
-  content: none;
 }
 
 .post-body blockquote p {
@@ -208,57 +188,7 @@
   margin-left: 0.5rem;
 }
 
-/* 提示块：Kraft 未定义，暖色浅底 + 细左边线（ADR-0008） */
-.post-body .markdown-alert {
-  --alert-color: var(--body-accent);
-  padding: 0.75rem 1rem;
-  border-left: 3px solid var(--alert-color);
-  background: color-mix(in srgb, var(--alert-color) 7%, transparent);
-  border-radius: 0;
-}
-
-.post-body .markdown-alert > :last-child {
-  margin-bottom: 0;
-}
-
-.post-body .markdown-alert-note {
-  --alert-color: light-dark(#a05036, #e68f70);
-}
-
-.post-body .markdown-alert-tip {
-  --alert-color: light-dark(#55714e, #9fbd94);
-}
-
-.post-body .markdown-alert-important {
-  --alert-color: light-dark(#76558a, #c9a7df);
-}
-
-.post-body .markdown-alert-warning {
-  --alert-color: light-dark(#895e1b, #d8b060);
-}
-
-.post-body .markdown-alert-caution {
-  --alert-color: light-dark(#a64d43, #e58376);
-}
-
-.post-body .markdown-alert-title {
-  margin-bottom: 0.45rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--alert-color);
-  font-family: var(--font-sans);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-}
-
-.post-body .markdown-alert-title svg {
-  width: 1rem;
-  fill: currentColor;
-}
-
-/* 行内代码：暖纸浅底小芯片；去掉 prose 出厂的反引号 */
+/* 行内代码：暖纸浅底小芯片。 */
 .post-body :not(pre) > code {
   padding: 0.1em 0.4em 0.12em;
   border: 1px solid var(--body-inline-border);
@@ -270,11 +200,6 @@
   font-weight: 500;
   font-variant-ligatures: none;
   overflow-wrap: anywhere;
-}
-
-.post-body :not(pre) > code::before,
-.post-body :not(pre) > code::after {
-  content: none;
 }
 
 .post-body .astro-code {

@@ -38,61 +38,30 @@ export function userMessage(purpose, code) {
   return messages[purpose][code];
 }
 
-export class RepoError extends Error {
-  constructor(code, purpose, cause) {
-    super(userMessage(purpose, code), { cause });
-    this.code = code;
-    this.purpose = purpose;
-  }
-}
-
 export async function git(cwd, args) {
   return execFileAsync("git", args, { cwd, encoding: "utf8" });
-}
-
-async function isAncestor(cwd, ancestor, descendant) {
-  try {
-    await git(cwd, ["merge-base", "--is-ancestor", ancestor, descendant]);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function gitOutput(error) {
-  return `${error.stdout ?? ""}\n${error.stderr ?? ""}`;
-}
-
-function workingTreePaths(stdout) {
-  return stdout
-    .split("\n")
-    .filter(line => line.length >= 4)
-    .flatMap(line => {
-      const rest = line.slice(3);
-      return rest.includes(" -> ") ? rest.split(" -> ") : [rest];
-    });
 }
 
 export async function alignMain(cwd, purpose) {
   try {
     await git(cwd, ["rev-parse", "--is-inside-work-tree"]);
   } catch (error) {
-    throw new RepoError(ERROR_CODE.NO_ORIGIN, purpose, error);
+    throw new Error(userMessage(purpose, ERROR_CODE.NO_ORIGIN), { cause: error });
   }
 
   const branch = (await git(cwd, ["branch", "--show-current"])).stdout.trim();
-  if (branch !== "main") throw new RepoError(ERROR_CODE.NOT_ON_MAIN, purpose);
+  if (branch !== "main") throw new Error(userMessage(purpose, ERROR_CODE.NOT_ON_MAIN));
 
   try {
     await git(cwd, ["remote", "get-url", "origin"]);
   } catch (error) {
-    throw new RepoError(ERROR_CODE.NO_ORIGIN, purpose, error);
+    throw new Error(userMessage(purpose, ERROR_CODE.NO_ORIGIN), { cause: error });
   }
 
   try {
     await git(cwd, ["fetch", "-q", "origin"]);
   } catch (error) {
-    throw new RepoError(ERROR_CODE.NETWORK, purpose, error);
+    throw new Error(userMessage(purpose, ERROR_CODE.NETWORK), { cause: error });
   }
 
   const head = (await git(cwd, ["rev-parse", "HEAD"])).stdout.trim();
@@ -100,40 +69,22 @@ export async function alignMain(cwd, purpose) {
   try {
     remote = (await git(cwd, ["rev-parse", "origin/main"])).stdout.trim();
   } catch (error) {
-    throw new RepoError(ERROR_CODE.DIVERGED, purpose, error);
+    throw new Error(userMessage(purpose, ERROR_CODE.DIVERGED), { cause: error });
   }
 
   if (head === remote) return { status: "same", head };
 
-  if (await isAncestor(cwd, head, remote)) {
-    const dirty = workingTreePaths(
-      (await git(cwd, ["status", "--porcelain", "--untracked-files=all"])).stdout,
-    );
-    const incoming = (await git(cwd, ["diff", "--name-only", head, remote])).stdout
-      .split("\n")
-      .filter(Boolean);
-    if (dirty.some(path => incoming.includes(path))) {
-      throw new RepoError(ERROR_CODE.CONFLICT, purpose);
-    }
-
-    try {
-      await git(cwd, ["merge", "--ff-only", "origin/main"]);
-      return {
-        status: "fast-forwarded",
-        head: (await git(cwd, ["rev-parse", "HEAD"])).stdout.trim(),
-      };
-    } catch (error) {
-      const output = gitOutput(error);
-      if (/would be overwritten|uncommitted changes|local changes/i.test(output)) {
-        throw new RepoError(ERROR_CODE.CONFLICT, purpose, error);
-      }
-      throw new RepoError(ERROR_CODE.DIVERGED, purpose, error);
-    }
+  try {
+    await git(cwd, ["merge", "--ff-only", "origin/main"]);
+  } catch (error) {
+    const code = (await workingTreeChanges(cwd)) ? ERROR_CODE.CONFLICT : ERROR_CODE.DIVERGED;
+    throw new Error(userMessage(purpose, code), { cause: error });
   }
 
-  if (await isAncestor(cwd, remote, head)) return { status: "ahead", head };
-
-  throw new RepoError(ERROR_CODE.DIVERGED, purpose);
+  const alignedHead = (await git(cwd, ["rev-parse", "HEAD"])).stdout.trim();
+  return alignedHead === head
+    ? { status: "ahead", head }
+    : { status: "fast-forwarded", head: alignedHead };
 }
 
 export async function workingTreeChanges(cwd) {

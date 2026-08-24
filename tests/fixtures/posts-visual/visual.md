@@ -38,9 +38,6 @@ console.log("visual fixture");
 
 行内公式 $a + b$。
 
-> [!NOTE]
-> 提示块用于强调阅读提示。
-
 ```js title="example.js" {2}
 const keep = 1;
 const highlight = 2;

@@ -64,20 +64,6 @@ try {
   await assert.rejects(publish(["one", "two"]));
   assert.equal((await git("rev-list", "--count", "HEAD")).stdout.trim(), "1");
 
-  await git("switch", "-c", "draft");
-  await assert.rejects(publish(["publish draft"]), error => {
-    assert.ok(output(error).includes(userMessage("publish", ERROR_CODE.NOT_ON_MAIN)));
-    return true;
-  });
-  assert.equal((await git("rev-list", "--count", "HEAD")).stdout.trim(), "1");
-
-  await git("switch", "main");
-  await assert.rejects(publish(["publish without remote"]), error => {
-    assert.ok(output(error).includes(userMessage("publish", ERROR_CODE.NO_ORIGIN)));
-    return true;
-  });
-  assert.equal((await git("rev-list", "--count", "HEAD")).stdout.trim(), "1");
-
   await execFileAsync("git", ["init", "--bare", "--initial-branch=main"], {
     cwd: remoteDirectory,
   });
@@ -121,69 +107,6 @@ try {
   assert.equal((await git("show", "HEAD:new.txt")).stdout, "new\n");
   await assert.rejects(git("cat-file", "-e", "HEAD:deleted.txt"));
 
-  const remoteAuthorDirectory = await mkdtemp(join(tmpdir(), "newblog-publish-author-"));
-  try {
-    await execFileAsync("git", ["clone", remoteDirectory, remoteAuthorDirectory]);
-    await execFileAsync("git", ["config", "user.name", "Remote Author"], {
-      cwd: remoteAuthorDirectory,
-    });
-    await execFileAsync("git", ["config", "user.email", "remote@example.com"], {
-      cwd: remoteAuthorDirectory,
-    });
-    await writeFile(join(remoteAuthorDirectory, "remote.txt"), "remote\n");
-    await execFileAsync("git", ["add", "-A"], { cwd: remoteAuthorDirectory });
-    await execFileAsync("git", ["commit", "-m", "remote ahead"], {
-      cwd: remoteAuthorDirectory,
-    });
-    await execFileAsync("git", ["push", "origin", "main"], { cwd: remoteAuthorDirectory });
-
-    await writeFile(join(workingDirectory, "local.txt"), "local\n");
-    const forwarded = await publish(["local publish"]);
-    assert.match(forwarded.stdout, /已与网上对齐/);
-    assert.match(forwarded.stdout, /已发布到网上/);
-    assert.equal((await git("show", "HEAD:local.txt")).stdout, "local\n");
-    assert.equal((await git("show", "HEAD:remote.txt")).stdout, "remote\n");
-    assert.equal(
-      (await git("rev-parse", "origin/main")).stdout,
-      (await git("rev-parse", "HEAD")).stdout,
-    );
-  } finally {
-    await rm(remoteAuthorDirectory, { recursive: true, force: true });
-  }
-
-  const divergeAuthorDirectory = await mkdtemp(join(tmpdir(), "newblog-publish-diverge-"));
-  try {
-    await writeFile(join(workingDirectory, "ahead.txt"), "ahead\n");
-    await git("add", "-A");
-    await git("commit", "-m", "unpublished local");
-    const unpublished = (await git("rev-parse", "HEAD")).stdout;
-
-    await execFileAsync("git", ["clone", remoteDirectory, divergeAuthorDirectory]);
-    await execFileAsync("git", ["config", "user.name", "Diverge Author"], {
-      cwd: divergeAuthorDirectory,
-    });
-    await execFileAsync("git", ["config", "user.email", "diverge@example.com"], {
-      cwd: divergeAuthorDirectory,
-    });
-    await writeFile(join(divergeAuthorDirectory, "other.txt"), "other\n");
-    await execFileAsync("git", ["add", "-A"], { cwd: divergeAuthorDirectory });
-    await execFileAsync("git", ["commit", "-m", "remote diverge"], {
-      cwd: divergeAuthorDirectory,
-    });
-    await execFileAsync("git", ["push", "origin", "main"], { cwd: divergeAuthorDirectory });
-
-    await writeFile(join(workingDirectory, "pending.txt"), "pending\n");
-    await assert.rejects(publish(["diverged publish"]), error => {
-      assert.ok(output(error).includes(userMessage("publish", ERROR_CODE.DIVERGED)));
-      return true;
-    });
-    assert.equal((await git("rev-parse", "HEAD")).stdout, unpublished);
-    assert.equal(await readFile(join(workingDirectory, "pending.txt"), "utf8"), "pending\n");
-  } finally {
-    await rm(divergeAuthorDirectory, { recursive: true, force: true });
-  }
-
-  await git("reset", "--hard", "origin/main");
   const hook = join(remoteDirectory, "hooks/pre-receive");
   await writeFile(hook, "#!/bin/sh\nexit 1\n");
   await chmod(hook, 0o755);

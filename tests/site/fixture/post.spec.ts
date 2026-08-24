@@ -53,7 +53,7 @@ test("技术文章元信息与结构化数据", async ({ page }) => {
   });
 });
 
-test("正文渲染：公式、脚注、提示块与代码块附加", async ({ page }) => {
+test("正文渲染：公式、脚注与代码块附加", async ({ page }) => {
   await page.goto(`${host}/posts/2/`);
   const katex = page.locator(".post-body .katex").first();
   assert.ok(await katex.count(), "公式应渲染为 KaTeX");
@@ -64,9 +64,6 @@ test("正文渲染：公式、脚注、提示块与代码块附加", async ({ pa
   );
   assert.equal(await page.locator("#footnote-label").textContent(), "脚注");
   assert.ok(await page.locator('[aria-label="返回脚注引用"]').count());
-  const alert = page.locator(".markdown-alert-note");
-  assert.match((await alert.textContent()) ?? "", /备注/);
-  assert.match((await alert.textContent()) ?? "", /提示块用于强调阅读提示/);
   assert.match(
     await page
       .locator('.astro-code[data-title="example.js"]')

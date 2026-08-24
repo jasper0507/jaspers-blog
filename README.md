@@ -19,7 +19,7 @@
 - [x] Pagefind 弹层搜索：`/` 打开，只索引已发布技术文章，公式不进入索引
 - [x] 文章标签、按年归档；宽屏文章目录，长文可回到顶部
 - [x] RSS（技术文章摘要 + 说说摘要）、Sitemap、Canonical URL、Open Graph 文本与结构化数据
-- [x] GFM、KaTeX、提示块、中文脚注，以及带文件名 / 行高亮 / diff 的 Shiki 代码块
+- [x] GFM、KaTeX、中文脚注，以及带文件名 / 行高亮 / diff 的 Shiki 代码块
 - [x] 自托管中西文字体，不依赖运行时字体 CDN
 - [x] 技术文章与说说创建命令，以及面向 Cloudflare Pages 的一键站点发布
 
@@ -113,7 +113,7 @@ id: 1
 - `publishedAt` 必须是加引号的有效上海时间字符串 `"YYYY-MM-DDTHH:mm:ss+08:00"`；未加引号的 YAML 日期值、UTC `Z` 和其他时区均无效。
 - `draft: true` 不进入公开页面；准备发布时改为 `false`。发布时间只用于显示和排序，不提供定时发布。数字网址也不是发布时间顺序。
 - 正文不能为空。文章图片使用外部图床，并以普通 Markdown 图片语法引用。
-- 正文可用 GFM（表格、任务列表、删除线、自动链接、脚注）、`$...$` / `$$...$$` 公式、GitHub 提示块（`> [!NOTE]` 等）和原生 `<details>`。代码块支持 `title="file.js"`、行高亮与 diff 标记。
+- 正文可用 GFM（表格、任务列表、删除线、自动链接、脚注）、`$...$` / `$$...$$` 公式和原生 `<details>`。代码块支持 `title="file.js"`、行高亮与 diff 标记。
 - 保存后按通用流程预览；准备公开时确认 `draft: false`，再运行下方的站点发布命令。
 
 ### 发布说说
@@ -184,7 +184,7 @@ npm run publish -- "发布新的技术文章"
 | 框架与静态生成 | [Astro](https://astro.build/) 7，静态输出                                                    |
 | 类型检查       | [TypeScript](https://www.typescriptlang.org/) + Astro Check                                  |
 | 内容           | Markdown + Astro Content Collections                                                         |
-| Markdown       | [Sätteri](https://docs.astro.build/en/guides/markdown-content/)（GFM、KaTeX、提示块）+ Shiki |
+| Markdown       | [Sätteri](https://docs.astro.build/en/guides/markdown-content/)（GFM、KaTeX）+ Shiki         |
 | 样式           | Tailwind CSS 4、原生 CSS 与 CSS Custom Properties                                            |
 | 搜索           | [Pagefind](https://pagefind.app/) 弹层，仅已发布技术文章                                     |
 | 格式化         | [Prettier](https://prettier.io/)                                                             |

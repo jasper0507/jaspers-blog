@@ -2,7 +2,6 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import {
   ERROR_CODE,
-  RepoError,
   alignMain,
   commitAll,
   pushMain,
@@ -37,7 +36,7 @@ const aligned = await alignMain(cwd, "publish");
 if (aligned.status === "fast-forwarded") console.log("已与网上对齐");
 
 if (!(await workingTreeChanges(cwd))) {
-  throw new RepoError(ERROR_CODE.NO_CHANGES, "publish");
+  throw new Error(userMessage("publish", ERROR_CODE.NO_CHANGES));
 }
 
 await runNpm(["test"], userMessage("publish", ERROR_CODE.TEST_FAILED));
@@ -48,6 +47,6 @@ try {
 } catch (error) {
   process.stderr.write(error.stderr ?? "");
   await undoCommitIf(cwd, before, after);
-  throw new RepoError(ERROR_CODE.PUSH_FAILED, "publish", error);
+  throw new Error(userMessage("publish", ERROR_CODE.PUSH_FAILED), { cause: error });
 }
 console.log("已发布到网上");
