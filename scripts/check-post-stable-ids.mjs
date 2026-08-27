@@ -3,6 +3,7 @@ import { chmod, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assertPostStableIds, createPost } from "../src/lib/post-rules.js";
+import { createShuoshuoDraft, isShuoshuoStableId } from "../src/lib/shuoshuo-rules.js";
 
 const root = await mkdtemp(join(tmpdir(), "newblog-post-id-"));
 const postsDirectory = join(root, "posts");
@@ -17,6 +18,10 @@ async function readNext() {
 }
 
 try {
+  const shuoshuo = createShuoshuoDraft();
+  assert.ok(isShuoshuoStableId(shuoshuo.id));
+  assert.ok(shuoshuo.source.includes(`publishedAt: "${shuoshuo.publishedAt}"`));
+
   await assert.rejects(createPost(postsDirectory, "深度学习笔记"), /找不到技术文章号码计数器/);
   await assert.rejects(assertPostStableIds(postsDirectory, []), /找不到技术文章号码计数器/);
 
@@ -101,4 +106,4 @@ try {
   await rm(root, { recursive: true, force: true });
 }
 
-console.log("技术文章稳定 ID 验收通过");
+console.log("内容创建规则验收通过");

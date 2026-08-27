@@ -1,5 +1,5 @@
-# 可选设置空串视为省略，本地身份资源必须存在
+# 站点设置只服务当前博客
 
-`blog.config.ts` 仍是唯一日常设置入口。可选项 `headerTitle`、`darkImage`、`favicon` 在省略、空字符串或只含空白时按省略处理（短名回退站名、暗图复用亮图、不输出图标标签）。`alt: ""` 仍表示装饰图；`footer.text` 空或空白仍不渲染左侧。公开快照只暴露替换后的 `footer.copyright`，不再带出原稿 `text`。必填项空值、主视觉/`favicon` 缺文件、以及 `src/content/about.md` 缺失，在 `src/lib/site.ts` 用中文失败。正式网址经原生 `URL.href` 规范化。不恢复 Zod 诊断矩阵，也不校验 GitHub 主页形态、邮箱格式、HTTPS 域名根或 16 字上限。
+2026-08-27 修订：`blog.config.ts` 仍是唯一设置入口，但不再充当可复用主题配置。`headerTitle`、`darkImage`、`favicon` 等当前字段都必须填写；不支持省略、空白回退、任意子路径网址或兼容旧配置形状。字段结构由 TypeScript 检查，正式网址直接交给原生 `URL` 解析，本地图片和图标必须在 `public/` 中存在。浏览器图标只接受 SVG、PNG 或 ICO。
 
-浏览器图标推荐站点根上的 `/favicon.svg`，并允许 `public/` 内现存的 svg/png/ico；`link` 的 `type` 按扩展名输出。主视觉仍只接受 `/images/` 下的本地文件。访客亮暗记忆的 localStorage 键为 `theme`，读取时兼容旧键 `jasper-theme`。
+设置错误允许 TypeScript、`URL`、文件系统或构建直接失败，不维护一套平行的中文诊断矩阵。页脚仍只替换 `{year}`、`{author}`；访客主题记忆继续使用 `theme`，并读取旧键 `jasper-theme`。

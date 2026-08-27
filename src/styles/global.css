@@ -8,10 +8,11 @@
  */
 @theme {
   --font-serif:
-    "Source Serif 4", "Noto Serif SC", Georgia, "Songti SC", "Source Han Serif SC", serif;
+    "Source Serif 4", "Songti SC", STSong, "Source Han Serif SC", "Noto Serif CJK SC",
+    "Noto Serif SC", Georgia, serif;
   --font-sans:
-    "IBM Plex Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
-    sans-serif;
+    "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", "Source Han Sans SC", "Noto Sans CJK SC",
+    "Noto Sans SC", sans-serif;
   --font-mono:
     "IBM Plex Mono", "Sarasa Mono SC", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }

@@ -11,7 +11,7 @@ const readDist = (path: string) => readFile(join(root, "dist", path), "utf8");
 test.setTimeout(300_000);
 test.beforeAll(() => build(productionEnvironment));
 
-test("生产构建产物覆盖固定栏位", async () => {
+test("生产构建产物完整", async () => {
   for (const route of ["", "shuoshuo", "tags", "archives", "about"]) {
     await accessDist(`${route ? `${route}/` : ""}index.html`);
   }
@@ -27,9 +27,7 @@ test("生产构建产物覆盖固定栏位", async () => {
   ]);
   await assert.rejects(accessDist("categories/index.html"));
   await assert.rejects(accessDist("prototype/warmth/index.html"));
-});
 
-test("产物字体自托管且不含 Google Fonts", async () => {
   const home = await readDist("index.html");
   assert.doesNotMatch(home, /fonts\.googleapis\.com/);
   const cssDirectory = join(root, "dist/_astro");
@@ -42,9 +40,7 @@ test("产物字体自托管且不含 Google Fonts", async () => {
   ).join("\n");
   assert.doesNotMatch(css, /fonts\.googleapis\.com/);
   assert.match(css, /source-serif-4-latin-italic\.woff2/);
-});
 
-test("Pagefind 页数与已发布技术文章一致", async () => {
   const publishedCount = await countPublishedPostPages(join(root, "dist"));
   const searchIndex = JSON.parse(await readDist("pagefind/pagefind-entry.json"));
   const pageCount = searchIndex.languages["zh-cn"]?.page_count ?? 0;

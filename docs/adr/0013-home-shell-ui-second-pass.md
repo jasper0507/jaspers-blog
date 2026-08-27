@@ -8,7 +8,7 @@
 
 首页「最近文章」「最近说说」各 1 条；字段节奏同构为 `YYYY.MM.DD` + 标题/正文首行 +（文章）两行截断描述；「查看全部 (N)」使用半角括号与已发布总数（可为 0），文章链归档、说说链说说列表；区头链接默认无下划线。首页说说不再渲染折叠 Markdown 摘要块。
 
-本决策部分撤回 ADR-0001 中「禅语文字主视觉」「文章下拉为全部文章/标签/归档」「文章主标题字重 500」「中文粗体回退黑体体系以避免宋体伪粗」的约定；标题与粗体改由 Noto Serif SC 真字重 600/700 承担（见下文字体段与 #17）。
+本决策部分撤回 ADR-0001 中「禅语文字主视觉」「文章下拉为全部文章/标签/归档」「文章主标题字重 500」「中文粗体回退黑体体系以避免宋体伪粗」的约定；其后的 Noto 字重约定已由本文 2026-08-27 字体修订取代。
 
 ## 归档（#13 已落地）
 
@@ -28,7 +28,7 @@
 
 ## 字体（#17 已落地）
 
-字体按角色自托管：中文正文/标题/粗体为 Noto Serif SC 400/600/700（可变 wght 200–900 的 unicode-range 分包，真字重而非伪粗），英文正文 Source Serif 4（可变 wght 200–900，另手维 italic 面；拉丁 woff2 不随 `fonts:fetch` 下载），界面 IBM Plex Sans 与 Noto Sans SC，代码 IBM Plex Mono，代码中文以 Sarasa Mono SC 为可选系统回退（不自托管）。禁止第三方字体 CDN；不为无关中文分段 preload。资源可用 `npm run fonts:fetch`（`scripts/fetch-fonts.mjs`）重生 Noto 分包；拉丁文件原样保留。验收落在 dist 合同与 visual 上；人工验收通过（`233f1cd`）。
+2026-08-27 修订：只自托管 Source Serif 4、IBM Plex Sans 与 IBM Plex Mono 的拉丁字形；中文正文使用 Songti SC / Source Han Serif SC 等系统衬线回退，中文界面使用 PingFang SC / Microsoft YaHei / Noto Sans CJK SC 等系统无衬线回退。删除 Noto SC 分包及更新器，不再要求不同系统的中文字形完全一致；仍禁止运行时字体 CDN。本段取代 ADR-0001、ADR-0020 与 ADR-0021 中的中文字体自托管条款。
 
 ## 第二轮范围（#9）
 

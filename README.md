@@ -20,8 +20,8 @@
 - [x] 文章标签、按年归档；宽屏文章目录，长文可回到顶部
 - [x] RSS（技术文章摘要 + 说说摘要）、Sitemap、Canonical URL、Open Graph 文本与结构化数据
 - [x] GFM、KaTeX、中文脚注，以及带文件名 / 行高亮 / diff 的 Shiki 代码块
-- [x] 自托管中西文字体，不依赖运行时字体 CDN
-- [x] 技术文章与说说创建命令，以及面向 Cloudflare Pages 的一键站点发布
+- [x] 拉丁字体自托管、中文使用系统字体，不依赖运行时字体 CDN
+- [x] 技术文章与说说创建命令；原始 Git 推送触发 Cloudflare Pages 发布
 
 ## 🚀 项目结构
 
@@ -29,9 +29,9 @@
 /
 ├── docs/                   # 部署说明、架构决策记录与调研
 ├── public/
-│   ├── fonts/              # 自托管字体
+│   ├── fonts/              # 自托管拉丁字体
 │   └── images/             # 站点主视觉与现有图片
-├── scripts/                # 内容创建、字体更新与验收脚本
+├── scripts/                # 内容创建、搜索索引与领域验收脚本
 ├── src/
 │   ├── components/         # 正文、目录、标签与回到顶部
 │   ├── content/
@@ -74,12 +74,12 @@
 
 ### 通用流程
 
-日常在 `main` 上创建内容和发布即可。创建与发布命令会先快进对齐网上的版本，不必先手动 `git pull`。
+日常在 `main` 上创建内容，再用原始 Git 命令发布。
 
 1. 按下方说明创建技术文章、说说，或修改博客设置。
 2. 运行 `npm run dev`，打开 `http://localhost:4321` 检查页面。验收完整搜索时先停止开发服务器，再运行 `npm run build` 和 `npm run preview`；搜索入口是导航放大镜，焦点不在输入框时按 `/` 也可打开。
 3. 确认内容的 `draft`：`false` 会出现在本地预览并随下一次站点发布公开，`true` 会从页面、搜索、RSS 和站点地图中排除；草稿仍须填写完整字段和正文。
-4. 确认工作树中的全部改动都应该进入同一发布快照，然后运行 `npm run publish -- "<完整提交信息>"`。命令会先对齐网上版本，再校验、提交并推送；推送失败时会撤掉刚才那一次提交，文件仍留在本地。
+4. 运行 `npm run build`。成功后检查 `git status`，再用 `git add -A`、`git commit`、`git push` 发布；推送后在 Cloudflare Pages 确认部署成功。
 
 ### 发布技术文章
 
@@ -144,18 +144,9 @@ draft: false
 
 ### 更新博客设置
 
-个性化博客只需打开根目录 [`blog.config.ts`](blog.config.ts)。页面、RSS、Canonical URL、Open Graph、结构化数据和站点地图共用这份博客设置，不需要再修改页面源码。
+个性化博客只需打开根目录 [`blog.config.ts`](blog.config.ts)。页面、RSS、Canonical URL、Open Graph、结构化数据和站点地图共用这份设置。
 
-| 设置区      | 可配置内容                                                     | 空值含义                                                                                                              |
-| :---------- | :------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- |
-| `site`      | 博客名称、可选页头短名称、正式网址、默认简介和可选浏览器图标   | 名称、网址、简介必填；`headerTitle` / `favicon` 省略、空字符串或只含空白视为省略（短名回退站名，无图标标签）          |
-| `author`    | 作者显示名，以及页脚固定展示的 GitHub 个人主页和邮箱           | 三项均必填                                                                                                            |
-| `home.hero` | 首页文案、必需的亮色主视觉、可选暗色主视觉和图片说明           | caption、亮图必填；`darkImage` 省略、空字符串或只含空白视为省略（复用亮图）；`alt` 填 `""` 表示装饰图，只含空白会失败 |
-| `footer`    | 左侧纯文本，可留空；支持 `{year}`、`{author}`，不支持 Markdown | 空或只含空白则不渲染左侧                                                                                              |
-
-页脚右侧仍是固定的 RSS、GitHub 与邮箱。页头短名称只用于顶栏。
-
-设置文件通过 TypeScript 检查字段和类型；必填空值、缺失的本地图片/图标、缺失的「关于我」文件，以及非法网址，会在 `npm run check` 或构建时以中文失败。网址仍由原生 `URL` 解析并规范化（例如补上尾斜杠），不另做 HTTPS 或域名根校验。每个字段的必填/可省略/可空已标在 [`blog.config.ts`](blog.config.ts) 注释里。
+配置只服务当前站点：站点名称、页头短名、正式网址、简介、图标、作者联系方式、亮暗主视觉和页脚文本都必须填写。TypeScript 检查字段形状；网址由原生 `URL` 解析，本地图片和图标必须存在。页脚文本支持 `{year}`、`{author}` 两个替换符。
 
 不适合放进设置文件的内容使用固定位置：
 
@@ -163,19 +154,21 @@ draft: false
 - 首页主视觉：[`public/images/`](public/images/)，在设置文件中填写以 `/images/` 开头的路径。亮暗主视觉均使用 3:2，推荐 960×640 或更高且尺寸、主体位置一致，非 3:2 图片会居中裁切而不拉伸。
 - 浏览器图标：推荐 [`public/favicon.svg`](public/favicon.svg)；也可以指向 `public/` 内其它 svg、png、ico，并在设置文件填写对应根相对路径。必须为 1:1，优先方形 SVG，PNG/ICO 至少提供 32×32 表示。
 
-修改博客设置后按通用流程预览和发布。Cloudflare Pages 仍使用 `npm run build` 和 `dist`，完整操作见 [Cloudflare Pages 部署与日常发布](docs/deployment.md)。第三方资源声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+修改博客设置后按通用流程预览和发布。Cloudflare Pages 使用 `npm run build` 和 `dist`，完整操作见 [Cloudflare Pages 部署与日常发布](docs/deployment.md)。第三方资源声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ### 站点发布
 
-在已检出的 `main` 分支准备好全部有意改动，然后提供非空的完整 Git 提交信息：
+在 `main` 上完成内容并确认 `draft` 后，先构建，再使用原始 Git 命令发布：
 
 ```sh
-npm run publish -- "发布新的技术文章"
+npm run build
+git status
+git add -A
+git commit -m "发布新的技术文章"
+git push
 ```
 
-命令先快进对齐 `origin/main`，再运行包含生产构建的 `npm test`；成功后才会暂存全部 tracked 变更、删除及未忽略的新文件，创建一个提交并推送到 `origin/main`。技术文章、说说、博客设置和文档可进入同一站点发布快照，`draft` 仍是内容是否公开的唯一开关。命令不会自动格式化、合并分叉、改写更早的历史或直接调用 Cloudflare API。
-
-若网上已有更新且不能快进，命令会停下且不创建提交。若检查通过但推送失败，会撤掉刚才那一次提交，文件仍在本地，可以改完再发布；不要 force-push。
+普通内容发布只需生产构建，不运行 Playwright。修改页面、脚本或依赖时先运行精简后的 `npm test`。推送后由 Cloudflare Pages 构建 `main`；若线上版本有问题，执行 `git revert <错误提交>` 再 `git push`。
 
 ## 💻 技术栈
 
@@ -224,11 +217,9 @@ npm run preview
 | `npm run check`               | 运行 Astro 与 TypeScript 检查                                |
 | `npm run format`              | 使用 Prettier 格式化项目文件                                 |
 | `npm run format:check`        | 检查项目文件格式，不修改文件                                 |
-| `npm test`                    | 运行格式、类型、脚本和站点验收（含生产构建）                 |
+| `npm test`                    | 运行格式、类型、领域不变量和 Chromium 高层验收               |
 | `npm run new:post -- "<标题>"` | 按标题创建技术文章 Markdown，并分配数字网址                  |
 | `npm run new:shuoshuo`        | 创建带上海时间稳定 ID 的说说 Markdown                        |
-| `npm run publish -- "<信息>"` | 对齐网上版本后验收、构建并发布全部改动                       |
-| `npm run fonts:fetch`         | 下载 Noto 中文字体分包并更新字体 CSS（拉丁字体文件保持不动） |
 
 ## ✨ Feedback & Suggestions
 

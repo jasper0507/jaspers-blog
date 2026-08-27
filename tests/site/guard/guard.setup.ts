@@ -6,11 +6,8 @@ import { build, draftTagCollisionEnvironment, tagCollisionEnvironment } from "..
 test.describe.configure({ mode: "serial" });
 test.setTimeout(300_000);
 
-for (const [name, environment] of [
-  ["不同标签生成相同网址时应使构建失败", tagCollisionEnvironment],
-  ["草稿中的不同标签生成相同网址时也应使构建失败", draftTagCollisionEnvironment],
-] as const) {
-  test(name, async () => {
+test("公开与草稿标签生成相同网址时都使构建失败", async () => {
+  for (const environment of [tagCollisionEnvironment, draftTagCollisionEnvironment]) {
     let error: ExecFileException | undefined;
     try {
       await build(environment);
@@ -19,5 +16,5 @@ for (const [name, environment] of [
     }
     assert.ok(error, "标签网址冲突应使构建失败");
     assert.match(`${error.stdout ?? ""}${error.stderr ?? ""}`, /生成了相同的网址/);
-  });
-}
+  }
+});

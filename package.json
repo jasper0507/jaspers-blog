@@ -9,22 +9,16 @@
   "scripts": {
     "dev": "astro dev",
     "preview": "astro preview",
-    "format": "prettier --write \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card}.css\" \"scripts/**/*.mjs\" \"tests/site/**/*.ts\" \"playwright.config.ts\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
-    "format:check": "prettier --check \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card}.css\" \"scripts/**/*.mjs\" \"tests/site/**/*.ts\" \"playwright.config.ts\" \"*.{json,mjs}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
+    "format": "prettier --write \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card}.css\" \"scripts/**/*.mjs\" \"tests/site/**/*.ts\" \"playwright.config.ts\" \"*.{json,mjs,ts}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
+    "format:check": "prettier --check \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card}.css\" \"scripts/**/*.mjs\" \"tests/site/**/*.ts\" \"playwright.config.ts\" \"*.{json,mjs,ts}\" \"docs/**/*.md\" \"THIRD_PARTY_NOTICES.md\"",
     "check": "astro check",
     "build": "astro build --force && node scripts/index-posts.mjs",
-    "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "new:post": "node scripts/new-post.mjs",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
-    "publish": "node scripts/publish.mjs",
-    "test:post:command": "node scripts/check-new-post.mjs",
-    "test:post:identity": "node scripts/check-post-stable-ids.mjs",
+    "test:content-rules": "node scripts/check-post-stable-ids.mjs",
     "test:index-posts": "node scripts/check-index-posts.mjs",
-    "test:publish:command": "node scripts/check-publish.mjs",
-    "test:repo-sync:command": "node scripts/check-repo-sync.mjs",
-    "test:shuoshuo:command": "node scripts/check-new-shuoshuo.mjs",
     "test:site": "playwright test",
-    "test": "npm run format:check && npm run check && node scripts/check-fetch-fonts.mjs && npm run test:post:identity && npm run test:post:command && npm run test:shuoshuo:command && npm run test:repo-sync:command && npm run test:publish:command && npm run test:index-posts && npm run test:site"
+    "test": "npm run format:check && npm run check && npm run test:content-rules && npm run test:index-posts && npm run test:site"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",
@@ -42,7 +36,6 @@
     "pagefind": "1.5.2",
     "prettier": "3.9.6",
     "prettier-plugin-astro": "0.14.1",
-    "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4.3.3",
     "typescript": "6.0.3"
   },
@@ -50,9 +43,7 @@
     "arrowParens": "avoid",
     "printWidth": 100,
     "plugins": [
-      "prettier-plugin-astro",
-      "prettier-plugin-tailwindcss"
-    ],
-    "tailwindStylesheet": "./src/styles/global.css"
+      "prettier-plugin-astro"
+    ]
   }
 }
