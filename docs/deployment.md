@@ -68,4 +68,4 @@ Cloudflare 会从撤销提交重新构建。只有必须立即切回且来不及
 
 ## 字体
 
-Source Serif 4、IBM Plex Sans 和 IBM Plex Mono 的拉丁字形自托管于 `public/fonts/`；中文使用系统字体回退。构建产物不依赖 Google Fonts 等字体 CDN。
+Source Serif 4、IBM Plex Sans、IBM Plex Mono 的拉丁字形与 Noto Sans SC 的中文分包自托管于 `public/fonts/`。构建产物不依赖 Google Fonts 等字体 CDN；维护时用 `npm run fonts:fetch` 重生中文分包。

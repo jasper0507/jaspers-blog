@@ -15,12 +15,14 @@
     "build": "node scripts/check-site-markdown.mjs && astro build --force && node scripts/index-posts.mjs",
     "new:post": "node scripts/new-post.mjs",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
+    "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "test:config": "node scripts/check-site-config.mjs",
+    "test:fonts": "node scripts/check-fonts.mjs",
     "test:content-rules": "node scripts/check-post-stable-ids.mjs",
     "test:index-posts": "node scripts/check-index-posts.mjs",
     "test:site": "playwright test",
     "test:browser-smoke": "playwright test --config=playwright.smoke.config.ts",
-    "test": "npm run format:check && npm run check && npm run test:config && npm run test:content-rules && npm run test:index-posts && npm run test:site"
+    "test": "npm run format:check && npm run check && npm run test:fonts && npm run test:config && npm run test:content-rules && npm run test:index-posts && npm run test:site"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",

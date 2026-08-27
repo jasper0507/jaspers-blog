@@ -49,4 +49,10 @@ test("生产构建产物完整", async () => {
   ).join("\n");
   assert.doesNotMatch(css, /fonts\.googleapis\.com/);
   assert.match(css, /source-serif-4-latin-italic\.woff2/);
+  assert.match(css, /noto-sans-sc-/);
+  const fontFiles = await readdir(join(root, "dist", "fonts"));
+  assert.ok(
+    fontFiles.some(name => name.startsWith("noto-sans-sc-") && name.endsWith(".woff2")),
+    "生产构建应包含 Noto Sans SC 分包",
+  );
 });

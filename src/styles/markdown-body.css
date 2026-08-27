@@ -38,6 +38,8 @@
   font-optical-sizing: auto;
   hanging-punctuation: first last;
   overflow-wrap: break-word;
+  /* 汉字与拉丁/数字之间加缝；代码与公式单独关掉，避免标识符被插空 */
+  text-autospace: normal;
 }
 
 .post-body > :first-child {
@@ -143,6 +145,7 @@
 
 .post-body :is(code, kbd, pre, .astro-code) {
   font-synthesis: weight;
+  text-autospace: no-autospace;
 }
 
 .post-body :is(h2, h3, h4, h5, h6, pre, code, kbd) :is(strong, b) {
@@ -354,6 +357,7 @@
   font-size: 1.05em;
   line-height: normal;
   color: inherit;
+  text-autospace: no-autospace;
 }
 
 .post-body .katex-display {

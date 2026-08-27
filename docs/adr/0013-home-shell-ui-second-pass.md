@@ -30,6 +30,8 @@
 
 2026-08-27 修订：只自托管 Source Serif 4、IBM Plex Sans 与 IBM Plex Mono 的拉丁字形；中文正文使用 Songti SC / Source Han Serif SC 等系统衬线回退，中文界面使用 PingFang SC / Microsoft YaHei / Noto Sans CJK SC 等系统无衬线回退。删除 Noto SC 分包及更新器，不再要求不同系统的中文字形完全一致；仍禁止运行时字体 CDN。本段取代 ADR-0001、ADR-0020 与 ADR-0021 中的中文字体自托管条款。
 
+2026-08-28 修订：技术文章正文改为拉丁 Source Serif 4 + 自托管 Noto Sans SC（思源黑）。Noto Sans SC 以可变 wght 200–900 的 unicode-range 分包交付，覆盖正文 400、标题 500/600 与粗体 700 真字重；浏览器只请求当前页用到的区段。不自托管 Noto Serif SC。系统黑体（苹方 / 雅黑 / Source Han Sans）仅作缺失字形回退。禁止运行时字体 CDN；维护时用 `npm run fonts:fetch` 重生分包。本段取代上一则「中文正文走系统宋体、不自托管中文」的条款。
+
 ## 第二轮范围（#9）
 
 父票 #9 下子工单 #10–#17 均已落地并人工验收。其中「单篇技术文章页标题区与 768 纸张卡片排版合同保持不变」已由 **ADR-0014** 取代（编辑排版 + 分层 Kraft 正文）。第二轮其余外壳/首页/归档/标签云/搜索/字体约定仍有效；后续单篇页改动以 ADR-0014 为准。

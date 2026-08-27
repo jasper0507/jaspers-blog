@@ -20,7 +20,7 @@
 - [x] 文章标签、按年归档；宽屏文章目录，长文可回到顶部
 - [x] RSS（技术文章摘要 + 说说摘要）、Sitemap、Canonical URL、Open Graph 文本与结构化数据
 - [x] GFM、KaTeX、中文脚注，以及带文件名 / 行高亮 / diff 的 Shiki 代码块
-- [x] 拉丁字体自托管、中文使用系统字体，不依赖运行时字体 CDN
+- [x] 拉丁字体与中文思源黑自托管，不依赖运行时字体 CDN
 - [x] 技术文章与说说创建命令；原始 Git 推送触发 Cloudflare Pages 发布
 - [x] GitHub Actions：PR 运行完整 Chromium/Axe 验证与 Firefox/WebKit 冒烟，`main` 推送复核构建
 
@@ -30,7 +30,7 @@
 /
 ├── docs/                   # 部署说明、架构决策记录与调研
 ├── public/
-│   ├── fonts/              # 自托管拉丁字体
+│   ├── fonts/              # 自托管拉丁字体与 Noto Sans SC 分包
 │   └── images/             # 站点主视觉与现有图片
 ├── scripts/                # 内容创建、搜索索引与领域验收脚本
 ├── src/
@@ -176,17 +176,17 @@ git push
 
 ## 💻 技术栈
 
-| 用途           | 技术                                                                                         |
-| :------------- | :------------------------------------------------------------------------------------------- |
-| 框架与静态生成 | [Astro](https://astro.build/) 7，静态输出                                                    |
-| 类型检查       | [TypeScript](https://www.typescriptlang.org/) + Astro Check                                  |
-| 内容           | Markdown + Astro Content Collections                                                         |
-| Markdown       | [Sätteri](https://docs.astro.build/en/guides/markdown-content/)（GFM、KaTeX）+ Shiki         |
-| 样式           | Tailwind CSS 4、原生 CSS 与 CSS Custom Properties                                            |
-| 搜索           | [Pagefind](https://pagefind.app/) 弹层，仅已发布技术文章                                     |
-| 格式化         | [Prettier](https://prettier.io/)                                                             |
-| 验收           | [Playwright Test](https://playwright.dev/)                                                   |
-| 部署           | [Cloudflare Pages](https://pages.cloudflare.com/)                                            |
+| 用途           | 技术                                                                                 |
+| :------------- | :----------------------------------------------------------------------------------- |
+| 框架与静态生成 | [Astro](https://astro.build/) 7，静态输出                                            |
+| 类型检查       | [TypeScript](https://www.typescriptlang.org/) + Astro Check                          |
+| 内容           | Markdown + Astro Content Collections                                                 |
+| Markdown       | [Sätteri](https://docs.astro.build/en/guides/markdown-content/)（GFM、KaTeX）+ Shiki |
+| 样式           | Tailwind CSS 4、原生 CSS 与 CSS Custom Properties                                    |
+| 搜索           | [Pagefind](https://pagefind.app/) 弹层，仅已发布技术文章                             |
+| 格式化         | [Prettier](https://prettier.io/)                                                     |
+| 验收           | [Playwright Test](https://playwright.dev/)                                           |
+| 部署           | [Cloudflare Pages](https://pages.cloudflare.com/)                                    |
 
 ## 👨🏻‍💻 本地运行
 

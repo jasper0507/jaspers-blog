@@ -4,3 +4,4 @@ dist-settings/
 .astro/
 artifacts/
 .playwright-cli/
+.font-refresh-*/
