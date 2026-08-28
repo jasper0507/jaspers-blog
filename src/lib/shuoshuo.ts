@@ -1,10 +1,7 @@
 import { getCollection, render } from "astro:content";
 import { isPublished } from "./content";
 import { SHUOSHUO_TIME_ZONE } from "./shuoshuo-rules.js";
-
-// ponytail: cover inline/reference Markdown images; use an AST if nested URLs or raw HTML images become authoring needs.
-const markdownImagePattern = /!\[[^\]]*\](?:\((?:\\.|[^)])*\)|\[[^\]]*\])?/g;
-const markdownReferenceDefinitionPattern = /^\[[^\]]+\]:\s*\S+/;
+import { projectShuoshuoBody } from "./site-markdown.js";
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "long",
   timeStyle: "short",
@@ -20,28 +17,28 @@ const compactDateFormatter = new Intl.DateTimeFormat("en-CA", {
 
 export async function getPublishedShuoshuo() {
   const entries = await getCollection("shuoshuo");
+  const projected = entries.map(entry => ({
+    entry,
+    projection: projectShuoshuoBody(entry.body ?? ""),
+  }));
 
-  for (const entry of entries) {
-    if (!entry.body?.trim()) throw new Error(`说说 ${entry.id} 的正文不能为空`);
-  }
-
-  return entries
-    .filter(isPublished)
+  return projected
+    .filter(({ entry }) => isPublished(entry))
     .sort(
       (left, right) =>
-        right.data.publishedAt.getTime() - left.data.publishedAt.getTime() ||
-        right.id.localeCompare(left.id),
+        right.entry.data.publishedAt.getTime() - left.entry.data.publishedAt.getTime() ||
+        right.entry.id.localeCompare(left.entry.id),
     )
-    .map(entry => {
+    .map(({ entry, projection }) => {
       const publishedAt = entry.data.publishedAt;
       const long = dateTimeFormatter.format(publishedAt);
       const label = `说说 · ${long}`;
       return {
         id: entry.id,
-        href: `/shuoshuo/#${entry.id}`,
+        href: `/shuoshuo/${entry.id}/`,
         label,
         permalinkLabel: `${label}的永久链接`,
-        summary: getShuoshuoSummary(entry.body!),
+        ...projection,
         publishedAt: {
           value: publishedAt,
           iso: publishedAt.toISOString(),
@@ -54,25 +51,4 @@ export async function getPublishedShuoshuo() {
         },
       };
     });
-}
-
-function getShuoshuoSummary(body: string) {
-  const imageCount = body.match(markdownImagePattern)?.length ?? 0;
-  const line = body
-    .replaceAll("\r\n", "\n")
-    .split("\n")
-    .map(raw => {
-      const text = raw.trim();
-      if (markdownReferenceDefinitionPattern.test(text)) return "";
-      return text
-        .replace(/^#{1,6}\s+/, "")
-        .replace(/^[-*+]\s+/, "")
-        .replace(/\*\*(.+?)\*\*/g, "$1")
-        .replace(/\*(.+?)\*/g, "$1")
-        .replace(/`([^`]+)`/g, "$1")
-        .replace(markdownImagePattern, "")
-        .replace(/\[([^\]]*)\]\([^)]+\)/g, "$1");
-    })
-    .find(text => text.length > 0);
-  return line ?? `${imageCount} Image${imageCount === 1 ? "" : "s"}`;
 }

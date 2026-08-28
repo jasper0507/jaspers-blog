@@ -12,7 +12,6 @@ const [{ posts: publishedPosts }, publishedShuoshuo] = await Promise.all([
 const [latestPost] = publishedPosts;
 const [latestShuoshuo] = publishedShuoshuo;
 const { hero } = blogSettings.home;
-const hasDarkHero = hero.darkImage !== hero.lightImage;
 const postCount = publishedPosts.length;
 const shuoshuoCount = publishedShuoshuo.length;
 ---
@@ -23,26 +22,44 @@ const shuoshuoCount = publishedShuoshuo.length;
 
     <div class="hero-media">
       <img
-        class:list={["hero-image", hasDarkHero && "hero-image-light"]}
-        src={hero.lightImage}
+        class="hero-image"
+        id="hero-image"
+        data-light-src={hero.lightImage}
+        data-dark-src={hero.darkImage}
         width="1248"
         height="832"
         alt={hero.alt}
         decoding="async"
         fetchpriority="high"
       />
-      {
-        hasDarkHero && (
-          <img
-            class="hero-image hero-image-dark"
-            src={hero.darkImage}
-            width="1248"
-            height="832"
-            alt={hero.alt}
-            decoding="async"
-          />
-        )
-      }
+      <script is:inline>
+        (() => {
+          const image = document.querySelector("#hero-image");
+          if (!(image instanceof HTMLImageElement)) return;
+          const root = document.documentElement;
+          const sync = () => {
+            const source =
+              root.dataset.theme === "dark" ? image.dataset.darkSrc : image.dataset.lightSrc;
+            if (source && image.getAttribute("src") !== source) image.src = source;
+          };
+          sync();
+          new MutationObserver(sync).observe(root, {
+            attributes: true,
+            attributeFilter: ["data-theme"],
+          });
+        })();
+      </script>
+      <noscript>
+        <img
+          class="hero-image"
+          src={hero.lightImage}
+          width="1248"
+          height="832"
+          alt={hero.alt}
+          decoding="async"
+          fetchpriority="high"
+        />
+      </noscript>
     </div>
 
     <div class="home-feed">
@@ -143,19 +160,6 @@ const shuoshuoCount = publishedShuoshuo.length;
     height: 100%;
     object-fit: cover;
     object-position: center;
-  }
-
-  /* 亮/暗双图：跟随已解析 data-theme */
-  .hero-image-dark {
-    display: none;
-  }
-
-  :global(html[data-theme="dark"]) .hero-image-light {
-    display: none;
-  }
-
-  :global(html[data-theme="dark"]) .hero-image-dark {
-    display: block;
   }
 
   .home-feed {
