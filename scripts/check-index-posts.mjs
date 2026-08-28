@@ -17,10 +17,12 @@ async function pageCount(distDirectory) {
 
 try {
   const emptyDist = join(workingDirectory, "empty");
-  await mkdir(emptyDist, { recursive: true });
+  await mkdir(join(emptyDist, "pagefind"), { recursive: true });
+  await writeFile(join(emptyDist, "pagefind/stale.js"), "stale");
   assert.equal(await countPublishedPostPages(emptyDist), 0);
   await indexPublishedPosts(root, emptyDist);
-  assert.ok((await pageCount(emptyDist)) <= 1, "没有已发布技术文章时搜索索引应为空或仅含占位页");
+  await assert.rejects(readFile(join(emptyDist, "pagefind/stale.js")));
+  await assert.rejects(readFile(join(emptyDist, "pagefind/pagefind-entry.json")));
   await assert.rejects(readFile(join(emptyDist, ".pagefind-seed/index.html")));
 
   const publishedDist = join(workingDirectory, "published");

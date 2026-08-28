@@ -1,0 +1,46 @@
+---
+import type { GetStaticPaths } from "astro";
+import MarkdownBody from "../../components/MarkdownBody.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getPublishedShuoshuo } from "../../lib/shuoshuo";
+import "../../styles/shuoshuo-card.css";
+
+export const getStaticPaths = (async () =>
+  (await getPublishedShuoshuo()).map(item => ({
+    params: { id: item.id },
+    props: { item },
+  }))) satisfies GetStaticPaths;
+
+const { item } = Astro.props;
+const { Content } = await item.render();
+---
+
+<BaseLayout title={item.label} description={item.summary} pageClass="page-shell shuoshuo-detail">
+  <article class="shuoshuo-card" aria-labelledby="shuoshuo-detail-title">
+    <h1 id="shuoshuo-detail-title" class="sr-only">{item.label}</h1>
+    <time class="shuoshuo-detail-time" datetime={item.publishedAt.iso}>
+      {item.publishedAt.long}
+    </time>
+    <MarkdownBody>
+      <Content />
+    </MarkdownBody>
+  </article>
+</BaseLayout>
+
+<style>
+  .shuoshuo-detail-time {
+    display: inline-block;
+    margin-bottom: 0.9rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--track-meta);
+  }
+</style>
+
+<style is:global>
+  .shuoshuo-detail .post-body {
+    font-size: 1.0625rem;
+  }
+</style>

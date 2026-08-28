@@ -31,6 +31,11 @@ export const draftTagCollisionEnvironment = {
   POST_CONTENT_DIR: "./tests/fixtures/posts-draft-tag-collision",
   SHUOSHUO_CONTENT_DIR: "./tests/fixtures/shuoshuo-empty",
 };
+export const invalidMathEnvironment = {
+  ...process.env,
+  POST_CONTENT_DIR: "./tests/fixtures/posts-invalid-math",
+  SHUOSHUO_CONTENT_DIR: "./tests/fixtures/shuoshuo-empty",
+};
 
 export async function build(environment: Record<string, string | undefined>) {
   await execFileAsync("npm", ["run", "build"], {

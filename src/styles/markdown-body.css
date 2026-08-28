@@ -26,7 +26,7 @@
   --code-comment: light-dark(#766c61, #9b9386);
   --code-string: light-dark(#477436, #9cbd84);
   --code-constant: light-dark(#9f5225, #e0a175);
-  --code-keyword: light-dark(#7e4fb5, #af95de);
+  --code-keyword: light-dark(#684092, #af95de);
   --code-function: light-dark(#3c6aa8, #85aedc);
   --code-parameter: light-dark(#886c32, #d3b46f);
 
@@ -152,7 +152,9 @@
 .post-body a {
   color: var(--body-accent);
   font-weight: inherit;
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
+  text-decoration-thickness: 0.06em;
   text-underline-offset: 0.18em;
 }
 

@@ -24,31 +24,37 @@ const shuoshuo = await Promise.all(
       <ol class="shuoshuo-list">
         {shuoshuo.map(({ item, Content }) => {
           const bodyId = `shuoshuo-body-${item.id}`;
+          const summaryId = `shuoshuo-summary-${item.id}`;
 
           return (
             <li>
               <article class="shuoshuo-card" aria-label={item.label}>
-                <h2 class="sr-only" id={item.id}>
-                  {item.label}
-                </h2>
+                <h2 class="sr-only">{item.label}</h2>
                 <a class="shuoshuo-anchor" href={item.href} aria-label={item.permalinkLabel}>
                   <time datetime={item.publishedAt.iso}>{item.publishedAt.long}</time>
                 </a>
-                <div class="shuoshuo-body" id={bodyId}>
+                {item.collapsible && (
+                  <p class="shuoshuo-summary" id={summaryId} data-shuoshuo-summary={item.id}>
+                    {item.summary}
+                  </p>
+                )}
+                <div class="shuoshuo-body" id={bodyId} hidden={item.collapsible}>
                   <MarkdownBody>
                     <Content />
                   </MarkdownBody>
                 </div>
-                <button
-                  class="shuoshuo-toggle"
-                  type="button"
-                  aria-expanded="false"
-                  aria-controls={bodyId}
-                  data-shuoshuo-toggle={item.id}
-                  hidden
-                >
-                  展开
-                </button>
+                {item.collapsible && (
+                  <button
+                    class="shuoshuo-toggle"
+                    type="button"
+                    aria-expanded="false"
+                    aria-controls={bodyId}
+                    data-shuoshuo-toggle={item.id}
+                    data-summary-id={summaryId}
+                  >
+                    展开
+                  </button>
+                )}
               </article>
             </li>
           );
@@ -65,18 +71,14 @@ const shuoshuo = await Promise.all(
     if (!(button instanceof HTMLButtonElement)) return;
     const id = button.dataset.shuoshuoToggle;
     const body = id && document.querySelector(`#shuoshuo-body-${id}`);
+    const summary = document.querySelector(`#${button.dataset.summaryId}`);
     if (!(body instanceof HTMLDivElement)) return;
+    if (!(summary instanceof HTMLParagraphElement)) return;
 
-    body.toggleAttribute("data-collapsed", true);
-    if (body.scrollHeight <= body.clientHeight) {
-      body.removeAttribute("data-collapsed");
-      return;
-    }
-    body.inert = true;
-    button.hidden = false;
     button.addEventListener("click", () => {
-      const expanded = !body.toggleAttribute("data-collapsed");
-      body.inert = !expanded;
+      const expanded = button.getAttribute("aria-expanded") !== "true";
+      body.hidden = !expanded;
+      summary.hidden = expanded;
       button.setAttribute("aria-expanded", String(expanded));
       button.textContent = expanded ? "收起" : "展开";
     });
@@ -98,11 +100,6 @@ const shuoshuo = await Promise.all(
 
   .shuoshuo-list > li {
     min-width: 0;
-    scroll-margin-top: 1.5rem;
-  }
-
-  .shuoshuo-list > li:has(h2:target) .shuoshuo-card {
-    border-color: var(--accent);
   }
 
   .shuoshuo-list h2 {
@@ -119,9 +116,13 @@ const shuoshuo = await Promise.all(
     letter-spacing: var(--track-meta);
   }
 
-  .shuoshuo-body[data-collapsed] {
-    max-height: 12rem;
-    mask-image: linear-gradient(to bottom, #000 75%, transparent);
+  .shuoshuo-summary {
+    margin: 0;
+    color: var(--text);
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+    line-height: 1.62;
+    overflow-wrap: anywhere;
   }
 
   .shuoshuo-toggle {

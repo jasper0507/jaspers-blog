@@ -12,16 +12,17 @@
 
 ## 🔥 Features
 
-- [x] 技术文章与说说两种内容类型；技术文章网址为创建时冻结的数字稳定 ID，说说没有独立详情页、用稳定锚点分享
+- [x] 技术文章与说说两种内容类型；两者都使用创建后不变的独立详情页网址
 - [x] 基于 Astro Content Collections 的内容校验与草稿过滤；`draft` 是唯一公开开关
 - [x] 集中配置博客身份、公开联系方式、首页主视觉、浏览器图标与页脚文本
 - [x] 响应式布局、亮色/暗色主题（首次跟随系统，选择写入本地），以及键盘可访问的导航与搜索
-- [x] Pagefind 弹层搜索：`/` 打开，只索引已发布技术文章，公式不进入索引
+- [x] Pagefind 弹层搜索：`/` 打开，只索引已发布技术文章；没有技术文章时不生成索引或搜索界面
 - [x] 文章标签、按年归档；宽屏文章目录，长文可回到顶部
 - [x] RSS（技术文章摘要 + 说说摘要）、Sitemap、Canonical URL、Open Graph 文本与结构化数据
 - [x] GFM、KaTeX、中文脚注，以及带文件名 / 行高亮 / diff 的 Shiki 代码块
 - [x] 拉丁字体自托管、中文使用系统字体，不依赖运行时字体 CDN
 - [x] 技术文章与说说创建命令；原始 Git 推送触发 Cloudflare Pages 发布
+- [x] GitHub Actions：PR 运行完整 Chromium/Axe 验证与 Firefox/WebKit 冒烟，`main` 推送复核构建
 
 ## 🚀 项目结构
 
@@ -51,22 +52,24 @@
 ├── astro.config.mjs        # Astro、Markdown 与代码高亮配置
 ├── pagefind.yml            # 搜索索引排除规则（公式）
 ├── playwright.config.ts    # 站点验收配置
+├── playwright.smoke.config.ts # Firefox / WebKit 核心冒烟配置
 ├── package.json            # 依赖与命令
 └── tsconfig.json           # TypeScript 严格模式
 ```
 
 ### 公开页面
 
-| 路径            | 内容                                           |
-| :-------------- | :--------------------------------------------- |
-| `/`             | 首页：主视觉、最近 1 篇技术文章、最近 1 条说说 |
-| `/archives/`    | 按年归档全部已发布技术文章                     |
-| `/tags/`        | 标签云                                         |
-| `/tags/:slug/`  | 该标签下的技术文章                             |
-| `/posts/:id/`   | 技术文章正文，`:id` 为创建时分配的稳定数字     |
-| `/shuoshuo/`    | 说说时间流；单条链接为 `/shuoshuo/#稳定ID`     |
-| `/about/`       | 关于我                                         |
-| `/rss.xml`      | RSS：技术文章摘要与说说摘要，不含草稿          |
+| 路径             | 内容                                           |
+| :--------------- | :--------------------------------------------- |
+| `/`              | 首页：主视觉、最近 1 篇技术文章、最近 1 条说说 |
+| `/archives/`     | 按年归档全部已发布技术文章                     |
+| `/tags/`         | 标签云                                         |
+| `/tags/:slug/`   | 该标签下的技术文章                             |
+| `/posts/:id/`    | 技术文章正文，`:id` 为创建时分配的稳定数字     |
+| `/shuoshuo/`     | 说说时间流                                     |
+| `/shuoshuo/:id/` | 单条说说详情页，`:id` 为创建时冻结的稳定 ID    |
+| `/about/`        | 关于我                                         |
+| `/rss.xml`       | RSS：技术文章摘要与说说摘要，不含草稿          |
 
 `/posts` 重定向到归档；旧搜索页 `/search` 重定向到首页。导航是「文章」（归档 / 标签）· 说说 · 关于 · 搜索放大镜。
 
@@ -74,12 +77,12 @@
 
 ### 通用流程
 
-日常在 `main` 上创建内容，再用原始 Git 命令发布。
+内容改动可以在 `main` 上创建并直接发布；源码、配置、依赖和 CI 改动必须使用 PR。
 
 1. 按下方说明创建技术文章、说说，或修改博客设置。
 2. 运行 `npm run dev`，打开 `http://localhost:4321` 检查页面。验收完整搜索时先停止开发服务器，再运行 `npm run build` 和 `npm run preview`；搜索入口是导航放大镜，焦点不在输入框时按 `/` 也可打开。
 3. 确认内容的 `draft`：`false` 会出现在本地预览并随下一次站点发布公开，`true` 会从页面、搜索、RSS 和站点地图中排除；草稿仍须填写完整字段和正文。
-4. 运行 `npm run build`。成功后检查 `git status`，再用 `git add -A`、`git commit`、`git push` 发布；推送后在 Cloudflare Pages 确认部署成功。
+4. 纯 `src/content/**` 改动运行 `npm run build` 后可直接推送；其他改动提交 PR，等待 `verify` 与 `browser-smoke` 通过后合并。
 
 ### 发布技术文章
 
@@ -124,7 +127,7 @@ id: 1
 npm run new:shuoshuo
 ```
 
-命令会生成 `src/content/shuoshuo/YYYYMMDD-HHmmss.md`。文件名同时是 `/shuoshuo/#YYYYMMDD-HHmmss` 的稳定锚点，创建后不要重命名。编辑生成的文件：
+命令会生成 `src/content/shuoshuo/YYYYMMDD-HHmmss.md`。文件名形成 `/shuoshuo/YYYYMMDD-HHmmss/` 独立详情页网址，创建后不要重命名。编辑生成的文件：
 
 ```md
 ---
@@ -135,8 +138,9 @@ draft: false
 今天完成了博客的日常发布流程。
 ```
 
-- 说说没有标题，也没有独立详情页；只出现在 `/shuoshuo/` 时间流里，过长内容在卡片内原地展开。
-- 可以只有文字、只有 Markdown 图片，或两者都有，但正文不能为空。纯图说说在首页和 RSS 里用 `N Image(s)` 作为摘要。
+- 说说没有作者标题；时间流保留摘要折叠，独立详情页始终显示完整 Markdown。
+- 可以只有文字、只有 Markdown 图片，或两者都有。摘要从 Markdown AST 的普通文本和图片节点自动投影，最多 80 个用户感知字符；图片用 `[1 Image]`、`[N Images]` 计数并默认在折叠状态隐藏。
+- 代码、公式和原生 HTML 不单独参与摘要投影；只有这些节点、且没有普通文本或图片的说说会使构建失败。
 - 说说只允许 `publishedAt` 和 `draft` 两个字段；标题、摘要、标签等额外字段会使构建失败。
 - `publishedAt` 和文件名由命令按当前上海时间生成；可修改发布时间，但不要修改稳定 ID。发布时间格式要求与技术文章相同。同一秒内重复创建会因文件已存在而失败，下一秒重试即可。
 - 想暂不公开时改为 `draft: true`；准备公开时恢复为 `false`，再按通用流程预览和发布。
@@ -146,7 +150,7 @@ draft: false
 
 个性化博客只需打开根目录 [`blog.config.ts`](blog.config.ts)。页面、RSS、Canonical URL、Open Graph、结构化数据和站点地图共用这份设置。
 
-配置只服务当前站点：站点名称、页头短名、正式网址、简介、图标、作者联系方式、亮暗主视觉和页脚文本都必须填写。TypeScript 检查字段形状；正式网址必须是 `https://example.com/` 这类域名根地址，不接受子路径、查询或锚点；本地图片和图标必须存在。页脚文本支持 `{year}`、`{author}` 两个替换符。
+配置只服务当前站点：站点名称、页头短名、正式网址、简介、图标、作者联系方式、亮暗主视觉和页脚文本都必须填写。TypeScript 检查字段形状，Zod 在运行时检查实际值；正式网址必须是无账号、端口、子路径、查询或锚点的 HTTPS 域名根地址，GitHub 必须是用户主页，邮箱必须有效，本地图片和图标必须存在。页脚文本只支持 `{year}`、`{author}` 两个替换符。
 
 不适合放进设置文件的内容使用固定位置：
 
@@ -154,11 +158,11 @@ draft: false
 - 首页主视觉：[`public/images/`](public/images/)，在设置文件中填写以 `/images/` 开头的路径。亮暗主视觉均使用 3:2，推荐 960×640 或更高且尺寸、主体位置一致，非 3:2 图片会居中裁切而不拉伸。
 - 浏览器图标：推荐 [`public/favicon.svg`](public/favicon.svg)；也可以指向 `public/` 内其它 svg、png、ico，并在设置文件填写对应根相对路径。必须为 1:1，优先方形 SVG，PNG/ICO 至少提供 32×32 表示。
 
-修改博客设置后按通用流程预览和发布。Cloudflare Pages 使用 `npm run build` 和 `dist`，完整操作见 [Cloudflare Pages 部署与日常发布](docs/deployment.md)。第三方资源声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+修改博客设置后按通用流程预览并通过 PR 发布。Cloudflare Pages 使用 `npm run build` 和 `dist`，完整操作见 [Cloudflare Pages 部署与日常发布](docs/deployment.md)。
 
 ### 站点发布
 
-在 `main` 上完成内容并确认 `draft` 后，先构建，再使用原始 Git 命令发布：
+纯内容改动在 `main` 上确认 `draft` 后，先构建，再使用原始 Git 命令发布：
 
 ```sh
 npm run build
@@ -168,7 +172,7 @@ git commit -m "发布新的技术文章"
 git push
 ```
 
-普通内容发布只需生产构建，不运行 Playwright。修改页面、脚本或依赖时先运行精简后的 `npm test`。推送后由 Cloudflare Pages 构建 `main`；若线上版本有问题，执行 `git revert <错误提交>` 再 `git push`。
+普通内容发布只需生产构建，不运行 Playwright。修改页面、脚本、配置、依赖或 CI 时在分支上提交 PR；GitHub Actions 自动运行 `verify` 与 `browser-smoke`。推送或合并到 `main` 后，`build` 工作流与 Cloudflare Pages 都会构建；若线上版本有问题，执行 `git revert <错误提交>` 再推送。
 
 ## 💻 技术栈
 
@@ -202,24 +206,25 @@ npm run build
 npm run preview
 ```
 
-源码仓库保持私有；构建产物不得依赖 Google Fonts 等第三方字体 CDN。
+源码与内容仓库公开；`draft` 不是保密机制，敏感内容不得提交。构建产物不得依赖 Google Fonts 等第三方字体 CDN。
 
 ## 🧞 Commands
 
 所有命令均在项目根目录执行。
 
-| 命令                          | 作用                                                         |
-| :---------------------------- | :----------------------------------------------------------- |
-| `npm ci`                      | 按 `package-lock.json` 安装依赖                              |
-| `npm run dev`                 | 启动本地开发服务器                                           |
-| `npm run build`               | 构建静态站点，并为已发布技术文章生成 Pagefind 索引           |
-| `npm run preview`             | 本地预览 `dist` 生产构建                                     |
-| `npm run check`               | 运行 Astro 与 TypeScript 检查                                |
-| `npm run format`              | 使用 Prettier 格式化项目文件                                 |
-| `npm run format:check`        | 检查项目文件格式，不修改文件                                 |
-| `npm test`                    | 运行格式、类型、领域不变量和 Chromium 高层验收               |
-| `npm run new:post -- "<标题>"` | 按标题创建技术文章 Markdown，并分配数字网址                  |
-| `npm run new:shuoshuo`        | 创建带上海时间稳定 ID 的说说 Markdown                        |
+| 命令                           | 作用                                               |
+| :----------------------------- | :------------------------------------------------- |
+| `npm ci`                       | 按 `package-lock.json` 安装依赖                    |
+| `npm run dev`                  | 启动本地开发服务器                                 |
+| `npm run build`                | 构建静态站点，并为已发布技术文章生成 Pagefind 索引 |
+| `npm run preview`              | 本地预览 `dist` 生产构建                           |
+| `npm run check`                | 运行 Astro 与 TypeScript 检查                      |
+| `npm run format`               | 使用 Prettier 格式化项目文件                       |
+| `npm run format:check`         | 检查项目文件格式，不修改文件                       |
+| `npm test`                     | 运行格式、类型、领域不变量和 Chromium 高层验收     |
+| `npm run test:browser-smoke`   | 运行 Firefox 与 WebKit 核心交互冒烟                |
+| `npm run new:post -- "<标题>"` | 按标题创建技术文章 Markdown，并分配数字网址        |
+| `npm run new:shuoshuo`         | 创建带上海时间稳定 ID 的说说 Markdown              |
 
 ## ✨ Feedback & Suggestions
 

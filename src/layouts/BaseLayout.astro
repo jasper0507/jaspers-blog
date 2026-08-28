@@ -1,6 +1,7 @@
 ---
 import "../styles/fonts.css";
 import "../styles/global.css";
+import { getPublishedPostCatalog } from "../lib/posts";
 import { blogSettings } from "../lib/site";
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
   description?: string;
   pageClass?: string;
   ogType?: "website" | "article";
+  noindex?: boolean;
 }
 
 const {
@@ -26,6 +28,7 @@ const description = pageData.description ?? defaultDescription;
 const canonical = new URL(Astro.url.pathname, url);
 const path = Astro.url.pathname;
 const inArticles = ["/posts/", "/tags/", "/archives/"].some(prefix => path.startsWith(prefix));
+const searchEnabled = (await getPublishedPostCatalog()).posts.length > 0;
 /* 导航项（含文章菜单触发钮）：移动端更小的点按内边距，≥30rem 恢复桌面尺度 */
 const navItemClass =
   "inline-flex min-h-[2.75rem] cursor-pointer items-center border-0 border-b-2 border-b-transparent bg-transparent px-[0.35rem] text-[0.9rem] font-medium tracking-[0.01em] text-muted no-underline hover:border-b-accent hover:text-text min-[30rem]:px-[0.55rem] min-[30rem]:text-[0.9375rem] is-current:border-b-accent is-current:text-text";
@@ -58,6 +61,7 @@ const structuredData = JSON.stringify(
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    {pageData.noindex && <meta name="robots" content="noindex" />}
     <meta name="generator" content={Astro.generator} />
     {favicon && <link rel="icon" href={favicon} type={faviconType} />}
     <link rel="canonical" href={canonical} />
@@ -74,12 +78,16 @@ const structuredData = JSON.stringify(
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
-    <link rel="stylesheet" href="/pagefind/pagefind-component-ui.css" />
+    {searchEnabled && <link rel="stylesheet" href="/pagefind/pagefind-component-ui.css" />}
     <title>{title}</title>
     <slot name="head">
-      <script type="application/ld+json" set:html={structuredData} is:inline />
+      {
+        !pageData.noindex && (
+          <script type="application/ld+json" set:html={structuredData} is:inline />
+        )
+      }
     </slot>
-    <script is:inline type="module" src="/pagefind/pagefind-component-ui.js"></script>
+    {searchEnabled && <script is:inline type="module" src="/pagefind/pagefind-component-ui.js" />}
     <script is:inline>
       (() => {
         const key = "theme";
@@ -211,11 +219,13 @@ const structuredData = JSON.stringify(
                 关于
               </a>
             </li>
-            <li class="nav-search flex items-center">
-              {/* 放大镜入口；/ 打开面板（可编辑焦点下不劫持）；Esc/遮罩/关闭钮退出 */}
-              <pagefind-modal-trigger compact hide-shortcut shortcut="/" placeholder="搜索"
-              ></pagefind-modal-trigger>
-            </li>
+            {
+              searchEnabled && (
+                <li class="nav-search flex items-center">
+                  <pagefind-modal-trigger compact hide-shortcut shortcut="/" placeholder="搜索" />
+                </li>
+              )
+            }
           </ul>
         </nav>
       </div>
@@ -244,20 +254,26 @@ const structuredData = JSON.stringify(
         </ul>
       </div>
     </footer>
-    {/* ponytail: 当前索引很小；内容规模明显增长时再恢复 Worker。 */}
-    <pagefind-config no-worker lang="zh-cn"></pagefind-config>
-    <pagefind-modal reset-on-close>
-      <pagefind-modal-header>
-        <pagefind-input placeholder="搜索技术文章"></pagefind-input>
-      </pagefind-modal-header>
-      <pagefind-modal-body>
-        <pagefind-summary></pagefind-summary>
-        <pagefind-results hide-sub-results></pagefind-results>
-      </pagefind-modal-body>
-      <pagefind-modal-footer>
-        <pagefind-keyboard-hints></pagefind-keyboard-hints>
-      </pagefind-modal-footer>
-    </pagefind-modal>
+    {
+      searchEnabled && (
+        <>
+          {/* ponytail: 当前索引很小；内容规模明显增长时再恢复 Worker。 */}
+          <pagefind-config no-worker lang="zh-cn" />
+          <pagefind-modal reset-on-close>
+            <pagefind-modal-header>
+              <pagefind-input placeholder="搜索技术文章" />
+            </pagefind-modal-header>
+            <pagefind-modal-body>
+              <pagefind-summary />
+              <pagefind-results hide-sub-results />
+            </pagefind-modal-body>
+            <pagefind-modal-footer>
+              <pagefind-keyboard-hints />
+            </pagefind-modal-footer>
+          </pagefind-modal>
+        </>
+      )
+    }
     <button
       class="theme-toggle group fixed right-[max(1rem,env(safe-area-inset-right,0px))] bottom-[max(1rem,env(safe-area-inset-bottom,0px))] z-[var(--z-float)] grid h-[2.75rem] w-[2.75rem] cursor-pointer place-items-center rounded-full border border-line bg-surface p-0 shadow-[var(--shadow-float)] transition-[border-color,color,background-color,box-shadow,transform] duration-[var(--duration)] ease-[var(--ease-out)] hover:border-accent hover:bg-surface hover:text-accent hover:shadow-[var(--shadow-float-hover)] active:scale-[0.96]"
       id="theme-toggle"

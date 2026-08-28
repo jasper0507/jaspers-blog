@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import AxeBuilder from "@axe-core/playwright";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "@playwright/test";
@@ -14,9 +15,10 @@ import {
 const readDist = (path: string) => readFile(join(root, "dist", path), "utf8");
 
 test("公开内容合同", async () => {
-  const [home, timeline, archive, tags, rss, sitemap] = await Promise.all([
+  const [home, timeline, detail, archive, tags, rss, sitemap] = await Promise.all([
     readDist("index.html"),
     readDist("shuoshuo/index.html"),
+    readDist("shuoshuo/20250101-000001/index.html"),
     readDist("archives/index.html"),
     readDist("tags/index.html"),
     readDist("rss.xml"),
@@ -29,12 +31,27 @@ test("公开内容合同", async () => {
     `${home}${timeline}${archive}${tags}${rss}${sitemap}`,
     /不应公开的技术文章草稿|这是一条不应公开的草稿|草稿标签/,
   );
-  assertInOrder(timeline, ['id="20260102-080000"', 'id="20250102-000000"'], "说说排序");
+  assertInOrder(
+    timeline,
+    ['href="/shuoshuo/20260102-080000/"', 'href="/shuoshuo/20250102-000000/"'],
+    "说说排序",
+  );
   assertInOrder(archive, ["/posts/1/", "/posts/2/", "/posts/3/"], "文章排序");
   assertInOrder(tags, ['href="/tags/共同/"', 'href="/tags/astro/"'], "标签排序");
+  assert.match(home, /href="\/shuoshuo\/20250101-000001\/"/);
+  assert.match(timeline, /href="\/shuoshuo\/20250101-000001\/"/);
+  assert.doesNotMatch(`${home}${timeline}${rss}`, /\/shuoshuo\/#/);
+  assert.match(
+    detail,
+    /<link rel="canonical" href="https:\/\/jasper0507\.me\/shuoshuo\/20250101-000001\/"/,
+  );
+  assert.match(detail, /loading="lazy"/);
+  assert.match(detail, /decoding="async"/);
   assert.ok(rss.includes(`<link>${expectedSite.url}</link>`));
+  assert.match(rss, /https:\/\/jasper0507\.me\/shuoshuo\/20250101-000001\//);
   assert.equal((rss.match(/<item>/g) ?? []).length, 6);
   assert.doesNotMatch(sitemap, /\/search\/|\/rss\.xml|<loc>[^<]*#/);
+  assert.match(sitemap, /\/shuoshuo\/20250101-000001\//);
 
   const searchIndex = JSON.parse(await readDist("pagefind/pagefind-entry.json"));
   assert.equal(searchIndex.languages["zh-cn"].page_count, 3);
@@ -76,6 +93,21 @@ test("站点壳、主题、菜单与搜索", async ({ page }) => {
     .first();
   await result.waitFor({ state: "visible" });
   assert.equal(new URL((await result.getAttribute("href")) ?? "", host).pathname, "/posts/2/");
+});
+
+test("暗色主视觉只请求暗色图片", async ({ page }) => {
+  const heroRequests: string[] = [];
+  page.on("request", request => {
+    if (/\/images\/hero-(?:light|dark)\.jpg$/.test(request.url())) {
+      heroRequests.push(new URL(request.url()).pathname);
+    }
+  });
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto(host, { waitUntil: "networkidle" });
+
+  assert.equal(await page.locator(".hero-media > img").count(), 1);
+  assert.equal(await page.locator(".hero-image").getAttribute("src"), expectedHome.hero.darkImage);
+  assert.deepEqual(heroRequests, [expectedHome.hero.darkImage]);
 });
 
 test("技术文章阅读能力", async ({ page }) => {
@@ -120,9 +152,26 @@ test("技术文章阅读能力", async ({ page }) => {
 test("说说和移动端基本可用", async ({ page }) => {
   await page.goto(`${host}/shuoshuo/`);
   const toggle = page.locator('[data-shuoshuo-toggle="20250101-000001"]');
+  const summary = page.locator('[data-shuoshuo-summary="20250101-000001"]');
+  const body = page.locator("#shuoshuo-body-20250101-000001");
   await toggle.waitFor({ state: "visible" });
+  assert.equal(await summary.isVisible(), true);
+  assert.equal(await body.isHidden(), true);
+  assert.equal(await body.getAttribute("inert"), null);
+  assert.equal(
+    await page.locator('a[href="/shuoshuo/20250101-000001/"]').first().isVisible(),
+    true,
+  );
   await toggle.click();
   assert.equal(await toggle.getAttribute("aria-expanded"), "true");
+  assert.equal(await summary.isHidden(), true);
+  assert.equal(await body.isVisible(), true);
+
+  const detailResponse = await page.goto(`${host}/shuoshuo/20250101-000001/`);
+  assert.equal(detailResponse?.ok(), true);
+  assert.equal(await page.locator("h1").textContent(), "说说 · 2026年2月3日 09:30");
+  assert.equal(await page.locator("[data-shuoshuo-toggle]").count(), 0);
+  assert.equal(await page.getByText("隐藏区域内的测试链接").isVisible(), true);
 
   await page.setViewportSize({ width: 320, height: 960 });
   for (const path of ["/", "/posts/2/"]) {
@@ -141,4 +190,17 @@ test("未知路径使用站点 404", async ({ page }) => {
   const response = await page.goto(`${host}/not-a-page/`);
   assert.equal(response?.status(), 404);
   assert.equal((await page.locator("h1").textContent())?.trim(), "没有找到这个页面");
+});
+
+test("核心页面没有明显无障碍违规", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const path of ["/", "/posts/2/", "/shuoshuo/", "/shuoshuo/20250101-000001/"]) {
+    await page.goto(`${host}${path}`);
+    const { violations } = await new AxeBuilder({ page }).analyze();
+    assert.deepEqual(
+      violations.map(({ id, nodes }) => ({ id, targets: nodes.map(node => node.target) })),
+      [],
+      path,
+    );
+  }
 });

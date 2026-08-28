@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assertPostStableIds, createPost } from "../src/lib/post-rules.js";
 import { createShuoshuoDraft, isShuoshuoStableId } from "../src/lib/shuoshuo-rules.js";
+import { projectShuoshuoBody } from "../src/lib/site-markdown.js";
 
 const root = await mkdtemp(join(tmpdir(), "newblog-post-id-"));
 const postsDirectory = join(root, "posts");
@@ -21,6 +22,29 @@ try {
   const shuoshuo = createShuoshuoDraft();
   assert.ok(isShuoshuoStableId(shuoshuo.id));
   assert.ok(shuoshuo.source.includes(`publishedAt: "${shuoshuo.publishedAt}"`));
+
+  assert.deepEqual(
+    projectShuoshuoBody(
+      "你好\n世界，[链接文字](https://example.com)。\n\n![不进入正文](one.jpg)\n![也不进入正文](two.jpg)",
+    ),
+    { summary: "你好 世界，链接文字。 [2 Images]", collapsible: true },
+  );
+  assert.deepEqual(projectShuoshuoBody("🙂".repeat(81)), {
+    summary: `${"🙂".repeat(79)}…`,
+    collapsible: true,
+  });
+  assert.deepEqual(projectShuoshuoBody(`${"字".repeat(75)}\n\n![图片](one.jpg)`), {
+    summary: `${"字".repeat(69)}… [1 Image]`,
+    collapsible: true,
+  });
+  assert.deepEqual(projectShuoshuoBody("![图片](one.jpg)"), {
+    summary: "[1 Image]",
+    collapsible: true,
+  });
+  assert.throws(
+    () => projectShuoshuoBody("```js\nconst ignored = true;\n```"),
+    /没有可见文字或图片/,
+  );
 
   await assert.rejects(createPost(postsDirectory, "深度学习笔记"), /找不到技术文章号码计数器/);
   await assert.rejects(assertPostStableIds(postsDirectory, []), /找不到技术文章号码计数器/);
