@@ -1,7 +1,7 @@
 import { getCollection, render } from "astro:content";
+import { markdownToMdast, type MdastNode } from "satteri";
 import { isPublished } from "./content";
 import { SHUOSHUO_TIME_ZONE } from "./shuoshuo-rules.js";
-import { projectShuoshuoBody } from "./site-markdown.js";
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "long",
   timeStyle: "short",
@@ -14,6 +14,54 @@ const compactDateFormatter = new Intl.DateTimeFormat("en-CA", {
   month: "2-digit",
   day: "2-digit",
 });
+const summarySegmenter = new Intl.Segmenter("zh-CN", { granularity: "grapheme" });
+const separatedMdastChildren = new Set([
+  "root",
+  "blockquote",
+  "list",
+  "listItem",
+  "table",
+  "tableRow",
+  "tableCell",
+  "footnoteDefinition",
+]);
+
+function projectShuoshuoBody(source: string) {
+  let imageCount = 0;
+  const tree = markdownToMdast(source, { features: { math: true } });
+
+  const visibleText = (node: MdastNode): string => {
+    if (node.type === "text") return node.value;
+    if (node.type === "image" || node.type === "imageReference") {
+      imageCount += 1;
+      return "";
+    }
+    if (node.type === "break") return " ";
+    if (!("children" in node)) return "";
+    return node.children
+      .map(visibleText)
+      .filter(Boolean)
+      .join(separatedMdastChildren.has(node.type) ? " " : "");
+  };
+
+  const text = visibleText(tree).replace(/\s+/gu, " ").trim();
+  if (!text && imageCount === 0) throw new Error("说说没有可见文字或图片");
+
+  const marker = imageCount > 0 ? `[${imageCount} Image${imageCount === 1 ? "" : "s"}]` : "";
+  const graphemes = [...summarySegmenter.segment(text)].map(segment => segment.segment);
+  const markerLength = marker ? [...summarySegmenter.segment(marker)].length + 1 : 0;
+  const textLimit = 80 - markerLength;
+  const truncated = graphemes.length > textLimit;
+  const projectedText = truncated
+    ? `${graphemes
+        .slice(0, textLimit - 1)
+        .join("")
+        .trimEnd()}…`
+    : text;
+  const summary = [projectedText, marker].filter(Boolean).join(" ");
+
+  return { summary, collapsible: truncated || imageCount > 0 };
+}
 
 export async function getPublishedShuoshuo() {
   const entries = await getCollection("shuoshuo");

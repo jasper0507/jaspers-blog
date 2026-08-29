@@ -5,6 +5,7 @@ import {
   build,
   draftTagCollisionEnvironment,
   invalidMathEnvironment,
+  invalidShuoshuoEnvironment,
   tagCollisionEnvironment,
 } from "../helpers.ts";
 
@@ -24,13 +25,18 @@ test("公开与草稿标签生成相同网址时都使构建失败", async () =>
   }
 });
 
-test("非法公式使构建失败", async () => {
-  let error: ExecFileException | undefined;
-  try {
-    await build(invalidMathEnvironment);
-  } catch (caught) {
-    error = caught as ExecFileException;
+test("非法 Markdown 内容使构建失败", async () => {
+  for (const [environment, pattern] of [
+    [invalidMathEnvironment, /KaTeX parse error/],
+    [invalidShuoshuoEnvironment, /说说没有可见文字或图片/],
+  ] as const) {
+    let error: ExecFileException | undefined;
+    try {
+      await build(environment);
+    } catch (caught) {
+      error = caught as ExecFileException;
+    }
+    assert.ok(error, "非法 Markdown 内容应使构建失败");
+    assert.match(`${error.stdout ?? ""}${error.stderr ?? ""}`, pattern);
   }
-  assert.ok(error, "非法公式应使构建失败");
-  assert.match(`${error.stdout ?? ""}${error.stderr ?? ""}`, /KaTeX parse error/);
 });

@@ -13,6 +13,9 @@ import {
 } from "../helpers.ts";
 
 const readDist = (path: string) => readFile(join(root, "dist", path), "utf8");
+const longShuoshuoSummary =
+  "这是发布时间最新的公开说说。它故意使用与发布时间不同的文件名，用来确认稳定 ID 不会从可修改的时间重新推导。 这里继续放入足够长的正文，… [1 Image]";
+const emojiShuoshuoSummary = `${"🙂".repeat(79)}…`;
 
 test("公开内容合同", async () => {
   const [home, timeline, detail, archive, tags, rss, sitemap] = await Promise.all([
@@ -26,7 +29,7 @@ test("公开内容合同", async () => {
   ]);
 
   assert.match(home, /同时发布的 Alpha 技术文章/);
-  assert.match(home, /这是发布时间最新的公开说说/);
+  assert.ok(home.includes(longShuoshuoSummary));
   assert.doesNotMatch(
     `${home}${timeline}${archive}${tags}${rss}${sitemap}`,
     /不应公开的技术文章草稿|这是一条不应公开的草稿|草稿标签/,
@@ -47,9 +50,24 @@ test("公开内容合同", async () => {
   );
   assert.match(detail, /loading="lazy"/);
   assert.match(detail, /decoding="async"/);
+  assert.ok(detail.includes(longShuoshuoSummary));
   assert.ok(rss.includes(`<link>${expectedSite.url}</link>`));
   assert.match(rss, /https:\/\/jasper0507\.me\/shuoshuo\/20250101-000001\//);
-  assert.equal((rss.match(/<item>/g) ?? []).length, 6);
+  for (const summary of [
+    longShuoshuoSummary,
+    "这是相同 发布时间下编号较早的说说。",
+    emojiShuoshuoSummary,
+    "[2 Images]",
+  ]) {
+    assert.ok(
+      rss.includes(`<description>${summary}</description>`),
+      `RSS 缺少说说摘要：${summary}`,
+    );
+  }
+  for (const summary of [longShuoshuoSummary, emojiShuoshuoSummary, "[2 Images]"]) {
+    assert.ok(timeline.includes(summary), `时间流缺少折叠摘要：${summary}`);
+  }
+  assert.equal((rss.match(/<item>/g) ?? []).length, 8);
   assert.doesNotMatch(sitemap, /\/search\/|\/rss\.xml|<loc>[^<]*#/);
   assert.match(sitemap, /\/shuoshuo\/20250101-000001\//);
 

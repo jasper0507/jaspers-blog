@@ -36,6 +36,11 @@ export const invalidMathEnvironment = {
   POST_CONTENT_DIR: "./tests/fixtures/posts-invalid-math",
   SHUOSHUO_CONTENT_DIR: "./tests/fixtures/shuoshuo-empty",
 };
+export const invalidShuoshuoEnvironment = {
+  ...process.env,
+  POST_CONTENT_DIR: "./tests/fixtures/posts-visual",
+  SHUOSHUO_CONTENT_DIR: "./tests/fixtures/shuoshuo-invalid-summary",
+};
 
 export async function build(environment: Record<string, string | undefined>) {
   await execFileAsync("npm", ["run", "build"], {
