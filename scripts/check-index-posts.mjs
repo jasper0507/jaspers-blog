@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { countPublishedPostPages, indexPublishedPosts } from "./lib/index-published-posts.mjs";
+import { indexPublishedPosts } from "./lib/index-published-posts.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const workingDirectory = await mkdtemp(join(tmpdir(), "newblog-index-"));
@@ -19,7 +19,6 @@ try {
   const emptyDist = join(workingDirectory, "empty");
   await mkdir(join(emptyDist, "pagefind"), { recursive: true });
   await writeFile(join(emptyDist, "pagefind/stale.js"), "stale");
-  assert.equal(await countPublishedPostPages(emptyDist), 0);
   await indexPublishedPosts(root, emptyDist);
   await assert.rejects(readFile(join(emptyDist, "pagefind/stale.js")));
   await assert.rejects(readFile(join(emptyDist, "pagefind/pagefind-entry.json")));
@@ -46,7 +45,6 @@ try {
     join(publishedDist, "about/index.html"),
     `<!doctype html><html lang="zh-cn"><head><meta charset="utf-8"><title>关于</title></head><body data-pagefind-body><p>不应进入搜索</p></body></html>\n`,
   );
-  assert.equal(await countPublishedPostPages(publishedDist), 1);
   await indexPublishedPosts(root, publishedDist);
   assert.equal(await pageCount(publishedDist), 1);
 
@@ -55,7 +53,6 @@ try {
     join(publishedDist, "posts/2/index.html"),
     `<!doctype html><html lang="zh-cn"><head><meta charset="utf-8"><title>另一篇公开文章</title></head><body data-pagefind-body><p>另一篇公开技术文章</p></body></html>\n`,
   );
-  assert.equal(await countPublishedPostPages(publishedDist), 2);
   await indexPublishedPosts(root, publishedDist);
   assert.equal(await pageCount(publishedDist), 2);
 } finally {

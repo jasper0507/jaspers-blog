@@ -18,10 +18,6 @@ async function publishedPostDirectories(distDirectory) {
   }
 }
 
-export async function countPublishedPostPages(distDirectory) {
-  return (await publishedPostDirectories(distDirectory)).length;
-}
-
 export async function indexPublishedPosts(root, distDirectory = join(root, "dist")) {
   const names = await publishedPostDirectories(distDirectory);
   if (names.length === 0) {
