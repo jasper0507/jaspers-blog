@@ -1,4 +1,28 @@
-import type { BlogSettings } from "./src/lib/site.ts";
+type BlogSettings = {
+  site: {
+    title: string;
+    headerTitle: string;
+    url: string;
+    description: string;
+    favicon: string;
+  };
+  author: {
+    name: string;
+    github: string;
+    email: string;
+  };
+  home: {
+    hero: {
+      caption: string;
+      lightImage: string;
+      darkImage: string;
+      alt: string;
+    };
+  };
+  footer: {
+    text: string;
+  };
+};
 
 export default {
   site: {
