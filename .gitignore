@@ -1,7 +1,37 @@
+# 依赖
 node_modules/
+
+# 构建产物
 dist/
 dist-settings/
 .astro/
+.font-refresh-*/
+
+# 测试与本地验收产物
 artifacts/
 .playwright-cli/
-.font-refresh-*/
+test-results/
+playwright-report/
+blob-report/
+
+# 环境变量与日志
+.env
+.env.*
+*.log
+npm-debug.log*
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+
+# 本地代理与设计工具状态
+.codex/
+.grok/
+.impeccable/
+.claude/
+.cursor/
+DESIGN.md
+PRODUCT.md
