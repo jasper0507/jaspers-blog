@@ -35,6 +35,7 @@ test("生产构建产物完整", async () => {
   ]);
   assert.doesNotMatch(home, /fonts\.googleapis\.com/);
   assert.doesNotMatch(home, /pagefind-|<pagefind-|\/pagefind\//);
+  assert.match(home, /查看全部 \(0\)/);
   assert.match(archive, /暂无技术文章/);
   assert.match(notFound, /<meta name="robots" content="noindex"/);
   assert.doesNotMatch(notFound, /application\/ld\+json/);

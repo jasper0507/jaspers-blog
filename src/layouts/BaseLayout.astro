@@ -226,6 +226,33 @@ const structuredData = JSON.stringify(
                 </li>
               )
             }
+            <li class="contents">
+              <button
+                class="theme-toggle group grid h-[2.75rem] w-[2.75rem] cursor-pointer place-items-center rounded-full border border-line bg-surface p-0 shadow-[var(--shadow-float)] transition-[border-color,color,background-color,box-shadow,transform] duration-[var(--duration)] ease-[var(--ease-out)] hover:border-accent hover:bg-surface hover:text-accent hover:shadow-[var(--shadow-float-hover)] active:scale-[0.96] min-[52rem]:fixed min-[52rem]:right-[max(1rem,env(safe-area-inset-right,0px))] min-[52rem]:bottom-[max(1rem,env(safe-area-inset-bottom,0px))] min-[52rem]:z-[var(--z-float)]"
+                id="theme-toggle"
+                type="button"
+                aria-label="切换主题"
+                title="切换主题"
+              >
+                <svg
+                  class="theme-icon theme-icon-sun block h-[1.15rem] w-[1.15rem] fill-none stroke-current stroke-[1.6] [grid-area:1/1] [stroke-linecap:round] [stroke-linejoin:round] group-data-[theme=dark]:hidden"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="3.5"></circle>
+                  <path
+                    d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+                  ></path>
+                </svg>
+                <svg
+                  class="theme-icon theme-icon-moon hidden h-[1.15rem] w-[1.15rem] fill-none stroke-current stroke-[1.6] [grid-area:1/1] [stroke-linecap:round] [stroke-linejoin:round] group-data-[theme=dark]:block"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path d="M20.4 15.4A8.5 8.5 0 0 1 8.6 3.6 8.5 8.5 0 1 0 20.4 15.4Z"></path>
+                </svg>
+              </button>
+            </li>
           </ul>
         </nav>
       </div>
@@ -274,31 +301,6 @@ const structuredData = JSON.stringify(
         </>
       )
     }
-    <button
-      class="theme-toggle group fixed right-[max(1rem,env(safe-area-inset-right,0px))] bottom-[max(1rem,env(safe-area-inset-bottom,0px))] z-[var(--z-float)] grid h-[2.75rem] w-[2.75rem] cursor-pointer place-items-center rounded-full border border-line bg-surface p-0 shadow-[var(--shadow-float)] transition-[border-color,color,background-color,box-shadow,transform] duration-[var(--duration)] ease-[var(--ease-out)] hover:border-accent hover:bg-surface hover:text-accent hover:shadow-[var(--shadow-float-hover)] active:scale-[0.96]"
-      id="theme-toggle"
-      type="button"
-      aria-label="切换主题"
-      title="切换主题"
-    >
-      <svg
-        class="theme-icon theme-icon-sun block h-[1.15rem] w-[1.15rem] fill-none stroke-current stroke-[1.6] [grid-area:1/1] [stroke-linecap:round] [stroke-linejoin:round] group-data-[theme=dark]:hidden"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <circle cx="12" cy="12" r="3.5"></circle>
-        <path
-          d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
-        ></path>
-      </svg>
-      <svg
-        class="theme-icon theme-icon-moon hidden h-[1.15rem] w-[1.15rem] fill-none stroke-current stroke-[1.6] [grid-area:1/1] [stroke-linecap:round] [stroke-linejoin:round] group-data-[theme=dark]:block"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path d="M20.4 15.4A8.5 8.5 0 0 1 8.6 3.6 8.5 8.5 0 1 0 20.4 15.4Z"></path>
-      </svg>
-    </button>
     <style>
       /* 文章菜单弹出层：CSS 锚点定位无法用工具类表达，保留为集成样式 */
       .article-menu-list {

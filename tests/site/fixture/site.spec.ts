@@ -201,6 +201,29 @@ test("说说和移动端基本可用", async ({ page }) => {
         () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
       ),
     );
+
+    if (path === "/") {
+      const [feed, hero, header, theme, sectionLink, postLink, shuoshuoLink] = await Promise.all([
+        page.locator(".home-feed").boundingBox(),
+        page.locator(".hero-media").boundingBox(),
+        page.locator(".site-header").boundingBox(),
+        page.locator("#theme-toggle").boundingBox(),
+        page.locator(".section-heading a").first().boundingBox(),
+        page.locator(".post-preview h3 a").boundingBox(),
+        page.locator("a.shuoshuo-preview").boundingBox(),
+      ]);
+      assert.ok(feed && hero && feed.y < hero.y, "移动端应先展示内容，再展示主视觉");
+      assert.ok(
+        header &&
+          theme &&
+          theme.y >= header.y &&
+          theme.y + theme.height <= header.y + header.height,
+        "移动端主题按钮应位于页头内",
+      );
+      for (const target of [sectionLink, postLink, shuoshuoLink]) {
+        assert.ok(target && target.height >= 44, "首页核心链接触控高度不得小于 44px");
+      }
+    }
   }
 });
 

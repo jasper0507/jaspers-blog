@@ -62,7 +62,7 @@ const shuoshuoCount = publishedShuoshuo.length;
       </noscript>
     </div>
 
-    <div class="home-feed">
+    <div class:list={["home-feed", { "home-feed-posts-empty": !latestPost }]}>
       <section class="feed-section" aria-labelledby="recent-posts">
         <div class="section-heading">
           <h2 id="recent-posts">最近文章</h2>
@@ -90,13 +90,13 @@ const shuoshuoCount = publishedShuoshuo.length;
         </div>
         {
           latestShuoshuo ? (
-            <article class="post-preview shuoshuo-preview" aria-label={latestShuoshuo.label}>
-              <time datetime={latestShuoshuo.publishedAt.iso}>
-                {latestShuoshuo.publishedAt.compact}
-              </time>
-              <h3>
-                <a href={latestShuoshuo.href}>{latestShuoshuo.summary}</a>
-              </h3>
+            <article aria-label={latestShuoshuo.label}>
+              <a class="post-preview shuoshuo-preview" href={latestShuoshuo.href}>
+                <time datetime={latestShuoshuo.publishedAt.iso}>
+                  {latestShuoshuo.publishedAt.compact}
+                </time>
+                <h3>{latestShuoshuo.summary}</h3>
+              </a>
             </article>
           ) : (
             <p class="empty-state">暂无说说</p>
@@ -126,10 +126,10 @@ const shuoshuoCount = publishedShuoshuo.length;
     grid-row: 1;
     margin: 0;
     color: var(--text);
-    font-family: var(--font-serif);
+    font-family: "Songti SC", STSong, "Noto Serif CJK SC", SimSun, serif;
     font-size: clamp(1.8rem, 3.2vw, 2.45rem);
-    font-weight: 600;
-    letter-spacing: var(--track-display);
+    font-weight: 400;
+    letter-spacing: 0.02em;
     line-height: var(--leading-display);
     font-optical-sizing: auto;
   }
@@ -193,6 +193,9 @@ const shuoshuoCount = publishedShuoshuo.length;
 
   .section-heading a {
     color: var(--muted);
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
     font-size: 0.82rem;
     letter-spacing: 0.01em;
     white-space: nowrap;
@@ -226,6 +229,14 @@ const shuoshuoCount = publishedShuoshuo.length;
   }
 
   .post-preview h3 a {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    text-decoration: none;
+  }
+
+  .post-preview.shuoshuo-preview {
+    color: inherit;
     text-decoration: none;
   }
 
@@ -261,7 +272,7 @@ const shuoshuoCount = publishedShuoshuo.length;
       grid-template-columns: 1fr;
       grid-template-rows: none;
       column-gap: 0;
-      row-gap: 2.75rem;
+      row-gap: 2rem;
     }
 
     .hero-caption,
@@ -271,15 +282,25 @@ const shuoshuoCount = publishedShuoshuo.length;
       grid-row: auto;
     }
 
+    .hero-caption {
+      order: 1;
+    }
+
+    .home-feed {
+      order: 2;
+      gap: 2rem;
+    }
+
+    .hero-media {
+      order: 3;
+    }
+
+    .home-feed-posts-empty .feed-section:first-child {
+      order: 2;
+    }
+
     .hero-media {
       max-width: 28rem;
-    }
-  }
-
-  @media (max-width: 30rem) {
-    .section-heading {
-      align-items: flex-start;
-      flex-direction: column;
     }
   }
 </style>
