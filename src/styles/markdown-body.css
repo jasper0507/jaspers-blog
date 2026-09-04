@@ -216,6 +216,45 @@
   overflow-wrap: anywhere;
 }
 
+.post-body .astro-code,
+.post-body table,
+.post-body .katex-display {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.post-body .astro-code::-webkit-scrollbar,
+.post-body table::-webkit-scrollbar,
+.post-body .katex-display::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.post-body .astro-code::-webkit-scrollbar-track,
+.post-body .astro-code::-webkit-scrollbar-corner,
+.post-body table::-webkit-scrollbar-track,
+.post-body table::-webkit-scrollbar-corner,
+.post-body .katex-display::-webkit-scrollbar-track,
+.post-body .katex-display::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.post-body .astro-code::-webkit-scrollbar-thumb,
+.post-body table::-webkit-scrollbar-thumb,
+.post-body .katex-display::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: 999px;
+}
+
+.post-body .astro-code::-webkit-scrollbar-thumb:hover,
+.post-body table::-webkit-scrollbar-thumb:hover,
+.post-body .katex-display::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
 .post-body .astro-code {
   width: 100%;
   max-width: 100%;

@@ -85,6 +85,22 @@ if (toc.length === 0) return;
     overflow-y: auto;
     border-left: 1px solid var(--line);
     transform: translateY(-50%);
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--line) 38%, transparent) transparent;
+  }
+
+  .post-toc::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .post-toc::-webkit-scrollbar-track,
+  .post-toc::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  .post-toc::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--line) 38%, transparent);
+    border-radius: 999px;
   }
 
   .post-toc > p {

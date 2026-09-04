@@ -47,6 +47,8 @@
   --line: light-dark(#ded7c7, #423d34);
   --accent: light-dark(#a14d2e, #d97757);
   --focus: light-dark(#8f3f2d, #f39a79);
+  --scrollbar-thumb: color-mix(in srgb, var(--muted) 42%, var(--line));
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--muted) 62%, var(--line));
   --shell-width: 70rem;
   --gutter: 2rem;
   --text-meta: 0.78rem;
@@ -109,6 +111,30 @@ html[data-theme="dark"] {
     font-family: var(--font-sans);
     font-kerning: normal;
     scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  html::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  html::-webkit-scrollbar-track,
+  html::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  html::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+    border-radius: 999px;
+  }
+
+  html::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+    background-clip: padding-box;
   }
 
   body {

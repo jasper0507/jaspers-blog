@@ -109,8 +109,8 @@ const shuoshuoCount = publishedShuoshuo.length;
 
 <style>
   /*
-   * 双行两栏：行1 caption | 空；行2 图 | 信息流
-   * 使 feed 顶与图顶对齐
+   * 双行两栏：行1 caption | 空；行2 图 | 信息流。
+   * 桌面信息流贴合影像上下沿；说说按内容高度贴底，文章占剩余空间。
    */
   .home-grid {
     display: grid;
@@ -138,6 +138,8 @@ const shuoshuoCount = publishedShuoshuo.length;
     grid-column: 1;
     grid-row: 2;
     position: relative;
+    align-self: start;
+    width: 100%;
     min-width: 0;
     aspect-ratio: 3 / 2;
     overflow: hidden;
@@ -162,26 +164,48 @@ const shuoshuoCount = publishedShuoshuo.length;
     object-position: center;
   }
 
+  /* height: 0 避免信息流撑开行高，min-height: 100% 再贴合影像 */
   .home-feed {
     grid-column: 2;
     grid-row: 2;
     display: grid;
-    gap: 3.25rem;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 0;
+    width: 100%;
+    height: 0;
+    min-height: 100%;
     min-width: 0;
+    overflow: hidden;
   }
 
-  /* 分区线：信息流栏近满宽细线 */
   .feed-section {
-    padding-top: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    padding-top: 1rem;
+    padding-bottom: 0.35rem;
     border-top: 1px solid var(--text);
   }
 
+  .feed-section:last-child {
+    overflow: hidden;
+    padding-bottom: 0.35rem;
+  }
+
   .section-heading {
-    margin-bottom: 1.25rem;
+    margin-bottom: 0.75rem;
     display: flex;
+    flex-shrink: 0;
     align-items: baseline;
     justify-content: space-between;
     gap: 1rem;
+  }
+
+  .feed-section:last-child .section-heading {
+    margin-bottom: 0.55rem;
   }
 
   .section-heading h2 {
@@ -228,6 +252,10 @@ const shuoshuoCount = publishedShuoshuo.length;
     font-optical-sizing: auto;
   }
 
+  .feed-section:first-child .post-preview h3 {
+    font-size: 1.215rem;
+  }
+
   .post-preview h3 a {
     display: inline-flex;
     min-height: 2.75rem;
@@ -247,14 +275,13 @@ const shuoshuoCount = publishedShuoshuo.length;
     overflow-wrap: anywhere;
   }
 
-  /* 首页最近文章：两行预览 */
   .post-preview-description {
     margin: 0;
     display: -webkit-box;
     overflow: hidden;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
     line-height: 1.65;
   }
 
@@ -288,19 +315,40 @@ const shuoshuoCount = publishedShuoshuo.length;
 
     .home-feed {
       order: 2;
+      display: grid;
+      grid-template-rows: none;
       gap: 2rem;
+      height: auto;
+      min-height: 0;
+      overflow: visible;
     }
 
     .hero-media {
       order: 3;
+      max-width: 28rem;
     }
 
     .home-feed-posts-empty .feed-section:first-child {
       order: 2;
     }
 
-    .hero-media {
-      max-width: 28rem;
+    .feed-section,
+    .feed-section:last-child {
+      display: block;
+      overflow: visible;
+      padding-top: 1.25rem;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .section-heading,
+    .feed-section:last-child .section-heading {
+      margin-bottom: 1.25rem;
+    }
+
+    .post-preview-description {
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
     }
   }
 </style>
