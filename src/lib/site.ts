@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { statSync } from "node:fs";
 import { extname, join } from "node:path";
 import rawSettings from "../../blog.config.ts";
+import { readHeroImages } from "./hero-images.ts";
 
 function publicFile(path: string, prefix = "/") {
   if (!path.startsWith(prefix) || path.includes("..")) {
@@ -46,8 +47,7 @@ function resolveBlogSettings(settings: typeof rawSettings) {
     home: {
       hero: {
         ...settings.home.hero,
-        lightImage: publicFile(settings.home.hero.lightImage, "/images/"),
-        darkImage: publicFile(settings.home.hero.darkImage, "/images/"),
+        images: readHeroImages(),
       },
     },
     footer: {
@@ -89,13 +89,14 @@ if (import.meta.main) {
     );
   }
 
+  assert.deepEqual(blogSettings.home.hero.images, [
+    "/images/hero/campus.jpg",
+    "/images/hero/opera.jpg",
+    "/images/hero/skyline.jpg",
+    "/images/hero/sunset.jpg",
+  ]);
   assert.throws(() =>
-    resolveBlogSettings(
-      changed(settings => (settings.home.hero.lightImage = "/images/missing-config-check.jpg")),
-    ),
-  );
-  assert.throws(() =>
-    resolveBlogSettings(changed(settings => (settings.site.favicon = "/images/hero-light.jpg"))),
+    resolveBlogSettings(changed(settings => (settings.site.favicon = "/images/hero/campus.jpg"))),
   );
   assert.throws(() =>
     resolveBlogSettings(changed(settings => (settings.footer.text = "© {year} {owner}"))),

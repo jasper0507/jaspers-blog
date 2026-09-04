@@ -14,8 +14,6 @@ type BlogSettings = {
   home: {
     hero: {
       caption: string;
-      lightImage: string;
-      darkImage: string;
       alt: string;
     };
   };
@@ -40,9 +38,7 @@ export default {
   home: {
     hero: {
       caption: "喊黑夜吻白天。",
-      lightImage: "/images/hero-light.jpg",
-      darkImage: "/images/hero-dark.jpg",
-      alt: "暮色下的山脊，天光与夜色在地平线交界",
+      alt: "首页风景照片",
     },
   },
   footer: {

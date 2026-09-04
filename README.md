@@ -1,6 +1,6 @@
 # Jasper's Blog 📝
 
-![Jasper's Blog](public/images/hero-light.jpg)
+![Jasper's Blog](public/images/hero/campus.jpg)
 
 [![Astro](https://img.shields.io/badge/Astro-7.1.6-BC52EE?style=for-the-badge&logo=astro&logoColor=white)](https://astro.build/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -14,7 +14,7 @@
 
 - [x] 技术文章与说说两种内容类型；两者都使用创建后不变的独立详情页网址
 - [x] 基于 Astro Content Collections 的内容校验与草稿过滤；`draft` 是唯一公开开关
-- [x] 集中配置博客身份、公开联系方式、首页主视觉、浏览器图标与页脚文本
+- [x] 集中配置博客身份、公开联系方式、首页主句、浏览器图标与页脚文本；主视觉照片放在固定目录
 - [x] 响应式布局、亮色/暗色主题（首次跟随系统，选择写入本地），以及键盘可访问的导航与搜索
 - [x] Pagefind 弹层搜索：`/` 打开，只索引已发布技术文章；没有技术文章时不生成索引或搜索界面
 - [x] 文章标签、按年归档；宽屏文章目录，长文可回到顶部
@@ -31,7 +31,7 @@
 ├── docs/                   # 部署说明、架构决策记录与调研
 ├── public/
 │   ├── fonts/              # 自托管拉丁字体与 Noto Sans SC 分包
-│   └── images/             # 站点主视觉与现有图片
+│   └── images/hero/        # 首页主视觉照片，丢入 jpg 即可
 ├── scripts/                # 内容创建、搜索索引与领域验收脚本
 ├── src/
 │   ├── components/         # 正文、目录、标签与回到顶部
@@ -151,12 +151,12 @@ draft: false
 
 个性化博客只需打开根目录 [`blog.config.ts`](blog.config.ts)。页面、RSS、Canonical URL、Open Graph、结构化数据和站点地图共用这份设置。
 
-配置只服务当前博客：站点名称、页头短名、正式网址、简介、图标、作者联系方式、亮暗主视觉和页脚文本都必须填写。TypeScript 检查字段形状；正式网址必须是没有子路径、查询或锚点的 HTTPS 根地址，本地图片和图标必须存在，浏览器图标只支持 SVG、PNG 或 ICO。页脚文本只支持 `{year}`、`{author}` 两个替换符。设置值按填写内容使用，不自动裁剪；错误由 TypeScript、`URL`、文件系统或构建直接报告。
+配置只服务当前博客：站点名称、页头短名、正式网址、简介、图标、作者联系方式、首页主句、主视觉替代文本和页脚文本都必须填写。TypeScript 检查字段形状；正式网址必须是没有子路径、查询或锚点的 HTTPS 根地址，本地图标必须存在，浏览器图标只支持 SVG、PNG 或 ICO。页脚文本只支持 `{year}`、`{author}` 两个替换符。设置值按填写内容使用，不自动裁剪；错误由 TypeScript、`URL`、文件系统或构建直接报告。
 
 不适合放进设置文件的内容使用固定位置：
 
 - “关于我”正文：[`src/content/about.md`](src/content/about.md)，可以留空但不能删除。
-- 首页主视觉：[`public/images/`](public/images/)，在设置文件中填写以 `/images/` 开头的路径。亮暗主视觉均使用 3:2，推荐 960×640 或更高且尺寸、主体位置一致，非 3:2 图片会居中裁切而不拉伸。
+- 首页主视觉照片：[`public/images/hero/`](public/images/hero/)。只接受 `.jpg`，必须是 3:2（允许 1 像素误差）且至少 960×640；空目录、其它扩展名或不合格尺寸会使构建失败。增删就是加减文件。亮暗主题共用这一池，首页每次刷新随机展示一张；无脚本时使用文件名排序后的第一张。
 - 浏览器图标：推荐 [`public/favicon.svg`](public/favicon.svg)；也可以指向 `public/` 内其它 svg、png、ico，并在设置文件填写对应根相对路径。必须为 1:1，优先方形 SVG，PNG/ICO 至少提供 32×32 表示。
 
 修改博客设置后按通用流程预览并通过 PR 发布。Cloudflare Pages 使用 `npm run build` 和 `dist`，完整操作见 [Cloudflare Pages 部署与日常发布](docs/deployment.md)。

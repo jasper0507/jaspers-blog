@@ -16,7 +16,7 @@
     "new:post": "node scripts/new-post.mjs",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
-    "test:config": "node src/lib/site.ts",
+    "test:config": "node src/lib/hero-images.ts && node src/lib/site.ts",
     "test:fonts": "node scripts/check-fonts.mjs",
     "test:content-rules": "node scripts/check-post-stable-ids.mjs",
     "test:index-posts": "node scripts/check-index-posts.mjs",

@@ -29,6 +29,8 @@ test("公开内容合同", async () => {
   ]);
 
   assert.match(home, /同时发布的 Alpha 技术文章/);
+  assert.match(home, /data-hero-images="[^"]*\/images\/hero\/campus\.jpg/);
+  assert.match(home, /<noscript>[\s\S]*src="\/images\/hero\/campus\.jpg"/);
   assert.ok(home.includes(longShuoshuoSummary));
   assert.doesNotMatch(
     `${home}${timeline}${archive}${tags}${rss}${sitemap}`,
@@ -79,6 +81,9 @@ test("公开内容合同", async () => {
 });
 
 test("站点壳、主题、菜单与搜索", async ({ page }) => {
+  await page.addInitScript(() => {
+    Math.random = () => 0;
+  });
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto(host, { waitUntil: "networkidle" });
   assert.equal(await page.title(), expectedSite.title);
@@ -86,7 +91,7 @@ test("站点壳、主题、菜单与搜索", async ({ page }) => {
   assert.equal(await page.locator(".hero-caption").textContent(), expectedHome.hero.caption);
   assert.equal(
     await page.locator(".hero-image").first().getAttribute("src"),
-    expectedHome.hero.lightImage,
+    expectedHome.hero.images[0],
   );
 
   const menuTrigger = page.locator("#article-menu-trigger");
@@ -113,19 +118,26 @@ test("站点壳、主题、菜单与搜索", async ({ page }) => {
   assert.equal(new URL((await result.getAttribute("href")) ?? "", host).pathname, "/posts/2/");
 });
 
-test("暗色主视觉只请求暗色图片", async ({ page }) => {
+test("主视觉只请求池中一张图片，主题切换不换图", async ({ page }) => {
+  await page.addInitScript(() => {
+    Math.random = () => 0;
+  });
   const heroRequests: string[] = [];
   page.on("request", request => {
-    if (/\/images\/hero-(?:light|dark)\.jpg$/.test(request.url())) {
+    if (/\/images\/hero\/[^/]+\.jpg$/.test(request.url())) {
       heroRequests.push(new URL(request.url()).pathname);
     }
   });
-  await page.emulateMedia({ colorScheme: "dark" });
   await page.goto(host, { waitUntil: "networkidle" });
 
+  const pinned = expectedHome.hero.images[0];
   assert.equal(await page.locator(".hero-media > img").count(), 1);
-  assert.equal(await page.locator(".hero-image").getAttribute("src"), expectedHome.hero.darkImage);
-  assert.deepEqual(heroRequests, [expectedHome.hero.darkImage]);
+  assert.equal(await page.locator(".hero-image").getAttribute("src"), pinned);
+  assert.deepEqual(heroRequests, [pinned]);
+
+  await page.locator("#theme-toggle").click();
+  assert.equal(await page.locator(".hero-image").getAttribute("src"), pinned);
+  assert.deepEqual(heroRequests, [pinned]);
 });
 
 test("技术文章阅读能力", async ({ page }) => {

@@ -24,8 +24,7 @@ const shuoshuoCount = publishedShuoshuo.length;
       <img
         class="hero-image"
         id="hero-image"
-        data-light-src={hero.lightImage}
-        data-dark-src={hero.darkImage}
+        data-hero-images={JSON.stringify(hero.images)}
         width="1248"
         height="832"
         alt={hero.alt}
@@ -36,23 +35,14 @@ const shuoshuoCount = publishedShuoshuo.length;
         (() => {
           const image = document.querySelector("#hero-image");
           if (!(image instanceof HTMLImageElement)) return;
-          const root = document.documentElement;
-          const sync = () => {
-            const source =
-              root.dataset.theme === "dark" ? image.dataset.darkSrc : image.dataset.lightSrc;
-            if (source && image.getAttribute("src") !== source) image.src = source;
-          };
-          sync();
-          new MutationObserver(sync).observe(root, {
-            attributes: true,
-            attributeFilter: ["data-theme"],
-          });
+          const pool = JSON.parse(image.dataset.heroImages ?? "[]");
+          image.src = pool[Math.floor(Math.random() * pool.length)];
         })();
       </script>
       <noscript>
         <img
           class="hero-image"
-          src={hero.lightImage}
+          src={hero.images[0]}
           width="1248"
           height="832"
           alt={hero.alt}
