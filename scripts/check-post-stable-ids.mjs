@@ -47,7 +47,7 @@ try {
   assert.ok(publishedTime >= before.getTime() - 1_000 && publishedTime <= after.getTime() + 1_000);
   assert.equal(
     source,
-    `---\ntitle: "深度学习笔记"\ndescription: ""\npublishedAt: "${publishedAt}"\ntags: []\ndraft: false\nid: 1\n---\n`,
+    `---\ntitle: "深度学习笔记"\ndescription: ""\npublishedAt: "${publishedAt}"\ntags: []\ndraft: false\n# 禁止修改\nid: 1\n---\n`,
   );
 
   const beforeCollision = source;

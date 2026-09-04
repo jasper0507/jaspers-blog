@@ -19,7 +19,7 @@
 - [x] Pagefind 弹层搜索：`/` 打开，只索引已发布技术文章；没有技术文章时不生成索引或搜索界面
 - [x] 文章标签、按年归档；宽屏文章目录，长文可回到顶部
 - [x] RSS（技术文章摘要 + 说说摘要）、Sitemap、Canonical URL、Open Graph 文本与结构化数据
-- [x] GFM、KaTeX、中文脚注，以及带文件名 / 行高亮 / diff 的 Shiki 代码块
+- [x] GFM、`==高亮==`、KaTeX、中文脚注，以及带文件名 / 行高亮 / diff 的 Shiki 代码块
 - [x] 拉丁字体与中文思源黑自托管，不依赖运行时字体 CDN
 - [x] 技术文章与说说创建命令；原始 Git 推送触发 Cloudflare Pages 发布
 - [x] GitHub Actions：PR 运行完整 Chromium/Axe 验证与 Firefox/WebKit 冒烟，`main` 推送复核构建
@@ -103,6 +103,7 @@ tags:
   - "Astro"
   - "前端开发"
 draft: true
+# 禁止修改
 id: 1
 ---
 
@@ -111,12 +112,12 @@ id: 1
 
 - 模板自动填写标题、当前上海时间、`tags: []`、`draft: false` 和系统分配的 `id`；摘要与正文留空，补完前构建会失败。
 - `title`、`description`、`publishedAt`、`draft`、`id` 必填；文章不维护更新时间，`updatedAt` 和其他未知字段会使构建失败。
-- `id` 是正整数稳定身份，由创建命令写入，不要手改；计数器文件 `src/content/post-next-id.json` 也不要手改。
+- `id` 是正整数稳定身份，由创建命令写入；模板在该字段上方注明「禁止修改」。计数器文件 `src/content/post-next-id.json` 也不要手改。
 - `tags` 可省略或留空，同一篇文章内标签不得重复，也不需要预先登记。不同标签若生成相同网址，构建会失败（草稿也参与检查）。
 - `publishedAt` 必须是加引号的有效上海时间字符串 `"YYYY-MM-DDTHH:mm:ss+08:00"`；未加引号的 YAML 日期值、UTC `Z` 和其他时区均无效。
 - `draft: true` 不进入公开页面；准备发布时改为 `false`。发布时间只用于显示和排序，不提供定时发布。数字网址也不是发布时间顺序。
 - 正文不能为空。文章图片使用外部图床，并以普通 Markdown 图片语法引用。
-- 正文可用 GFM（表格、任务列表、删除线、自动链接、脚注）、`$...$` / `$$...$$` 公式和原生 `<details>`。代码块支持 `title="file.js"`、行高亮与 diff 标记。
+- 正文可用 GFM（表格、任务列表、删除线、自动链接、脚注）、`==高亮==`、`$...$` / `$$...$$` 公式和原生 `<details>`。代码块支持 `title="file.js"`、行高亮与 diff 标记。代码与行内代码中的 `==` 保持原样。
 - 保存后按通用流程预览；准备公开时确认 `draft: false`，再构建并用原始 Git 命令发布。
 
 ### 发布说说

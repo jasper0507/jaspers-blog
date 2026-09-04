@@ -132,6 +132,7 @@ test("技术文章阅读能力", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 960 });
   await page.goto(`${host}/posts/2/`);
   assert.ok(await page.locator(".post-body .katex").count());
+  assert.equal(await page.locator(".post-body mark").textContent(), "高亮标记");
   assert.equal(await page.locator("#footnote-label").textContent(), "脚注");
   assert.ok(await page.locator('[aria-label="返回脚注引用"]').count());
   assert.ok(await page.locator('.astro-code[data-title="example.js"]').count());

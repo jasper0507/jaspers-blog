@@ -5,7 +5,7 @@ import {
   transformerNotationHighlight,
 } from "@shikijs/transformers";
 import katex from "katex";
-import { markdownToMdast } from "satteri";
+import { defineMdastPlugin, markdownToMdast } from "satteri";
 
 const siteMarkdownFeatures = {
   math: true,
@@ -50,6 +50,38 @@ const katexPlugin = {
     return { type: "html", value: renderKatex(node.value, false) };
   },
 };
+
+function escapeHtml(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+/** Typora / 部分编辑器的 `==高亮==`，代码块与行内代码保持字面量。 */
+const markPlugin = defineMdastPlugin({
+  name: "inline-mark",
+  text(node, context) {
+    const value = node.value;
+    if (!value.includes("==")) return;
+
+    const parts = [];
+    let lastIndex = 0;
+    for (const match of value.matchAll(/==((?:(?!==).)+?)==/gu)) {
+      if (match.index > lastIndex) {
+        parts.push({ type: "text", value: value.slice(lastIndex, match.index) });
+      }
+      parts.push({ type: "html", value: `<mark>${escapeHtml(match[1])}</mark>` });
+      lastIndex = match.index + match[0].length;
+    }
+    if (parts.length === 0) return;
+    if (lastIndex < value.length) parts.push({ type: "text", value: value.slice(lastIndex) });
+
+    context.insertBefore(node, parts);
+    context.removeNode(node);
+  },
+});
 
 /* Shiki token 颜色走 MarkdownBody 的 --code-*（ADR-0019）；本 module 不拥有 CSS。 */
 const kraftPaperTheme = {
@@ -105,7 +137,7 @@ export function siteMarkdown() {
   return {
     processor: satteri({
       features: siteMarkdownFeatures,
-      mdastPlugins: [katexPlugin],
+      mdastPlugins: [katexPlugin, markPlugin],
       hastPlugins: [lazyImagesPlugin],
     }),
     shikiConfig: {

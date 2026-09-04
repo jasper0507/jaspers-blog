@@ -143,6 +143,15 @@
   font-weight: 700;
 }
 
+/* `==高亮==`：暖纸上的浅珊瑚底，不是荧光黄。 */
+.post-body mark {
+  padding: 0.05em 0.18em;
+  border-radius: 0.12em;
+  background: color-mix(in srgb, var(--body-accent) 18%, transparent);
+  color: inherit;
+  box-decoration-break: clone;
+}
+
 .post-body :is(code, kbd, pre, .astro-code) {
   font-synthesis: weight;
   text-autospace: no-autospace;
