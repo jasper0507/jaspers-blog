@@ -11,11 +11,6 @@ const execFileAsync = promisify(execFile);
 export const root = fileURLToPath(new URL("../../", import.meta.url));
 export const host = "http://127.0.0.1:4321";
 export const { site: expectedSite, home: expectedHome } = blogSettings;
-export const productionEnvironment = {
-  ...process.env,
-  POST_CONTENT_DIR: "./src/content/posts",
-  SHUOSHUO_CONTENT_DIR: "./src/content/shuoshuo",
-};
 export const fixtureEnvironment = {
   ...process.env,
   POST_CONTENT_DIR: "./tests/fixtures/posts-visual",
