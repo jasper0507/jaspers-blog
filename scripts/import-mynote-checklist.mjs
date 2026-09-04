@@ -128,7 +128,13 @@ for (const item of items) {
   );
   const href = `/posts/${record.id}/`;
   hrefBySource.set(item.noteSource, href);
-  created.push({ id: record.id, href, title: item.title, noteSource: item.noteSource, path: record.path });
+  created.push({
+    id: record.id,
+    href,
+    title: item.title,
+    noteSource: item.noteSource,
+    path: record.path,
+  });
 }
 
 const index = created.find(post => post.noteSource.endsWith("/INDEX.md"));
