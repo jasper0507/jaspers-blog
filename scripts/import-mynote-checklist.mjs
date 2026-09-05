@@ -58,7 +58,7 @@ ${body}`;
 }
 
 function rewriteGolangIndex(markdown, hrefBySource) {
-  return markdown.replace(/\]\(\.\/([^)]+)\)/g, (full, target) => {
+  return markdown.replace(/\]\(\.\/([^)]+)\)/g, (_full, target) => {
     const hashIndex = target.indexOf("#");
     const pathPart = hashIndex === -1 ? target : target.slice(0, hashIndex);
     const hash = hashIndex === -1 ? "" : target.slice(hashIndex);
