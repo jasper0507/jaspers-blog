@@ -115,6 +115,12 @@ html[data-theme="dark"] {
     scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 
+  @media (min-width: 30rem) {
+    html {
+      scrollbar-gutter: stable both-edges;
+    }
+  }
+
   html::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -129,7 +135,7 @@ html[data-theme="dark"] {
     background-color: var(--scrollbar-thumb);
     background-clip: padding-box;
     border: 2px solid transparent;
-    border-radius: 999px;
+    border-radius: 0.35rem;
   }
 
   html::-webkit-scrollbar-thumb:hover {

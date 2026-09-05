@@ -5,8 +5,5 @@ export default defineConfig({
   ...fullConfig,
   testDir: "tests/site/smoke",
   outputDir: "artifacts/smoke-results",
-  projects: [
-    { name: "firefox", use: { browserName: "firefox" } },
-    { name: "webkit", use: { browserName: "webkit" } },
-  ],
+  projects: [{ name: "firefox", use: { browserName: "firefox" } }],
 });

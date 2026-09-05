@@ -240,6 +240,43 @@ test("说说和移动端基本可用", async ({ page }) => {
   }
 });
 
+test("归档页与其他栏目共用对齐基准", async ({ page }) => {
+  for (const width of [1440, 320]) {
+    await page.setViewportSize({ width, height: 960 });
+    await page.goto(`${host}/archives/`);
+    const shell = await page.locator(".header-inner").evaluate(element => {
+      const { left, width } = element.getBoundingClientRect();
+      return {
+        center: left + width / 2,
+        gutter: getComputedStyle(document.documentElement).scrollbarGutter,
+      };
+    });
+    const archive = await page
+      .locator(".archive-card")
+      .first()
+      .evaluate(element => {
+        const { left, right } = element.getBoundingClientRect();
+        return { left, right };
+      });
+
+    await page.goto(`${host}/shuoshuo/`);
+    const reference = await page
+      .locator(".shuoshuo-card")
+      .first()
+      .evaluate(element => {
+        const { left, right } = element.getBoundingClientRect();
+        return { left, right };
+      });
+
+    assert.deepEqual(
+      shell,
+      { center: width / 2, gutter: width >= 480 ? "stable both-edges" : "auto" },
+      `${width}px 视口下的公共壳居中基准`,
+    );
+    assert.deepEqual(archive, reference, `${width}px 视口下的内容边界`);
+  }
+});
+
 test("未知路径使用站点 404", async ({ page }) => {
   const response = await page.goto(`${host}/not-a-page/`);
   assert.equal(response?.status(), 404);

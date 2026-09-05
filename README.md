@@ -22,7 +22,7 @@
 - [x] GFM、`==高亮==`、KaTeX、中文脚注，以及带文件名 / 行高亮 / diff 的 Shiki 代码块
 - [x] 拉丁字体与中文思源黑自托管，不依赖运行时字体 CDN
 - [x] 技术文章与说说创建命令；原始 Git 推送触发 Cloudflare Pages 发布
-- [x] GitHub Actions：PR 运行完整 Chromium/Axe 验证与 Firefox/WebKit 冒烟，`main` 推送复核构建
+- [x] GitHub Actions：PR 运行完整 Chromium/Axe 验证与 Firefox 冒烟，`main` 推送复核构建
 
 ## 🚀 项目结构
 
@@ -52,7 +52,7 @@
 ├── astro.config.mjs        # Astro、Markdown 与代码高亮配置
 ├── pagefind.yml            # 搜索索引排除规则（公式）
 ├── playwright.config.ts    # 站点验收配置
-├── playwright.smoke.config.ts # Firefox / WebKit 核心冒烟配置
+├── playwright.smoke.config.ts # Firefox 核心冒烟配置
 ├── package.json            # 依赖与命令
 └── tsconfig.json           # TypeScript 严格模式
 ```
@@ -223,7 +223,7 @@ npm run preview
 | `npm run format`               | 使用 Prettier 格式化项目文件                       |
 | `npm run format:check`         | 检查项目文件格式，不修改文件                       |
 | `npm test`                     | 运行格式、类型、领域不变量和 Chromium 高层验收     |
-| `npm run test:browser-smoke`   | 运行 Firefox 与 WebKit 核心交互冒烟                |
+| `npm run test:browser-smoke`   | 运行 Firefox 核心交互冒烟                          |
 | `npm run new:post -- "<标题>"` | 按标题创建技术文章 Markdown，并分配数字网址        |
 | `npm run new:shuoshuo`         | 创建带上海时间稳定 ID 的说说 Markdown              |
 

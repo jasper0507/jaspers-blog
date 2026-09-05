@@ -60,9 +60,11 @@ const { archive } = await getPublishedPostCatalog();
     /* 轴线中心与圆点中心共用同一横坐标，避免 border-left + 手工偏移错位 */
     --archive-rail-x: 0.5rem;
     --archive-dot-size: 0.55rem;
-    --archive-content-inset: 1.65rem;
+    --archive-content-inset: min(1.65rem, var(--gutter));
     position: relative;
+    width: calc(100% + var(--archive-content-inset));
     margin: 1.25rem 0 0;
+    margin-inline-start: calc(-1 * var(--archive-content-inset));
     padding: 0 0 0 var(--archive-content-inset);
     list-style: none;
     display: grid;
@@ -134,7 +136,7 @@ const { archive } = await getPublishedPostCatalog();
 
   .archive-card-title {
     font-family: var(--font-serif);
-    font-size: 1.0625rem;
+    font-size: 1.125rem;
     font-weight: 600;
     letter-spacing: -0.015em;
     line-height: 1.42;
