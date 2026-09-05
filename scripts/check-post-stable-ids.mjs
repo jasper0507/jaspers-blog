@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmod, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assertPostStableIds, createPost } from "../src/lib/post-rules.js";
@@ -63,9 +63,20 @@ try {
   assert.match(strippedSource, /^title: "问答\?"$/m);
   assert.match(strippedSource, /^id: 2$/m);
 
+  const concurrent = await Promise.all([
+    createPost(postsDirectory, "并发文章甲"),
+    createPost(postsDirectory, "并发文章乙"),
+  ]);
+  assert.deepEqual(
+    concurrent.map(post => post.id).sort((left, right) => left - right),
+    [3, 4],
+  );
+  assert.equal(await readNext(), 5, "并发创建必须串行分配号码");
+
   await assertPostStableIds(postsDirectory, [
     { filename: "深度学习笔记", id: 1 },
     { filename: "问答", id: 2 },
+    ...concurrent.map(post => ({ filename: post.path, id: post.id })),
   ]);
 
   await assert.rejects(
@@ -81,16 +92,16 @@ try {
     assertPostStableIds(postsDirectory, [{ filename: "深度学习笔记", id: 1 }]),
     /技术文章号码计数器过小：next=1，已用最大号=1/,
   );
-  await writeNext(3);
+  await writeNext(5);
   await assertPostStableIds(postsDirectory, []);
 
   await writeFile(nextIdPath, "not-json");
   await assert.rejects(createPost(postsDirectory, "无效计数器"), /技术文章号码计数器无效/);
   await assert.rejects(assertPostStableIds(postsDirectory, []), /技术文章号码计数器无效/);
-  await writeNext(3);
+  await writeNext(5);
   assert.equal((await readdir(postsDirectory)).includes("无效计数器.md"), false);
 
-  await chmod(nextIdPath, 0o444);
+  await mkdir(`${nextIdPath}.tmp`);
   try {
     await assert.rejects(createPost(postsDirectory, "将回滚"));
     assert.equal(
@@ -99,9 +110,9 @@ try {
       "bump 失败须撤回文件",
     );
   } finally {
-    await chmod(nextIdPath, 0o644);
+    await rm(`${nextIdPath}.tmp`, { recursive: true });
   }
-  assert.equal(await readNext(), 3);
+  assert.equal(await readNext(), 5, "原子替换失败不得改写号码计数器");
 } finally {
   await rm(root, { recursive: true, force: true });
 }

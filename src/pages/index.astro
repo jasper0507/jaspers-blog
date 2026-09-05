@@ -154,6 +154,10 @@ const shuoshuoCount = publishedShuoshuo.length;
     object-position: center;
   }
 
+  #hero-image:not([src]) {
+    display: none;
+  }
+
   /* height: 0 避免信息流撑开行高，min-height: 100% 再贴合影像 */
   .home-feed {
     grid-column: 2;
@@ -240,10 +244,6 @@ const shuoshuoCount = publishedShuoshuo.length;
     line-height: 1.42;
     overflow-wrap: anywhere;
     font-optical-sizing: auto;
-  }
-
-  .feed-section:first-child .post-preview h3 {
-    font-size: 1.215rem;
   }
 
   .post-preview h3 a {

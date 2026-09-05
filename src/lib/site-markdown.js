@@ -59,6 +59,12 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
+const inlineMarkPattern = /==((?:(?!==).)+?)==/gu;
+
+export function stripInlineMarks(value) {
+  return value.replaceAll(inlineMarkPattern, "$1");
+}
+
 /** Typora / 部分编辑器的 `==高亮==`，代码块与行内代码保持字面量。 */
 const markPlugin = defineMdastPlugin({
   name: "inline-mark",
@@ -68,7 +74,7 @@ const markPlugin = defineMdastPlugin({
 
     const parts = [];
     let lastIndex = 0;
-    for (const match of value.matchAll(/==((?:(?!==).)+?)==/gu)) {
+    for (const match of value.matchAll(inlineMarkPattern)) {
       if (match.index > lastIndex) {
         parts.push({ type: "text", value: value.slice(lastIndex, match.index) });
       }

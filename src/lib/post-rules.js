@@ -1,5 +1,6 @@
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rmdir, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { formatShanghaiDateTime } from "./shanghai-time.js";
 
 export const POST_CONTENT_DIRECTORY = "src/content/posts";
@@ -9,6 +10,27 @@ const illegalInFilename = /[/\\:*?"<>|\r\n]/g;
 
 function postNextIdPath(postsDirectory) {
   return join(postsDirectory, "..", POST_NEXT_ID_FILENAME);
+}
+
+async function acquirePostLock(postsDirectory) {
+  const path = `${postNextIdPath(postsDirectory)}.lock`;
+  const deadline = Date.now() + 10_000;
+  while (true) {
+    try {
+      await mkdir(path);
+      return path;
+    } catch (error) {
+      if (error?.code === "ENOENT") {
+        throw new Error("找不到技术文章号码计数器", { cause: error });
+      }
+      if (error?.code !== "EEXIST") throw error;
+      // ponytail: 超时锁只报错不抢占；需要崩溃自动恢复时记录并校验 owner PID。
+      if (Date.now() >= deadline) {
+        throw new Error("技术文章创建正被另一个进程占用", { cause: error });
+      }
+      await delay(10);
+    }
+  }
 }
 
 function formatPostNextId(next) {
@@ -42,6 +64,24 @@ async function loadNextPostId(postsDirectory) {
   } catch (error) {
     if (error?.code === "ENOENT") {
       throw new Error("找不到技术文章号码计数器", { cause: error });
+    }
+    throw error;
+  }
+}
+
+async function replaceNextPostId(postsDirectory, next) {
+  const path = postNextIdPath(postsDirectory);
+  const temporaryPath = `${path}.tmp`;
+  try {
+    await writeFile(temporaryPath, formatPostNextId(next));
+    await rename(temporaryPath, path);
+  } catch (error) {
+    try {
+      await unlink(temporaryPath);
+    } catch (cleanupError) {
+      if (cleanupError?.code !== "ENOENT") {
+        throw new AggregateError([error, cleanupError], "号码计数器临时文件清理失败");
+      }
     }
     throw error;
   }
@@ -96,31 +136,36 @@ export async function createPost(postsDirectory, title) {
   if (!filename) throw new Error("标题无法生成有效文件名");
 
   const path = join(postsDirectory, `${filename}.md`);
-  const next = await loadNextPostId(postsDirectory);
-
-  await mkdir(postsDirectory, { recursive: true });
-  const { source } = createPostDraft({ title: trimmed, id: next });
+  const lockPath = await acquirePostLock(postsDirectory);
   try {
-    await writeFile(path, source, { flag: "wx" });
-  } catch (error) {
-    if (error?.code === "EEXIST") throw new Error(`技术文章已存在：${path}`, { cause: error });
-    throw error;
-  }
+    const next = await loadNextPostId(postsDirectory);
 
-  try {
-    await writeFile(postNextIdPath(postsDirectory), formatPostNextId(next + 1));
-  } catch (error) {
+    await mkdir(postsDirectory, { recursive: true });
+    const { source } = createPostDraft({ title: trimmed, id: next });
     try {
-      await unlink(path);
-    } catch (cleanupError) {
-      throw new Error(`未能写入号码计数器，且无法撤回已创建的文件：${path}`, {
-        cause: cleanupError,
-      });
+      await writeFile(path, source, { flag: "wx" });
+    } catch (error) {
+      if (error?.code === "EEXIST") throw new Error(`技术文章已存在：${path}`, { cause: error });
+      throw error;
     }
-    throw error;
-  }
 
-  return { path, id: next };
+    try {
+      await replaceNextPostId(postsDirectory, next + 1);
+    } catch (error) {
+      try {
+        await unlink(path);
+      } catch (cleanupError) {
+        throw new Error(`未能写入号码计数器，且无法撤回已创建的文件：${path}`, {
+          cause: cleanupError,
+        });
+      }
+      throw error;
+    }
+
+    return { path, id: next };
+  } finally {
+    await rmdir(lockPath);
+  }
 }
 
 /**

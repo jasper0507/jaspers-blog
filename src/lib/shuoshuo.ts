@@ -1,6 +1,7 @@
 import { getCollection, render } from "astro:content";
 import { markdownToMdast, type MdastNode } from "satteri";
 import { isPublished } from "./content";
+import { stripInlineMarks } from "./site-markdown.js";
 import { SHUOSHUO_TIME_ZONE } from "./shuoshuo-rules.js";
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "long",
@@ -31,7 +32,7 @@ function projectShuoshuoBody(source: string) {
   const tree = markdownToMdast(source, { features: { math: true } });
 
   const visibleText = (node: MdastNode): string => {
-    if (node.type === "text") return node.value;
+    if (node.type === "text") return stripInlineMarks(node.value);
     if (node.type === "image" || node.type === "imageReference") {
       imageCount += 1;
       return "";

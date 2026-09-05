@@ -151,6 +151,7 @@ const oldFontsDir = join(transactionDir, "old-fonts");
 const oldCssPath = join(transactionDir, "old-fonts.css");
 let committed = false;
 let failure;
+let preserveTransaction = false;
 
 try {
   await mkdir(nextFontsDir);
@@ -252,6 +253,7 @@ try {
     if (fontsInstalled) await rollback(() => rename(fontsDir, nextFontsDir));
     if (fontsBackedUp) await rollback(() => rename(oldFontsDir, fontsDir));
     if (rollbackErrors.length > 0) {
+      preserveTransaction = true;
       throw new AggregateError([error, ...rollbackErrors], "字体替换失败且未能完整恢复旧文件");
     }
     throw error;
@@ -264,10 +266,14 @@ try {
   failure = error;
   throw error;
 } finally {
-  try {
-    await rm(transactionDir, { recursive: true, force: true });
-  } catch (cleanupError) {
-    if (!failure && !committed) throw cleanupError;
-    console.warn(`未能清理临时目录 ${transactionDir}：${cleanupError.message}`);
+  if (preserveTransaction) {
+    console.warn(`已保留字体事务目录以便手动恢复：${transactionDir}`);
+  } else {
+    try {
+      await rm(transactionDir, { recursive: true, force: true });
+    } catch (cleanupError) {
+      if (!failure && !committed) throw cleanupError;
+      console.warn(`未能清理临时目录 ${transactionDir}：${cleanupError.message}`);
+    }
   }
 }

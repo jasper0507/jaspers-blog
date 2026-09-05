@@ -52,6 +52,7 @@ test("公开内容合同", async () => {
   );
   assert.match(detail, /loading="lazy"/);
   assert.match(detail, /decoding="async"/);
+  assert.match(detail, /<mark>说说<\/mark>/);
   assert.ok(detail.includes(longShuoshuoSummary));
   assert.ok(rss.includes(`<link>${expectedSite.url}</link>`));
   assert.match(rss, /https:\/\/jasper0507\.me\/shuoshuo\/20250101-000001\//);
@@ -138,6 +139,19 @@ test("主视觉只请求池中一张图片，主题切换不换图", async ({ pa
   await page.locator("#theme-toggle").click();
   assert.equal(await page.locator(".hero-image").getAttribute("src"), pinned);
   assert.deepEqual(heroRequests, [pinned]);
+});
+
+test("无脚本时显示主视觉回退图", async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto(host);
+
+  assert.equal(await page.locator("#hero-image").isHidden(), true);
+  const fallback = page.locator(".hero-media noscript .hero-image");
+  assert.equal(await fallback.getAttribute("src"), expectedHome.hero.images[0]);
+  assert.equal(await fallback.isVisible(), true);
+
+  await context.close();
 });
 
 test("技术文章阅读能力", async ({ page }) => {

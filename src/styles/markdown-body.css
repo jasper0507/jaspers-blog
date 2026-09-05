@@ -182,11 +182,11 @@
   margin-block: 1.75em;
 }
 
-/* 引用：克制的珊瑚左边线，非色块。 */
+/* 引用：克制的珊瑚细边线，非色块。 */
 .post-body blockquote {
   margin-block: 1.7em;
   padding: 0.15em 0 0.15em 1.1rem;
-  border-left: 3px solid var(--body-quote-border);
+  border-left: 1px solid var(--body-quote-border);
   color: var(--body-quote);
 }
 
@@ -245,7 +245,7 @@
   background-color: var(--scrollbar-thumb);
   background-clip: padding-box;
   border: 2px solid transparent;
-  border-radius: 999px;
+  border-radius: 50%;
 }
 
 .post-body .astro-code::-webkit-scrollbar-thumb:hover,
@@ -294,7 +294,6 @@
 
 .post-body .astro-code .line.highlighted {
   background: color-mix(in srgb, var(--body-accent) 14%, transparent);
-  box-shadow: inset 3px 0 var(--body-accent);
 }
 
 .post-body .astro-code .line.diff.add {
