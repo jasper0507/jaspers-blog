@@ -1,5 +1,4 @@
-/* 首页最近说说与列表页：浅色纸面卡片，条目间距区分、无分割线 */
-.shuoshuo-preview,
+/* 说说列表页：浅色纸面卡片，条目间距区分、无分割线 */
 .shuoshuo-card {
   padding: 1.15rem 1.35rem;
   border: 1px solid var(--line);
@@ -10,7 +9,6 @@
     box-shadow var(--duration) var(--ease-out);
 }
 
-.shuoshuo-preview:hover,
 .shuoshuo-card:hover {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
   box-shadow: var(--shadow-float);

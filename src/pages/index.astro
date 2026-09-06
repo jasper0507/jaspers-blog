@@ -3,7 +3,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { getPublishedPostCatalog } from "../lib/posts";
 import { getPublishedShuoshuo } from "../lib/shuoshuo";
 import { blogSettings } from "../lib/site";
-import "../styles/shuoshuo-card.css";
 
 const [{ posts: publishedPosts }, publishedShuoshuo] = await Promise.all([
   getPublishedPostCatalog(),
@@ -81,11 +80,13 @@ const shuoshuoCount = publishedShuoshuo.length;
         {
           latestShuoshuo ? (
             <article aria-label={latestShuoshuo.label}>
-              <a class="post-preview shuoshuo-preview" href={latestShuoshuo.href}>
+              <a class="shuoshuo-preview" href={latestShuoshuo.href}>
                 <time datetime={latestShuoshuo.publishedAt.iso}>
                   {latestShuoshuo.publishedAt.compact}
                 </time>
-                <h3>{latestShuoshuo.summary}</h3>
+                <blockquote>
+                  <p>{latestShuoshuo.summary}</p>
+                </blockquote>
               </a>
             </article>
           ) : (
@@ -253,9 +254,38 @@ const shuoshuoCount = publishedShuoshuo.length;
     text-decoration: none;
   }
 
-  .post-preview.shuoshuo-preview {
-    color: inherit;
+  .shuoshuo-preview {
+    display: grid;
+    gap: 0.65rem;
+    min-width: 0;
+    padding: 0.9rem 1.15rem;
+    border-inline-start: 3px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+    border-radius: 0 0.25rem 0.25rem 0;
+    background: color-mix(in srgb, var(--surface) 65%, transparent);
+    color: var(--text);
     text-decoration: none;
+    transition: border-color var(--duration) var(--ease-out);
+  }
+
+  .shuoshuo-preview:hover {
+    border-inline-start-color: color-mix(in srgb, var(--accent) 75%, var(--line));
+  }
+
+  .shuoshuo-preview:focus-visible {
+    outline-offset: -3px;
+  }
+
+  .shuoshuo-preview blockquote,
+  .shuoshuo-preview p {
+    margin: 0;
+  }
+
+  .shuoshuo-preview p {
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
   }
 
   .post-preview p {
