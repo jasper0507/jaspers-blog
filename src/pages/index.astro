@@ -170,7 +170,8 @@ const shuoshuoCount = publishedShuoshuo.length;
     height: 0;
     min-height: 100%;
     min-width: 0;
-    overflow: hidden;
+    /* 为便签的轻抬和投影留出空间；文章区仍独立滚动。 */
+    overflow: visible;
   }
 
   .feed-section {
@@ -186,7 +187,7 @@ const shuoshuoCount = publishedShuoshuo.length;
   }
 
   .feed-section:last-child {
-    overflow: hidden;
+    overflow: visible;
     padding-bottom: 0.35rem;
   }
 
@@ -255,24 +256,53 @@ const shuoshuoCount = publishedShuoshuo.length;
   }
 
   .shuoshuo-preview {
+    --note-shadow: 0 1px 2px var(--shadow-color);
+    --note-shadow-lifted: 1px 5px 10px var(--shadow-color);
     display: grid;
     gap: 0.65rem;
     min-width: 0;
     padding: 0.9rem 1.15rem;
     border-inline-start: 3px solid color-mix(in srgb, var(--accent) 55%, var(--line));
     border-radius: 0 0.25rem 0.25rem 0;
-    background: color-mix(in srgb, var(--surface) 65%, transparent);
+    background: var(--surface);
+    box-shadow: var(--note-shadow);
     color: var(--text);
     text-decoration: none;
-    transition: border-color var(--duration) var(--ease-out);
+    transform-origin: 1.15rem 0.9rem;
+    transition:
+      border-color var(--duration) var(--ease-out),
+      box-shadow var(--duration) var(--ease-out),
+      transform 280ms var(--ease-out);
   }
 
-  .shuoshuo-preview:hover {
-    border-inline-start-color: color-mix(in srgb, var(--accent) 75%, var(--line));
+  @media (hover: hover) and (pointer: fine) {
+    .shuoshuo-preview:hover {
+      border-inline-start-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+      box-shadow: var(--note-shadow-lifted);
+    }
   }
 
   .shuoshuo-preview:focus-visible {
     outline-offset: -3px;
+    box-shadow: var(--note-shadow-lifted);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @media (hover: hover) and (pointer: fine) {
+      .shuoshuo-preview:hover {
+        transform: translateY(-2px) rotate(-0.35deg);
+      }
+    }
+
+    .shuoshuo-preview:focus-visible {
+      transform: translateY(-2px);
+    }
+  }
+
+  .shuoshuo-preview:active {
+    transform: none;
+    box-shadow: var(--note-shadow);
+    transition-duration: 100ms;
   }
 
   .shuoshuo-preview blockquote,
