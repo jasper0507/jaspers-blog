@@ -1,7 +1,6 @@
 import { getCollection, render } from "astro:content";
-import { markdownToMdast, type MdastNode } from "satteri";
 import { isPublished } from "./content";
-import { stripInlineMarks } from "./site-markdown.js";
+import { extractMarkdownContent } from "./site-markdown.js";
 import { SHUOSHUO_TIME_ZONE } from "./shuoshuo-rules.js";
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "long",
@@ -16,36 +15,9 @@ const compactDateFormatter = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 const summarySegmenter = new Intl.Segmenter("zh-CN", { granularity: "grapheme" });
-const separatedMdastChildren = new Set([
-  "root",
-  "blockquote",
-  "list",
-  "listItem",
-  "table",
-  "tableRow",
-  "tableCell",
-  "footnoteDefinition",
-]);
 
 function projectShuoshuoBody(source: string) {
-  let imageCount = 0;
-  const tree = markdownToMdast(source, { features: { math: true } });
-
-  const visibleText = (node: MdastNode): string => {
-    if (node.type === "text") return stripInlineMarks(node.value);
-    if (node.type === "image" || node.type === "imageReference") {
-      imageCount += 1;
-      return "";
-    }
-    if (node.type === "break") return " ";
-    if (!("children" in node)) return "";
-    return node.children
-      .map(visibleText)
-      .filter(Boolean)
-      .join(separatedMdastChildren.has(node.type) ? " " : "");
-  };
-
-  const text = visibleText(tree).replace(/\s+/gu, " ").trim();
+  const { text, imageCount } = extractMarkdownContent(source);
   if (!text && imageCount === 0) throw new Error("说说没有可见文字或图片");
 
   const marker = imageCount > 0 ? `[${imageCount} Image${imageCount === 1 ? "" : "s"}]` : "";

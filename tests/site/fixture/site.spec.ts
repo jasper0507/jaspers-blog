@@ -53,6 +53,10 @@ test("公开内容合同", async () => {
   assert.match(detail, /loading="lazy"/);
   assert.match(detail, /decoding="async"/);
   assert.match(detail, /<mark>说说<\/mark>/);
+  const shortDetail = await readDist("shuoshuo/20250102-000000/index.html");
+  assert.match(shortDetail, /<mark>相同<\/mark>/);
+  assert.match(shortDetail, /<mark>编号较早<\/mark>/);
+  assert.match(shortDetail, /name="description" content="这是相同 发布时间下编号较早的说说。"/);
   assert.ok(detail.includes(longShuoshuoSummary));
   assert.ok(rss.includes(`<link>${expectedSite.url}</link>`));
   assert.match(rss, /https:\/\/jasper0507\.me\/shuoshuo\/20250101-000001\//);
