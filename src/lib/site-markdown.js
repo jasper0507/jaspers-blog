@@ -61,8 +61,60 @@ function escapeHtml(value) {
 
 const inlineMarkPattern = /==((?:(?!==).)+?)==/gu;
 
-export function stripInlineMarks(value) {
-  return value.replaceAll(inlineMarkPattern, "$1");
+function splitInlineMarks(value) {
+  const parts = [];
+  let lastIndex = 0;
+  for (const match of value.matchAll(inlineMarkPattern)) {
+    if (match.index > lastIndex) {
+      parts.push({ value: value.slice(lastIndex, match.index), marked: false });
+    }
+    parts.push({ value: match[1], marked: true });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < value.length) parts.push({ value: value.slice(lastIndex), marked: false });
+  return parts;
+}
+
+const separatedMdastChildren = new Set([
+  "root",
+  "blockquote",
+  "list",
+  "listItem",
+  "table",
+  "tableRow",
+  "tableCell",
+  "footnoteDefinition",
+]);
+
+/**
+ * 提取未截断的普通文字与图片数量；空投影有效，解析错误直接传播。
+ * @param {string} source
+ * @returns {{ text: string, imageCount: number }}
+ */
+export function extractMarkdownContent(source) {
+  let imageCount = 0;
+  const tree = markdownToMdast(source, { features: siteMarkdownFeatures });
+
+  /** @param {import("satteri").MdastNode} node @returns {string} */
+  const visibleText = node => {
+    if (node.type === "text")
+      return splitInlineMarks(node.value)
+        .map(part => part.value)
+        .join("");
+    if (node.type === "image" || node.type === "imageReference") {
+      imageCount += 1;
+      return "";
+    }
+    if (node.type === "break") return " ";
+    if (!("children" in node)) return "";
+    return node.children
+      .map(visibleText)
+      .filter(Boolean)
+      .join(separatedMdastChildren.has(node.type) ? " " : "");
+  };
+
+  const text = visibleText(tree).replace(/\s+/gu, " ").trim();
+  return { text, imageCount };
 }
 
 /** Typora / 部分编辑器的 `==高亮==`，代码块与行内代码保持字面量。 */
@@ -72,17 +124,13 @@ const markPlugin = defineMdastPlugin({
     const value = node.value;
     if (!value.includes("==")) return;
 
-    const parts = [];
-    let lastIndex = 0;
-    for (const match of value.matchAll(inlineMarkPattern)) {
-      if (match.index > lastIndex) {
-        parts.push({ type: "text", value: value.slice(lastIndex, match.index) });
-      }
-      parts.push({ type: "html", value: `<mark>${escapeHtml(match[1])}</mark>` });
-      lastIndex = match.index + match[0].length;
-    }
-    if (parts.length === 0) return;
-    if (lastIndex < value.length) parts.push({ type: "text", value: value.slice(lastIndex) });
+    const segments = splitInlineMarks(value);
+    if (!segments.some(part => part.marked)) return;
+    const parts = segments.map(part =>
+      part.marked
+        ? { type: "html", value: `<mark>${escapeHtml(part.value)}</mark>` }
+        : { type: "text", value: part.value },
+    );
 
     context.insertBefore(node, parts);
     context.removeNode(node);

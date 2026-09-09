@@ -53,6 +53,10 @@ test("公开内容合同", async () => {
   assert.match(detail, /loading="lazy"/);
   assert.match(detail, /decoding="async"/);
   assert.match(detail, /<mark>说说<\/mark>/);
+  const shortDetail = await readDist("shuoshuo/20250102-000000/index.html");
+  assert.match(shortDetail, /<mark>相同<\/mark>/);
+  assert.match(shortDetail, /<mark>编号较早<\/mark>/);
+  assert.match(shortDetail, /name="description" content="这是相同 发布时间下编号较早的说说。"/);
   assert.ok(detail.includes(longShuoshuoSummary));
   assert.ok(rss.includes(`<link>${expectedSite.url}</link>`));
   assert.match(rss, /https:\/\/jasper0507\.me\/shuoshuo\/20250101-000001\//);
@@ -295,6 +299,34 @@ test("未知路径使用站点 404", async ({ page }) => {
   const response = await page.goto(`${host}/not-a-page/`);
   assert.equal(response?.status(), 404);
   assert.equal((await page.locator("h1").textContent())?.trim(), "没有找到这个页面");
+});
+
+test("高亮链接在亮暗主题与交互状态下保持可读", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme });
+    await page.goto(`${host}/shuoshuo/20250102-000000/`);
+    const link = page.locator(".post-body a:has(mark)");
+    assert.equal(await link.isVisible(), true);
+    for (const state of ["default", "hover", "focus"]) {
+      if (state === "hover") await link.hover();
+      if (state === "focus") {
+        await page.mouse.move(0, 0);
+        await link.focus();
+      }
+      assert.ok(
+        await link.evaluate(element =>
+          getComputedStyle(element).textDecorationLine.includes("underline"),
+        ),
+        "高亮链接仍须保留下划线",
+      );
+      const { violations } = await new AxeBuilder({ page })
+        .include(".post-body a:has(mark)")
+        .withRules(["color-contrast"])
+        .analyze();
+      assert.deepEqual(violations, [], `${colorScheme} / ${state}`);
+    }
+  }
 });
 
 test("核心页面没有明显无障碍违规", async ({ page }) => {
