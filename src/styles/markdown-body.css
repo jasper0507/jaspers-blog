@@ -175,6 +175,11 @@
   text-decoration: underline;
 }
 
+/* 高亮底色上的链接色对比度不足；保留下划线，以正文文字色保证可读。 */
+.post-body a mark {
+  color: var(--body-text);
+}
+
 .post-body img {
   max-width: 100%;
   height: auto;

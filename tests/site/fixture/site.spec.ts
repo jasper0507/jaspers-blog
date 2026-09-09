@@ -301,6 +301,34 @@ test("未知路径使用站点 404", async ({ page }) => {
   assert.equal((await page.locator("h1").textContent())?.trim(), "没有找到这个页面");
 });
 
+test("高亮链接在亮暗主题与交互状态下保持可读", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme });
+    await page.goto(`${host}/shuoshuo/20250102-000000/`);
+    const link = page.locator(".post-body a:has(mark)");
+    assert.equal(await link.isVisible(), true);
+    for (const state of ["default", "hover", "focus"]) {
+      if (state === "hover") await link.hover();
+      if (state === "focus") {
+        await page.mouse.move(0, 0);
+        await link.focus();
+      }
+      assert.ok(
+        await link.evaluate(element =>
+          getComputedStyle(element).textDecorationLine.includes("underline"),
+        ),
+        "高亮链接仍须保留下划线",
+      );
+      const { violations } = await new AxeBuilder({ page })
+        .include(".post-body a:has(mark)")
+        .withRules(["color-contrast"])
+        .analyze();
+      assert.deepEqual(violations, [], `${colorScheme} / ${state}`);
+    }
+  }
+});
+
 test("核心页面没有明显无障碍违规", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   for (const path of ["/", "/posts/2/", "/shuoshuo/", "/shuoshuo/20250101-000001/"]) {
