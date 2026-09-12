@@ -126,9 +126,12 @@ id: ${id}
 /**
  * @param {string} postsDirectory
  * @param {string} title
+ * @param {{ unlink?: typeof unlink, rmdir?: typeof rmdir }} [io]
  * @returns {Promise<{ path: string, id: number }>}
  */
-export async function createPost(postsDirectory, title) {
+export async function createPost(postsDirectory, title, io = {}) {
+  const unlinkFile = io.unlink ?? unlink;
+  const removeLock = io.rmdir ?? rmdir;
   const trimmed = title.trim();
   if (!trimmed) throw new Error("标题不能为空");
 
@@ -137,6 +140,8 @@ export async function createPost(postsDirectory, title) {
 
   const path = join(postsDirectory, `${filename}.md`);
   const lockPath = await acquirePostLock(postsDirectory);
+  let committed = false;
+  let failure;
   try {
     const next = await loadNextPostId(postsDirectory);
 
@@ -153,18 +158,33 @@ export async function createPost(postsDirectory, title) {
       await replaceNextPostId(postsDirectory, next + 1);
     } catch (error) {
       try {
-        await unlink(path);
+        await unlinkFile(path);
       } catch (cleanupError) {
-        throw new Error(`未能写入号码计数器，且无法撤回已创建的文件：${path}`, {
-          cause: cleanupError,
-        });
+        if (cleanupError?.code !== "ENOENT") {
+          throw new AggregateError(
+            [error, cleanupError],
+            `未能写入号码计数器，且无法撤回已创建的文件：${path}`,
+          );
+        }
       }
       throw error;
     }
 
+    committed = true;
     return { path, id: next };
+  } catch (error) {
+    failure = error;
+    throw error;
   } finally {
-    await rmdir(lockPath);
+    try {
+      await removeLock(lockPath);
+    } catch (cleanupError) {
+      if (cleanupError?.code !== "ENOENT") {
+        if (failure) throw new AggregateError([failure, cleanupError], failure.message);
+        if (!committed) throw cleanupError;
+        console.warn(`技术文章已创建，但未能释放锁：${lockPath}`);
+      }
+    }
   }
 }
 

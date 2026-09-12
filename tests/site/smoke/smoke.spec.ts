@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "@playwright/test";
-import { host } from "../helpers.ts";
+import { origin } from "../acceptance-site.ts";
+
+const host = origin();
 
 test("核心阅读与站点壳交互可用", async ({ page }) => {
   await page.goto(host, { waitUntil: "networkidle" });

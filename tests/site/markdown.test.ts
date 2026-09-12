@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { test } from "@playwright/test";
-import { extractMarkdownContent } from "../../../src/lib/site-markdown.js";
+import { test } from "node:test";
+import { extractMarkdownContent } from "../../src/lib/site-markdown.js";
 
 test("Markdown 提取保留文字、段落间隔与高亮内容", () => {
   const source = `开头==甲==中间==乙 & 丙==结尾。

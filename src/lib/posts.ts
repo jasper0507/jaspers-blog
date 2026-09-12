@@ -1,6 +1,5 @@
 import { getCollection, render } from "astro:content";
 import type { RenderResult } from "astro:content";
-import { isPublished } from "./content";
 import { POST_CONTENT_DIRECTORY, assertPostStableIds } from "./post-rules.js";
 import { getTag } from "./tags";
 
@@ -68,7 +67,7 @@ export async function getPublishedPostCatalog() {
   );
 
   const posts: PublishedPost[] = entries
-    .filter(isPublished)
+    .filter(entry => !entry.data.draft)
     .sort(
       (left, right) =>
         right.data.publishedAt.getTime() - left.data.publishedAt.getTime() ||

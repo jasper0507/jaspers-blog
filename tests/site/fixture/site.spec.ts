@@ -1,18 +1,10 @@
 import assert from "node:assert/strict";
 import AxeBuilder from "@axe-core/playwright";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { test } from "@playwright/test";
-import {
-  assertInOrder,
-  expectedHome,
-  expectedSite,
-  host,
-  pagefindFragmentText,
-  root,
-} from "../helpers.ts";
+import { origin, readDist } from "../acceptance-site.ts";
+import { assertInOrder, expectedHome, expectedSite, pagefindFragmentText } from "../helpers.ts";
 
-const readDist = (path: string) => readFile(join(root, "dist", path), "utf8");
+const host = origin();
 const longShuoshuoSummary =
   "这是发布时间最新的公开说说。它故意使用与发布时间不同的文件名，用来确认稳定 ID 不会从可修改的时间重新推导。 这里继续放入足够长的正文，… [1 Image]";
 const emojiShuoshuoSummary = `${"🙂".repeat(79)}…`;
@@ -29,8 +21,9 @@ test("公开内容合同", async () => {
   ]);
 
   assert.match(home, /同时发布的 Alpha 技术文章/);
-  assert.match(home, /data-hero-images="[^"]*\/images\/hero\/campus\.jpg/);
-  assert.match(home, /<noscript>[\s\S]*src="\/images\/hero\/campus\.jpg"/);
+  const [heroImage] = expectedHome.hero.images;
+  assert.ok(home.includes(heroImage));
+  assert.match(home, new RegExp(`<noscript>[\\s\\S]*src="${heroImage}"`));
   assert.ok(home.includes(longShuoshuoSummary));
   assert.doesNotMatch(
     `${home}${timeline}${archive}${tags}${rss}${sitemap}`,

@@ -49,7 +49,7 @@ git commit -m "发布内容"
 git push
 ```
 
-修改页面、脚本、配置、依赖或 CI 时使用分支和 PR，不直接推送 `main`。PR 自动运行 `verify`（静态检查、领域测试、Chromium 完整场景和 Axe）与 `browser-smoke`（Firefox、WebKit 核心场景），两项成功且分支基于最新 `main` 后才能合并。`main` 推送另运行不安装浏览器的 `build`。本地完整搜索需先 `npm run build`，再 `npm run preview`。
+修改页面、脚本、配置、依赖或 CI 时使用分支和 PR，不直接推送 `main`。PR 自动运行 `verify`（静态检查、领域测试、Chromium 完整场景和 Axe）与 `browser-smoke`（Firefox 核心场景），两项成功且分支基于最新 `main` 后才能合并。`main` 推送另运行不安装浏览器的 `build`。本地完整搜索需先 `npm run build`，再 `npm run preview`。
 
 ## 恢复
 

@@ -1,9 +1,9 @@
 import { defineConfig } from "@playwright/test";
-import fullConfig from "./playwright.config";
+import { preview } from "./tests/site/acceptance-site.ts";
 
 export default defineConfig({
-  ...fullConfig,
   testDir: "tests/site/smoke",
   outputDir: "artifacts/smoke-results",
+  ...preview(),
   projects: [{ name: "firefox", use: { browserName: "firefox" } }],
 });

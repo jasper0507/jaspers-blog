@@ -8,7 +8,7 @@
 
 一个以技术文章为核心、以说说承载轻量表达的中文个人网站。项目使用 Astro 生成静态页面，内容随 Git 推送到 Cloudflare Pages；站内搜索、标签、归档、RSS 与站点地图都在构建时生成。
 
-访问 [Jasper's Blog](https://jasper0507.me/)，或查看[更新日志](CHANGELOG.md)。
+访问 [Jasper's Blog](https://jasper0507.me/)。
 
 ## 🔥 Features
 
@@ -47,7 +47,7 @@
 │   └── content.config.ts   # Content Collections 数据结构
 ├── tests/
 │   ├── fixtures/           # 构建验收用内容
-│   └── site/               # Playwright 整站验收用例
+│   └── site/               # 站点验收用例
 ├── blog.config.ts          # 博客设置的唯一日常入口
 ├── astro.config.mjs        # Astro、Markdown 与代码高亮配置
 ├── pagefind.yml            # 搜索索引排除规则（公式）

@@ -1,24 +1,29 @@
 import { getCollection, render } from "astro:content";
-import { isPublished } from "./content";
+import { SHANGHAI_TIME_ZONE } from "./shanghai-time.js";
 import { extractMarkdownContent } from "./site-markdown.js";
-import { SHUOSHUO_TIME_ZONE } from "./shuoshuo-rules.js";
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "long",
   timeStyle: "short",
   hour12: false,
-  timeZone: SHUOSHUO_TIME_ZONE,
+  timeZone: SHANGHAI_TIME_ZONE,
 });
 const compactDateFormatter = new Intl.DateTimeFormat("en-CA", {
-  timeZone: SHUOSHUO_TIME_ZONE,
+  timeZone: SHANGHAI_TIME_ZONE,
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
 });
 const summarySegmenter = new Intl.Segmenter("zh-CN", { granularity: "grapheme" });
 
-function projectShuoshuoBody(source: string) {
-  const { text, imageCount } = extractMarkdownContent(source);
-  if (!text && imageCount === 0) throw new Error("说说没有可见文字或图片");
+function projectShuoshuoBody(id: string, source: string) {
+  let text: string;
+  let imageCount: number;
+  try {
+    ({ text, imageCount } = extractMarkdownContent(source));
+  } catch (error) {
+    throw new Error(`说说 ${id} 摘要投影失败`, { cause: error });
+  }
+  if (!text && imageCount === 0) throw new Error(`说说 ${id} 没有可见文字或图片`);
 
   const marker = imageCount > 0 ? `[${imageCount} Image${imageCount === 1 ? "" : "s"}]` : "";
   const graphemes = [...summarySegmenter.segment(text)].map(segment => segment.segment);
@@ -40,11 +45,11 @@ export async function getPublishedShuoshuo() {
   const entries = await getCollection("shuoshuo");
   const projected = entries.map(entry => ({
     entry,
-    projection: projectShuoshuoBody(entry.body ?? ""),
+    projection: projectShuoshuoBody(entry.id, entry.body ?? ""),
   }));
 
   return projected
-    .filter(({ entry }) => isPublished(entry))
+    .filter(({ entry }) => !entry.data.draft)
     .sort(
       (left, right) =>
         right.entry.data.publishedAt.getTime() - left.entry.data.publishedAt.getTime() ||
