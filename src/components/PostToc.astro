@@ -27,50 +27,6 @@ if (toc.length === 0) return;
   </ol>
 </nav>
 
-<script is:inline>
-  (() => {
-    const tocNav = document.querySelector(".post-toc");
-    if (!(tocNav instanceof HTMLElement)) return;
-
-    const items = [...tocNav.querySelectorAll("a[data-heading-id]")].map(link => {
-      const id = link.getAttribute("data-heading-id") ?? "";
-      const heading = document.getElementById(id);
-      if (!heading) throw new Error("文章目录目标不存在：" + id);
-      return { link, heading };
-    });
-
-    let activeId = "";
-    const setActive = id => {
-      if (!id || id === activeId) return;
-      activeId = id;
-      for (const { link, heading } of items) {
-        if (heading.id === id) link.setAttribute("aria-current", "true");
-        else link.removeAttribute("aria-current");
-      }
-    };
-
-    setActive(items[0].heading.id);
-
-    if (!("IntersectionObserver" in window)) return;
-
-    const observer = new IntersectionObserver(
-      () => {
-        const current =
-          items.findLast(
-            ({ heading }) => heading.getBoundingClientRect().top <= window.innerHeight * 0.45,
-          ) ?? items[0];
-        setActive(current.heading.id);
-      },
-      {
-        rootMargin: "0px 0px -55% 0px",
-        threshold: [0, 0.25, 1],
-      },
-    );
-
-    for (const { heading } of items) observer.observe(heading);
-  })();
-</script>
-
 <style>
   .post-toc {
     display: none;

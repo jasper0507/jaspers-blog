@@ -34,7 +34,7 @@
 │   └── images/hero/        # 首页主视觉照片，丢入 jpg 即可
 ├── scripts/                # 内容创建、搜索索引与领域验收脚本
 ├── src/
-│   ├── components/         # 正文、目录、标签、搜索与回到顶部
+│   ├── components/         # 正文、标签、搜索与技术文章阅读
 │   ├── content/
 │   │   ├── about.md           # 「关于我」正文
 │   │   ├── post-next-id.json  # 技术文章号码计数器（不要手改）

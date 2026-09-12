@@ -237,6 +237,38 @@ test("技术文章阅读能力", async ({ page }) => {
   await page.waitForFunction(() => scrollY < 8 && document.activeElement?.id === "post-title");
 });
 
+test("无目录的短文保留标题焦点且不显示回顶", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.goto(`${host}/posts/1/`);
+  assert.equal(await page.locator(".post-toc").count(), 0);
+  assert.equal(await page.locator("#back-to-top").getAttribute("data-visible"), "false");
+  const title = page.locator("#post-title");
+  assert.equal(await title.getAttribute("tabindex"), "-1");
+  await title.focus();
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "post-title");
+});
+
+test("减少动态效果时回顶立即完成并交还标题焦点", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.goto(`${host}/posts/2/`);
+  await page
+    .locator(".post-body h2")
+    .nth(1)
+    .evaluate(element =>
+      scrollTo({
+        top: element.getBoundingClientRect().top + scrollY - innerHeight * 0.4,
+        behavior: "instant",
+      }),
+    );
+  const backToTop = page.locator("#back-to-top");
+  await page.waitForFunction(
+    () => document.querySelector("#back-to-top")?.getAttribute("data-visible") === "true",
+  );
+  await backToTop.click();
+  await page.waitForFunction(() => scrollY < 8 && document.activeElement?.id === "post-title");
+});
+
 test("说说和移动端基本可用", async ({ page }) => {
   await page.goto(`${host}/shuoshuo/`);
   const toggle = page.locator('[data-shuoshuo-toggle="20250101-000001"]');
