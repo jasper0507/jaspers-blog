@@ -1,5 +1,5 @@
 import { getCollection, render } from "astro:content";
-import type { RenderResult } from "astro:content";
+import type { CollectionEntry, RenderResult } from "astro:content";
 import { POST_CONTENT_DIRECTORY, assertPostStableIds } from "./post-rules.js";
 import { getTag } from "./tags";
 
@@ -45,8 +45,58 @@ interface PublishedTagGroup extends PublishedTag {
   posts: PublishedPost[];
 }
 
+interface PublishedCatalog {
+  posts: PublishedPost[];
+  archive: ArchiveGroup[];
+  tags: PublishedTagGroup[];
+}
+
+let snapshot: { key: string; catalog: PublishedCatalog } | undefined;
+let inflight: { key: string; promise: Promise<PublishedCatalog> } | undefined;
+let generation = 0;
+
+function publishedCatalogKey(entries: CollectionEntry<"posts">[]) {
+  return [
+    process.env.POST_CONTENT_DIR ?? "",
+    ...[...entries]
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .map(entry =>
+        [
+          entry.id,
+          entry.data.id,
+          entry.data.draft ? "1" : "0",
+          entry.data.publishedAt.toISOString(),
+          entry.data.title,
+          entry.data.description,
+          entry.data.tags.join("\u001f"),
+          entry.body ?? "",
+        ].join("\0"),
+      ),
+  ].join("\n");
+}
+
 export async function getPublishedPostCatalog() {
   const entries = await getCollection("posts");
+  const key = publishedCatalogKey(entries);
+  if (snapshot?.key === key) return snapshot.catalog;
+  if (inflight?.key === key) return inflight.promise;
+
+  const currentGeneration = ++generation;
+  const promise = createPublishedCatalog(entries)
+    .then(catalog => {
+      if (currentGeneration === generation) snapshot = { key, catalog };
+      return catalog;
+    })
+    .finally(() => {
+      if (inflight?.promise === promise) inflight = undefined;
+    });
+  inflight = { key, promise };
+  return promise;
+}
+
+async function createPublishedCatalog(
+  entries: CollectionEntry<"posts">[],
+): Promise<PublishedCatalog> {
   const tagHrefOwners = new Map<string, string>();
 
   for (const entry of entries) {
