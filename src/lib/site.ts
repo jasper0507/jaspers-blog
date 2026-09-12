@@ -18,7 +18,7 @@ const year = new Intl.DateTimeFormat("en", {
   year: "numeric",
 }).format(new Date());
 
-export function resolveBlogSettings(settings: typeof rawSettings) {
+function resolveBlogSettings(settings: typeof rawSettings) {
   const url = new URL(settings.site.url);
   if (url.protocol !== "https:" || url.pathname !== "/" || /[?#]/u.test(settings.site.url)) {
     throw new Error("博客正式网址必须是 HTTPS 根地址，且不得包含查询或锚点");

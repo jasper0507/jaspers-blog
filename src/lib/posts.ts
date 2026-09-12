@@ -77,6 +77,11 @@ function publishedCatalogKey(entries: CollectionEntry<"posts">[]) {
 
 export async function getPublishedPostCatalog() {
   const entries = await getCollection("posts");
+  // 计数器不属于 collection；即使命中投影快照，也必须重新断言身份状态。
+  await assertPostStableIds(
+    process.env.POST_CONTENT_DIR ?? `./${POST_CONTENT_DIRECTORY}`,
+    entries.map(entry => ({ filename: entry.id, id: entry.data.id })),
+  );
   const key = publishedCatalogKey(entries);
   if (snapshot?.key === key) return snapshot.catalog;
   if (inflight?.key === key) return inflight.promise;
@@ -110,11 +115,6 @@ async function createPublishedCatalog(
       tagHrefOwners.set(href, tagName);
     }
   }
-
-  await assertPostStableIds(
-    process.env.POST_CONTENT_DIR ?? `./${POST_CONTENT_DIRECTORY}`,
-    entries.map(entry => ({ filename: entry.id, id: entry.data.id })),
-  );
 
   const posts: PublishedPost[] = entries
     .filter(entry => !entry.data.draft)

@@ -18,11 +18,11 @@
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "test:config": "node src/lib/hero-images.ts && node scripts/check-site.mjs",
     "test:fonts": "node scripts/check-fonts.mjs && node --test scripts/check-fetch-fonts.mjs",
-    "test:content-rules": "node scripts/check-post-stable-ids.mjs",
+    "test:content-rules": "node scripts/check-post-stable-ids.mjs && node --test tests/site/posts.test.ts",
     "test:index-posts": "node scripts/check-index-posts.mjs",
     "test:markdown": "node --test tests/site/markdown.test.ts",
     "test:site": "playwright test",
-    "test:guard": "node --test tests/site/guard.test.ts",
+    "test:guard": "node --test tests/site/guard.test.ts tests/site/acceptance.test.ts",
     "test:browser-smoke": "playwright test --config=playwright.smoke.config.ts",
     "test": "npm run format:check && npm run check && npm run test:fonts && npm run test:config && npm run test:content-rules && npm run test:index-posts && npm run test:markdown && npm run test:site && npm run test:guard"
   },

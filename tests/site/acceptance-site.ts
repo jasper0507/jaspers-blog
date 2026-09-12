@@ -1,15 +1,7 @@
 import { preview as astroPreview } from "astro";
 import { execFile, type ExecFileException } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, rmSync, statSync } from "node:fs";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
@@ -20,7 +12,6 @@ import { indexPublishedPosts } from "../../scripts/lib/index-published-posts.mjs
 const execFileAsync = promisify(execFile);
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const astroCli = join(root, "node_modules/astro/bin/astro.mjs");
-const locatorPath = join(root, "artifacts/acceptance-host.json");
 const previewPort = 4321;
 const previewOrigin = `http://127.0.0.1:${previewPort}`;
 
@@ -59,34 +50,6 @@ function assertDistPath(path: string) {
   }
 }
 
-function writeLocator(occupancy: Occupancy) {
-  mkdirSync(dirname(locatorPath), { recursive: true });
-  writeFileSync(locatorPath, `${JSON.stringify({ origin: previewOrigin, ...occupancy })}\n`);
-}
-
-function tryReadLocator(): Occupancy | undefined {
-  try {
-    const locator = JSON.parse(readFileSync(locatorPath, "utf8")) as Partial<Occupancy> & {
-      origin?: string;
-    };
-    if (!locator.dist || !locator.cache || !locator.posts || !locator.shuoshuo) return undefined;
-    return {
-      dist: locator.dist,
-      cache: locator.cache,
-      posts: locator.posts,
-      shuoshuo: locator.shuoshuo,
-    };
-  } catch {
-    return undefined;
-  }
-}
-
-function readLocator() {
-  const occupancy = tryReadLocator();
-  if (!occupancy) throw new Error("没有占用中的验收场景");
-  return { origin: previewOrigin, dist: occupancy.dist };
-}
-
 function definedEnv(env: NodeJS.ProcessEnv) {
   return Object.fromEntries(
     Object.entries(env).filter((entry): entry is [string, string] => entry[1] !== undefined),
@@ -122,15 +85,6 @@ async function runBuild(occupancy: Occupancy) {
 
 function removeOccupancy(workspace: string) {
   rmSync(workspace, { recursive: true, force: true });
-  rmSync(locatorPath, { force: true });
-}
-
-function sweepStaleWorkspaces(current: string) {
-  for (const entry of readdirSync(tmpdir(), { withFileTypes: true })) {
-    if (!entry.isDirectory() || !entry.name.startsWith("jasper-blog-acceptance-")) continue;
-    const workspace = join(tmpdir(), entry.name);
-    if (workspace !== current) rmSync(workspace, { recursive: true, force: true });
-  }
 }
 
 async function runPreview() {
@@ -159,7 +113,6 @@ function occupancyFromEnv(): Occupancy {
 async function occupyAndServe() {
   const occupancy = occupancyFromEnv();
   const workspace = dirname(occupancy.dist);
-  sweepStaleWorkspaces(workspace);
   const cleanup = () => removeOccupancy(workspace);
   process.on("exit", cleanup);
   await mkdir(occupancy.dist, { recursive: true });
@@ -195,8 +148,8 @@ function webServerConfig(occupancy: Occupancy) {
 }
 
 export function preview() {
-  const existing = tryReadLocator();
-  if (existing) return webServerConfig(existing);
+  // 配置进程、webServer 与测试 worker 通过继承环境共享本次场景，跨运行不共享。
+  if (process.env[ENV_DIST]) return webServerConfig(occupancyFromEnv());
 
   const workspace = createWorkspace();
   const occupancy: Occupancy = {
@@ -205,16 +158,16 @@ export function preview() {
     posts: resolveContentDirectory("tests/fixtures/posts-visual", "技术文章"),
     shuoshuo: resolveContentDirectory("tests/fixtures/shuoshuo", "说说"),
   };
-  writeLocator(occupancy);
   return webServerConfig(occupancy);
 }
 
 export function origin() {
-  return readLocator().origin;
+  occupancyFromEnv();
+  return previewOrigin;
 }
 
 export function dist() {
-  return readLocator().dist;
+  return occupancyFromEnv().dist;
 }
 
 export async function readDist(path: string) {
@@ -244,8 +197,7 @@ export async function build(
 }
 
 export default function teardown() {
-  const occupancy = tryReadLocator();
-  if (occupancy) removeOccupancy(dirname(occupancy.dist));
+  if (process.env[ENV_DIST]) removeOccupancy(dirname(occupancyFromEnv().dist));
 }
 
 if (import.meta.main) {
