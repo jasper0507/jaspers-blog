@@ -11,15 +11,20 @@
  * 页面运行时不请求字体 CDN。
  */
 import { createWriteStream } from "node:fs";
-import { cp, mkdir, mkdtemp, readFile, writeFile, readdir, rename, rm } from "node:fs/promises";
+import {
+  cp,
+  mkdir,
+  mkdtemp,
+  readFile,
+  writeFile,
+  readdir,
+  rename as renameFile,
+  rm,
+} from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
-
-const root = fileURLToPath(new URL("..", import.meta.url));
-const fontsDir = join(root, "public/fonts");
-const cssPath = join(root, "src/styles/fonts.css");
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -100,13 +105,13 @@ const isSkippedExtra = (fileName, unicodeRange) => {
   return kind === "latin" || kind === "latin-ext" || kind === "cyrillic" || kind === "vietnamese";
 };
 
-const fetchText = async url => {
+const fetchText = async (url, fetch) => {
   const res = await fetch(url, { headers: { "User-Agent": UA } });
   if (!res.ok) throw new Error(`GET ${url} → ${res.status}`);
   return res.text();
 };
 
-const download = async (url, dest) => {
+const download = async (url, dest, fetch) => {
   const res = await fetch(url, { headers: { "User-Agent": UA } });
   if (!res.ok) throw new Error(`GET ${url} → ${res.status}`);
   await pipeline(Readable.fromWeb(res.body), createWriteStream(dest));
@@ -143,54 +148,75 @@ const formatFace = (family, localName, unicodeRange) => `@font-face {
 }
 `;
 
-await mkdir(fontsDir, { recursive: true });
-const transactionDir = await mkdtemp(join(root, ".font-refresh-"));
-const nextFontsDir = join(transactionDir, "fonts");
-const nextCssPath = join(transactionDir, "fonts.css");
-const oldFontsDir = join(transactionDir, "old-fonts");
-const oldCssPath = join(transactionDir, "old-fonts.css");
-let committed = false;
-let failure;
-let preserveTransaction = false;
+/**
+ * 更新仓库的中文分包及字体样式；调用期间须暂停其他字体更新和构建。
+ * 可捕获错误会尝试回滚；回滚失败的 AggregateError 带 recoveryDirectory，
+ * 保留恢复文件供人工处理。进程中断后同样由维护者人工恢复。
+ * @param {string} root
+ * @param {{ fetch?: typeof globalThis.fetch, rename?: typeof renameFile }} [adapters]
+ * @returns {Promise<void>}
+ */
+export async function refreshFonts(root, { fetch = globalThis.fetch, rename = renameFile } = {}) {
+  const fontsDir = join(root, "public/fonts");
+  const cssPath = join(root, "src/styles/fonts.css");
 
-try {
-  await mkdir(nextFontsDir);
-  for (const name of await readdir(fontsDir)) {
-    if (!/^noto-sans-sc-.*\.woff2$/.test(name)) {
-      await cp(join(fontsDir, name), join(nextFontsDir, name), { recursive: true });
+  await mkdir(fontsDir, { recursive: true });
+  const transactionDir = await mkdtemp(join(root, ".font-refresh-"));
+  const nextFontsDir = join(transactionDir, "fonts");
+  const nextCssPath = join(transactionDir, "fonts.css");
+  const oldFontsDir = join(transactionDir, "old-fonts");
+  const oldCssPath = join(transactionDir, "old-fonts.css");
+  let committed = false;
+  let failure;
+  let preserveTransaction = false;
+
+  try {
+    await mkdir(nextFontsDir);
+    for (const name of await readdir(fontsDir)) {
+      if (!/^noto-sans-sc-.*\.woff2$/.test(name)) {
+        await cp(join(fontsDir, name), join(nextFontsDir, name), { recursive: true });
+      }
     }
-  }
 
-  const cssUrl = `https://fonts.googleapis.com/css2?${FAMILY.query}`;
-  console.log(`fetch CSS ${FAMILY.cssFamily}…`);
-  const css = await fetchText(cssUrl);
-  const faces = uniqueVariableFaces(
-    parseFaces(css).filter(face => face.family === FAMILY.cssFamily),
-  ).filter(face => {
-    const name = localFileName(FAMILY.filePrefix, face.url, face.unicodeRange);
-    return !isSkippedExtra(name, face.unicodeRange);
-  });
-  if (faces.length === 0) throw new Error(`${FAMILY.cssFamily} 没有可用的中文分包`);
-  console.log(`  ${faces.length} CJK subsets`);
+    const cssUrl = `https://fonts.googleapis.com/css2?${FAMILY.query}`;
+    console.log(`fetch CSS ${FAMILY.cssFamily}…`);
+    const css = await fetchText(cssUrl, fetch);
+    const faces = uniqueVariableFaces(
+      parseFaces(css).filter(face => face.family === FAMILY.cssFamily),
+    ).filter(face => {
+      const name = localFileName(FAMILY.filePrefix, face.url, face.unicodeRange);
+      return !isSkippedExtra(name, face.unicodeRange);
+    });
+    if (faces.length === 0) throw new Error(`${FAMILY.cssFamily} 没有可用的中文分包`);
+    console.log(`  ${faces.length} CJK subsets`);
 
-  const localNames = new Set();
-  const jobs = faces.map(face => {
-    const localName = localFileName(FAMILY.filePrefix, face.url, face.unicodeRange);
-    if (localNames.has(localName)) throw new Error(`字体文件名重复：${localName}`);
-    localNames.add(localName);
-    return { ...face, family: FAMILY.cssFamily, localName, dest: join(nextFontsDir, localName) };
-  });
+    const localNames = new Set();
+    const jobs = faces.map(face => {
+      const localName = localFileName(FAMILY.filePrefix, face.url, face.unicodeRange);
+      if (localNames.has(localName)) throw new Error(`字体文件名重复：${localName}`);
+      localNames.add(localName);
+      return { ...face, family: FAMILY.cssFamily, localName, dest: join(nextFontsDir, localName) };
+    });
 
-  const concurrency = 12;
-  for (let i = 0; i < jobs.length; i += concurrency) {
-    const batch = jobs.slice(i, i + concurrency);
-    await Promise.all(batch.map(job => download(job.url, job.dest)));
-    process.stdout.write(`  downloaded ${Math.min(i + concurrency, jobs.length)}/${jobs.length}\r`);
-  }
-  process.stdout.write("\n");
+    const concurrency = 12;
+    for (let i = 0; i < jobs.length; i += concurrency) {
+      const batch = jobs.slice(i, i + concurrency);
+      // 首个失败后也要等本批下载结束，清理时不得仍有任务写入事务目录。
+      const results = await Promise.allSettled(
+        batch.map(job => download(job.url, job.dest, fetch)),
+      );
+      const errors = results
+        .filter(result => result.status === "rejected")
+        .map(result => result.reason);
+      if (errors.length === 1) throw errors[0];
+      if (errors.length > 1) throw new AggregateError(errors, "字体下载失败");
+      process.stdout.write(
+        `  downloaded ${Math.min(i + concurrency, jobs.length)}/${jobs.length}\r`,
+      );
+    }
+    process.stdout.write("\n");
 
-  await Promise.all(
-    jobs.map(async job => {
+    for (const job of jobs) {
       const font = await readFile(job.dest);
       if (
         font.length < 48 ||
@@ -202,78 +228,85 @@ try {
       ) {
         throw new Error(`下载内容不是 WOFF2 字体：${job.localName}`);
       }
-    }),
-  );
-
-  const stagedNotoNames = (await readdir(nextFontsDir))
-    .filter(name => /^noto-sans-sc-.*\.woff2$/.test(name))
-    .sort();
-  const expectedNames = [...localNames].sort();
-  if (
-    stagedNotoNames.length !== expectedNames.length ||
-    stagedNotoNames.some((name, index) => name !== expectedNames[index])
-  ) {
-    throw new Error("字体样式清单与下载文件不一致");
-  }
-
-  const generated = jobs.map(job => formatFace(job.family, job.localName, job.unicodeRange));
-  const header = `/* 由 scripts/fetch-fonts.mjs 生成。拉丁资源手维；Noto Sans SC 为可变字重 unicode-range 分包。 */\n\n`;
-  await writeFile(nextCssPath, header + LATIN_FACES + "\n" + generated.join("\n"), "utf8");
-
-  try {
-    await readFile(join(nextFontsDir, "LICENSE-noto-sans-sc.txt"), "utf8");
-  } catch {
-    throw new Error("缺少 public/fonts/LICENSE-noto-sans-sc.txt");
-  }
-
-  let fontsBackedUp = false;
-  let fontsInstalled = false;
-  let cssBackedUp = false;
-  let cssInstalled = false;
-  try {
-    await rename(fontsDir, oldFontsDir);
-    fontsBackedUp = true;
-    await rename(nextFontsDir, fontsDir);
-    fontsInstalled = true;
-    await rename(cssPath, oldCssPath);
-    cssBackedUp = true;
-    await rename(nextCssPath, cssPath);
-    cssInstalled = true;
-  } catch (error) {
-    const rollbackErrors = [];
-    const rollback = async action => {
-      try {
-        await action();
-      } catch (rollbackError) {
-        rollbackErrors.push(rollbackError);
-      }
-    };
-    if (cssInstalled) await rollback(() => rename(cssPath, nextCssPath));
-    if (cssBackedUp) await rollback(() => rename(oldCssPath, cssPath));
-    if (fontsInstalled) await rollback(() => rename(fontsDir, nextFontsDir));
-    if (fontsBackedUp) await rollback(() => rename(oldFontsDir, fontsDir));
-    if (rollbackErrors.length > 0) {
-      preserveTransaction = true;
-      throw new AggregateError([error, ...rollbackErrors], "字体替换失败且未能完整恢复旧文件");
     }
-    throw error;
-  }
 
-  committed = true;
-  console.log(`wrote ${cssPath} (${generated.length} Noto Sans SC faces)`);
-  console.log("done");
-} catch (error) {
-  failure = error;
-  throw error;
-} finally {
-  if (preserveTransaction) {
-    console.warn(`已保留字体事务目录以便手动恢复：${transactionDir}`);
-  } else {
+    const stagedNotoNames = (await readdir(nextFontsDir))
+      .filter(name => /^noto-sans-sc-.*\.woff2$/.test(name))
+      .sort();
+    const expectedNames = [...localNames].sort();
+    if (
+      stagedNotoNames.length !== expectedNames.length ||
+      stagedNotoNames.some((name, index) => name !== expectedNames[index])
+    ) {
+      throw new Error("字体样式清单与下载文件不一致");
+    }
+
+    const generated = jobs.map(job => formatFace(job.family, job.localName, job.unicodeRange));
+    const header = `/* 由 scripts/fetch-fonts.mjs 生成。拉丁资源手维；Noto Sans SC 为可变字重 unicode-range 分包。 */\n\n`;
+    await writeFile(nextCssPath, header + LATIN_FACES + "\n" + generated.join("\n"), "utf8");
+
     try {
-      await rm(transactionDir, { recursive: true, force: true });
-    } catch (cleanupError) {
-      if (!failure && !committed) throw cleanupError;
-      console.warn(`未能清理临时目录 ${transactionDir}：${cleanupError.message}`);
+      await readFile(join(nextFontsDir, "LICENSE-noto-sans-sc.txt"), "utf8");
+    } catch {
+      throw new Error("缺少 public/fonts/LICENSE-noto-sans-sc.txt");
+    }
+
+    let fontsBackedUp = false;
+    let fontsInstalled = false;
+    let cssBackedUp = false;
+    let cssInstalled = false;
+    try {
+      await rename(fontsDir, oldFontsDir);
+      fontsBackedUp = true;
+      await rename(nextFontsDir, fontsDir);
+      fontsInstalled = true;
+      await rename(cssPath, oldCssPath);
+      cssBackedUp = true;
+      await rename(nextCssPath, cssPath);
+      cssInstalled = true;
+    } catch (error) {
+      const rollbackErrors = [];
+      const rollback = async action => {
+        try {
+          await action();
+        } catch (rollbackError) {
+          rollbackErrors.push(rollbackError);
+        }
+      };
+      if (cssInstalled) await rollback(() => rename(cssPath, nextCssPath));
+      if (cssBackedUp) await rollback(() => rename(oldCssPath, cssPath));
+      if (fontsInstalled) await rollback(() => rename(fontsDir, nextFontsDir));
+      if (fontsBackedUp) await rollback(() => rename(oldFontsDir, fontsDir));
+      if (rollbackErrors.length > 0) {
+        preserveTransaction = true;
+        throw Object.assign(
+          new AggregateError([error, ...rollbackErrors], "字体替换失败且未能完整恢复旧文件"),
+          { recoveryDirectory: transactionDir },
+        );
+      }
+      throw error;
+    }
+
+    committed = true;
+    console.log(`wrote ${cssPath} (${generated.length} Noto Sans SC faces)`);
+    console.log("done");
+  } catch (error) {
+    failure = error;
+    throw error;
+  } finally {
+    if (preserveTransaction) {
+      console.warn(`已保留字体事务目录以便手动恢复：${transactionDir}`);
+    } else {
+      try {
+        await rm(transactionDir, { recursive: true, force: true });
+      } catch (cleanupError) {
+        if (!failure && !committed) throw cleanupError;
+        console.warn(`未能清理临时目录 ${transactionDir}：${cleanupError.message}`);
+      }
     }
   }
+}
+
+if (import.meta.main) {
+  await refreshFonts(fileURLToPath(new URL("..", import.meta.url)));
 }
