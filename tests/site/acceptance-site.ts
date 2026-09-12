@@ -222,7 +222,10 @@ export async function readDist(path: string) {
   return readFile(join(dist(), path), "utf8");
 }
 
-export async function build(content: { posts: string; shuoshuo: string }) {
+export async function build(
+  content: { posts: string; shuoshuo: string },
+  inspect?: (distDirectory: string) => Promise<void>,
+) {
   const workspace = createWorkspace();
   const occupancy: Occupancy = {
     dist: join(workspace, "dist"),
@@ -234,6 +237,7 @@ export async function build(content: { posts: string; shuoshuo: string }) {
   await mkdir(occupancy.cache, { recursive: true });
   try {
     await runBuild(occupancy);
+    if (inspect) await inspect(occupancy.dist);
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }

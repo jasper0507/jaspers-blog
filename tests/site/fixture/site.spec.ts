@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import AxeBuilder from "@axe-core/playwright";
-import { test } from "@playwright/test";
+import { test, type Page } from "@playwright/test";
 import { origin, readDist } from "../acceptance-site.ts";
 import { assertInOrder, expectedHome, expectedSite, pagefindFragmentText } from "../helpers.ts";
 
@@ -70,6 +70,8 @@ test("公开内容合同", async () => {
   assert.equal((rss.match(/<item>/g) ?? []).length, 8);
   assert.doesNotMatch(sitemap, /\/search\/|\/rss\.xml|<loc>[^<]*#/);
   assert.match(sitemap, /\/shuoshuo\/20250101-000001\//);
+  assert.match(home, /pagefind-modal-trigger/);
+  assert.match(home, /pagefind-component-ui/);
 
   const searchIndex = JSON.parse(await readDist("pagefind/pagefind-entry.json"));
   assert.equal(searchIndex.languages["zh-cn"].page_count, 3);
@@ -114,6 +116,50 @@ test("站点壳、主题、菜单与搜索", async ({ page }) => {
     .first();
   await result.waitFor({ state: "visible" });
   assert.equal(new URL((await result.getAttribute("href")) ?? "", host).pathname, "/posts/2/");
+  await page.keyboard.press("Escape");
+  await searchInput.waitFor({ state: "hidden" });
+});
+
+async function paperColor(page: Page) {
+  return page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.style.backgroundColor = "var(--surface)";
+    document.body.append(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return color;
+  });
+}
+
+test("搜索面板跟随亮暗主题，短页不产生假滚动", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1200 });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto(`${host}/about/`, { waitUntil: "networkidle" });
+
+  const overflow = await page.evaluate(() => {
+    const live = document.querySelector("[data-pf-sr-hidden]");
+    const style = live ? getComputedStyle(live) : null;
+    return {
+      extra: document.documentElement.scrollHeight - document.documentElement.clientHeight,
+      top: style?.top ?? null,
+      left: style?.left ?? null,
+    };
+  });
+  assert.equal(overflow.top, "0px");
+  assert.equal(overflow.left, "0px");
+  assert.ok(overflow.extra <= 1, `短页多出 ${overflow.extra}px 滚动`);
+
+  for (const theme of ["light", "dark"] as const) {
+    if (theme === "dark") await page.locator("#theme-toggle").click();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), theme);
+    await page.keyboard.press("/");
+    const dialog = page.locator("dialog.pf-modal");
+    await dialog.waitFor({ state: "visible" });
+    const panel = await dialog.evaluate(element => getComputedStyle(element).backgroundColor);
+    assert.equal(panel, await paperColor(page), `${theme} 面板`);
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "hidden" });
+  }
 });
 
 test("主视觉只请求池中一张图片，主题切换不换图", async ({ page }) => {

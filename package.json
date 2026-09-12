@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "astro dev",
     "preview": "astro preview",
-    "format": "prettier --no-error-on-unmatched-pattern --write \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card}.css\" \"scripts/**/*.mjs\" \"tests/site/**/*.ts\" \"playwright*.config.ts\" \"*.{json,mjs,ts}\" \"docs/**/*.md\"",
-    "format:check": "prettier --no-error-on-unmatched-pattern --check \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card}.css\" \"scripts/**/*.mjs\" \"tests/site/**/*.ts\" \"playwright*.config.ts\" \".github/workflows/*.{yml,yaml}\" \"*.{json,mjs,ts}\" \"docs/**/*.md\"",
+    "format": "prettier --no-error-on-unmatched-pattern --write \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card,search}.css\" \"scripts/**/*.mjs\" \"tests/site/**/*.ts\" \"playwright*.config.ts\" \"*.{json,mjs,ts}\" \"docs/**/*.md\"",
+    "format:check": "prettier --no-error-on-unmatched-pattern --check \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card,search}.css\" \"scripts/**/*.mjs\" \"tests/site/**/*.ts\" \"playwright*.config.ts\" \".github/workflows/*.{yml,yaml}\" \"*.{json,mjs,ts}\" \"docs/**/*.md\"",
     "check": "astro check",
     "build": "node scripts/check-site-markdown.mjs && astro build --force && node scripts/index-posts.mjs",
     "new:post": "node scripts/new-post.mjs",

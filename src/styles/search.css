@@ -1,0 +1,86 @@
+/* Pagefind 面板：对齐站内暖纸 token。html:root 盖过组件样式表的 :root 默认色，不依赖加载顺序。 */
+html:root {
+  --pf-text: var(--text);
+  --pf-text-secondary: var(--muted);
+  --pf-text-muted: var(--muted);
+  --pf-background: var(--surface);
+  --pf-border: var(--line);
+  --pf-border-focus: var(--accent);
+  --pf-skeleton: var(--line);
+  --pf-skeleton-shine: var(--background);
+  --pf-hover: var(--background);
+  --pf-mark: var(--accent);
+  --pf-outline-focus: var(--focus);
+  --pf-font: var(--font-sans);
+  --pf-border-radius: 0.75rem;
+  --pf-modal-backdrop: light-dark(rgb(40 39 36 / 45%), rgb(0 0 0 / 55%));
+  --pf-modal-max-width: 36rem;
+  --pf-modal-top: 12dvh;
+}
+
+/*
+ * Pagefind 组件样式表对每个宿主元素声明 all: initial，color-scheme 一并被重置为
+ * normal，顶层对话框因此永远解析 light-dark() 的亮色分支（暗色下面板发白）。
+ * 让宿主继承站点主题；导航触发钮的补丁由下方 .nav-search 规则单独承担。
+ */
+body pagefind-config,
+body pagefind-filter-dropdown,
+body pagefind-filter-pane,
+body pagefind-input,
+body pagefind-keyboard-hints,
+body pagefind-modal,
+body pagefind-modal-body,
+body pagefind-modal-footer,
+body pagefind-modal-header,
+body pagefind-results,
+body pagefind-searchbox,
+body pagefind-summary {
+  color-scheme: inherit;
+}
+
+/*
+ * Pagefind 的 live region 自带 position:absolute + 1×1，但未钉坐标也无负 margin。
+ * 静态位置落在文档流末尾时，1px 盒子会把 scrollHeight 撑出视口（假纵向滚动）。
+ * 钉到视口原点，保留可读性语义、不参与可滚动溢出。
+ */
+[data-pf-sr-hidden] {
+  top: 0 !important;
+  left: 0 !important;
+  margin: 0 !important;
+}
+
+/* 导航放大镜：压成与文字链同高的无边框图标钮（对抗组件出厂样式） */
+.nav-search pagefind-modal-trigger {
+  --pf-input-height: 2.75rem;
+  --pf-background: transparent;
+  --pf-border: transparent;
+  --pf-border-focus: transparent;
+  --pf-text-muted: var(--text);
+  --pf-border-radius: 0;
+  width: auto;
+  color-scheme: inherit;
+}
+
+.nav-search .pf-trigger-btn {
+  width: auto !important;
+  min-width: 2.75rem;
+  padding-inline: 0.55rem !important;
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--text) !important;
+  justify-content: center;
+}
+
+.nav-search .pf-trigger-btn:hover {
+  border-bottom-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.nav-search .pf-trigger-icon {
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  background: currentColor !important;
+}

@@ -1,0 +1,38 @@
+---
+import { getPublishedPostCatalog } from "../lib/posts";
+import "../styles/search.css";
+
+const enabled = (await getPublishedPostCatalog()).posts.length > 0;
+if (!enabled) return;
+---
+
+<li class="nav-search flex items-center">
+  <link rel="stylesheet" href="/pagefind/pagefind-component-ui.css" />
+  <script is:inline type="module" src="/pagefind/pagefind-component-ui.js"></script>
+  <pagefind-modal-trigger compact hide-shortcut shortcut="/" placeholder="搜索"
+  ></pagefind-modal-trigger>
+  <template data-site-search-root>
+    <!-- ponytail: 当前索引很小；内容规模明显增长时再恢复 Worker。 -->
+    <pagefind-config no-worker lang="zh-cn"></pagefind-config>
+    <pagefind-modal reset-on-close>
+      <pagefind-modal-header>
+        <pagefind-input placeholder="搜索技术文章"></pagefind-input>
+      </pagefind-modal-header>
+      <pagefind-modal-body>
+        <pagefind-summary></pagefind-summary>
+        <pagefind-results hide-sub-results></pagefind-results>
+      </pagefind-modal-body>
+      <pagefind-modal-footer>
+        <pagefind-keyboard-hints></pagefind-keyboard-hints>
+      </pagefind-modal-footer>
+    </pagefind-modal>
+  </template>
+  <script is:inline>
+    (() => {
+      const root = document.querySelector("template[data-site-search-root]");
+      if (!(root instanceof HTMLTemplateElement)) return;
+      document.body.append(root.content);
+      root.remove();
+    })();
+  </script>
+</li>

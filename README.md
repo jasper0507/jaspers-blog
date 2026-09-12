@@ -34,7 +34,7 @@
 │   └── images/hero/        # 首页主视觉照片，丢入 jpg 即可
 ├── scripts/                # 内容创建、搜索索引与领域验收脚本
 ├── src/
-│   ├── components/         # 正文、目录、标签与回到顶部
+│   ├── components/         # 正文、目录、标签、搜索与回到顶部
 │   ├── content/
 │   │   ├── about.md           # 「关于我」正文
 │   │   ├── post-next-id.json  # 技术文章号码计数器（不要手改）
@@ -43,7 +43,7 @@
 │   ├── layouts/            # 页面公共布局
 │   ├── lib/                # 内容查询与领域规则
 │   ├── pages/              # 页面与 XML 路由
-│   ├── styles/             # 全局、文章与说说样式
+│   ├── styles/             # 全局、文章、说说与搜索样式
 │   └── content.config.ts   # Content Collections 数据结构
 ├── tests/
 │   ├── fixtures/           # 构建验收用内容
