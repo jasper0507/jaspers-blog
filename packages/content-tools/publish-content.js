@@ -110,30 +110,24 @@ export async function publishContent(directory, args) {
   }
   const sha = (await git(["rev-parse", "HEAD"])).stdout.trim();
   const unpushedFiles = await unpushedWritingFiles(git, paths);
-  const shouldPush = unpushedFiles === null || unpushedFiles.length > 0;
   let pushed = false;
 
-  if (shouldPush) {
+  if (unpushedFiles === null || unpushedFiles.length > 0) {
     if (!status && unpushedFiles?.length) {
       console.log("待推送：");
       console.log(unpushedFiles.join("\n"));
     }
     try {
       const result = await git(["push", "-u", "origin", "HEAD"], { env: { LC_ALL: "C" } });
-      if (pushWasUpToDate(result)) {
-        console.log("没有写作内容改动，重新触发发布");
-      } else {
-        pushed = true;
-        console.log(`已推送 ${sha}`);
-      }
+      pushed = !pushWasUpToDate(result);
     } catch (error) {
       console.log(describePushError(error));
       unfinished();
       return;
     }
-  } else {
-    console.log("没有写作内容改动，重新触发发布");
   }
+  if (pushed) console.log(`已推送 ${sha}`);
+  else console.log("没有写作内容改动，重新触发发布");
 
   let runInfo;
   try {
