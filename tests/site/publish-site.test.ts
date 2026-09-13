@@ -69,10 +69,9 @@ async function workspace(t: { after: (fn: () => Promise<void>) => void }) {
   return { dir, bin, wrangler, statePath, ghLog, wranglerLog };
 }
 
-function envFor(
-  dir: ReturnType<typeof workspace> extends Promise<infer T> ? T : never,
-  extra: NodeJS.ProcessEnv = {},
-): NodeJS.ProcessEnv {
+type Workspace = Awaited<ReturnType<typeof workspace>>;
+
+function envFor(dir: Workspace, extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   return {
     ...process.env,
     PATH: `${dir.bin}:${process.env.PATH}`,
@@ -81,6 +80,24 @@ function envFor(
     FAKE_WRANGLER_LOG: dir.wranglerLog,
     ...extra,
   };
+}
+
+function pipelineEnv(dir: Workspace, content: string, extra: NodeJS.ProcessEnv = {}) {
+  return envFor(dir, {
+    BLOG_CONTENT_DIR: content,
+    PUBLISH_CONTENT_SHA: contentSha,
+    PUBLISH_SOURCE_SHA: sourceSha,
+    PUBLISH_SITE_URL: "https://jasper0507.me",
+    PAGES_PROJECT: "jaspers-blog",
+    PUBLISH_RESULT_PATH: join(dir.dir, "publish-result.json"),
+    PUBLISH_WRANGLER: dir.wrangler,
+    GITHUB_RUN_ID: "2",
+    GITHUB_REPOSITORY: "jasper0507/blog-content",
+    CLOUDFLARE_API_TOKEN: "secret-token-do-not-log",
+    JASPER_ACCEPTANCE_DIST: join(dir.dir, "dist"),
+    JASPER_ACCEPTANCE_CACHE: join(dir.dir, "cache"),
+    ...extra,
+  });
 }
 
 async function runNode(script: string, env: NodeJS.ProcessEnv, cwd = root) {
@@ -118,16 +135,8 @@ test("真实外部内容校验构建成功后才上传，并记录两个提交",
   const token = "secret-token-do-not-log";
   const { stdout, stderr } = await runNode(
     publishScript,
-    envFor(dir, {
-      BLOG_CONTENT_DIR: content,
-      PUBLISH_CONTENT_SHA: contentSha,
-      PUBLISH_SOURCE_SHA: sourceSha,
-      PUBLISH_SITE_URL: "https://jasper0507.me",
-      PAGES_PROJECT: "jaspers-blog",
+    pipelineEnv(dir, content, {
       PUBLISH_RESULT_PATH: resultPath,
-      PUBLISH_WRANGLER: dir.wrangler,
-      GITHUB_RUN_ID: "2",
-      GITHUB_REPOSITORY: "jasper0507/blog-content",
       CLOUDFLARE_API_TOKEN: token,
       CLOUDFLARE_ACCOUNT_ID: "account",
       JASPER_ACCEPTANCE_DIST: dist,
@@ -160,24 +169,7 @@ test("必要内容缺失时校验失败且不上传", { timeout: 60_000 }, async
   await cp(join(root, "tests/fixtures/content"), content, { recursive: true });
   await rm(join(content, "about.md"));
   await assert.rejects(
-    () =>
-      runNode(
-        publishScript,
-        envFor(dir, {
-          BLOG_CONTENT_DIR: content,
-          PUBLISH_CONTENT_SHA: contentSha,
-          PUBLISH_SOURCE_SHA: sourceSha,
-          PUBLISH_SITE_URL: "https://jasper0507.me",
-          PAGES_PROJECT: "jaspers-blog",
-          PUBLISH_RESULT_PATH: resultPath,
-          PUBLISH_WRANGLER: dir.wrangler,
-          GITHUB_RUN_ID: "2",
-          GITHUB_REPOSITORY: "jasper0507/blog-content",
-          CLOUDFLARE_API_TOKEN: "secret-token-do-not-log",
-          JASPER_ACCEPTANCE_DIST: join(dir.dir, "dist"),
-          JASPER_ACCEPTANCE_CACHE: join(dir.dir, "cache"),
-        }),
-      ),
+    () => runNode(publishScript, pipelineEnv(dir, content, { PUBLISH_RESULT_PATH: resultPath })),
     /缺少内容来源或必要状态/,
   );
   const result = JSON.parse(await readFile(resultPath, "utf8"));
@@ -195,24 +187,7 @@ test("构建失败时不上传", { timeout: 300_000 }, async t => {
   await cp(join(root, "tests/fixtures/content"), content, { recursive: true });
   await writeFile(join(content, "post-next-id.json"), "invalid\n");
   await assert.rejects(
-    () =>
-      runNode(
-        publishScript,
-        envFor(dir, {
-          BLOG_CONTENT_DIR: content,
-          PUBLISH_CONTENT_SHA: contentSha,
-          PUBLISH_SOURCE_SHA: sourceSha,
-          PUBLISH_SITE_URL: "https://jasper0507.me",
-          PAGES_PROJECT: "jaspers-blog",
-          PUBLISH_RESULT_PATH: resultPath,
-          PUBLISH_WRANGLER: dir.wrangler,
-          GITHUB_RUN_ID: "2",
-          GITHUB_REPOSITORY: "jasper0507/blog-content",
-          CLOUDFLARE_API_TOKEN: "secret-token-do-not-log",
-          JASPER_ACCEPTANCE_DIST: join(dir.dir, "dist"),
-          JASPER_ACCEPTANCE_CACHE: join(dir.dir, "cache"),
-        }),
-      ),
+    () => runNode(publishScript, pipelineEnv(dir, content, { PUBLISH_RESULT_PATH: resultPath })),
     /号码计数器无效/,
   );
   const result = JSON.parse(await readFile(resultPath, "utf8"));
@@ -230,20 +205,9 @@ test("上传失败时记录部署阶段且不提供网站地址", { timeout: 300
     () =>
       runNode(
         publishScript,
-        envFor(dir, {
-          BLOG_CONTENT_DIR: content,
-          PUBLISH_CONTENT_SHA: contentSha,
-          PUBLISH_SOURCE_SHA: sourceSha,
-          PUBLISH_SITE_URL: "https://jasper0507.me",
-          PAGES_PROJECT: "jaspers-blog",
+        pipelineEnv(dir, content, {
           PUBLISH_RESULT_PATH: resultPath,
-          PUBLISH_WRANGLER: dir.wrangler,
           FAKE_WRANGLER_FAIL: "1",
-          GITHUB_RUN_ID: "2",
-          GITHUB_REPOSITORY: "jasper0507/blog-content",
-          CLOUDFLARE_API_TOKEN: "secret-token-do-not-log",
-          JASPER_ACCEPTANCE_DIST: join(dir.dir, "dist"),
-          JASPER_ACCEPTANCE_CACHE: join(dir.dir, "cache"),
         }),
       ),
     /模拟 Wrangler 上传失败/,
@@ -271,23 +235,7 @@ test("已有更新任务时构建成功也不上传，以免旧结果覆盖", { 
   const content = join(dir.dir, "content");
   const resultPath = join(dir.dir, "publish-result.json");
   await cp(join(root, "tests/fixtures/content"), content, { recursive: true });
-  await runNode(
-    publishScript,
-    envFor(dir, {
-      BLOG_CONTENT_DIR: content,
-      PUBLISH_CONTENT_SHA: contentSha,
-      PUBLISH_SOURCE_SHA: sourceSha,
-      PUBLISH_SITE_URL: "https://jasper0507.me",
-      PAGES_PROJECT: "jaspers-blog",
-      PUBLISH_RESULT_PATH: resultPath,
-      PUBLISH_WRANGLER: dir.wrangler,
-      GITHUB_RUN_ID: "2",
-      GITHUB_REPOSITORY: "jasper0507/blog-content",
-      CLOUDFLARE_API_TOKEN: "secret-token-do-not-log",
-      JASPER_ACCEPTANCE_DIST: join(dir.dir, "dist"),
-      JASPER_ACCEPTANCE_CACHE: join(dir.dir, "cache"),
-    }),
-  );
+  await runNode(publishScript, pipelineEnv(dir, content, { PUBLISH_RESULT_PATH: resultPath }));
   const result = JSON.parse(await readFile(resultPath, "utf8"));
   assert.equal(result.status, "skipped");
   assert.equal(result.stage, "deploy");
@@ -313,7 +261,6 @@ test("未配置跨仓凭据时跳过通知；配置后使用授权令牌触发�
   const dispatches = JSON.parse(await readFile(dir.statePath, "utf8")).dispatches;
   assert.equal(dispatches.length, 1);
   assert.equal(dispatches[0].event_type, "source-updated");
-  assert.equal(dispatches[0].source_sha, sourceSha);
   assert.ok(dispatches[0].request_id);
 });
 

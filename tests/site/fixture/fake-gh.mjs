@@ -8,11 +8,11 @@ function statePath() {
   return path;
 }
 
-export function loadState() {
+function loadState() {
   return JSON.parse(readFileSync(statePath(), "utf8"));
 }
 
-export function saveState(state) {
+function saveState(state) {
   writeFileSync(statePath(), `${JSON.stringify(state, null, 2)}\n`);
 }
 
@@ -101,7 +101,7 @@ function resultFor(state, kind, sha) {
   };
 }
 
-export function recordPush(sha) {
+function recordPush(sha) {
   const state = loadState();
   const result = resultFor(state, "push", sha);
   const pending = Boolean(state.pushResult?.pending);
@@ -157,7 +157,6 @@ function handleApi(args) {
       const value = field.slice(separator + 1);
       if (key === "event_type") payload.event_type = value;
       if (key === "client_payload[request_id]") payload.request_id = value;
-      if (key === "client_payload[source_sha]") payload.source_sha = value;
     }
     state.dispatches = state.dispatches ?? [];
     state.dispatches.push({ repo: dispatch[1], ...payload });
@@ -191,18 +190,6 @@ function handleRun(args) {
     if (commit) runs = runs.filter(run => run.headSha === commit);
     if (workflow && workflow !== "publish.yml" && workflow !== "发布网站") runs = [];
     process.stdout.write(`${JSON.stringify(runs.map(run => pickJson(run, fields)))}\n`);
-    return;
-  }
-  if (sub === "view") {
-    failIf("run-view");
-    const id = Number(args.shift());
-    const fields = jsonFields(args);
-    const run = loadState().runs.find(item => item.databaseId === id);
-    if (!run) {
-      console.error(`找不到任务 ${id}`);
-      process.exit(1);
-    }
-    process.stdout.write(`${JSON.stringify(pickJson(run, fields))}\n`);
     return;
   }
   if (sub === "download") {
@@ -254,7 +241,7 @@ function handleWorkflow(args) {
   saveState(state);
 }
 
-export async function runFakeGh(argv) {
+async function runFakeGh(argv) {
   const args = [...argv];
   log({ args });
   const command = args.shift();

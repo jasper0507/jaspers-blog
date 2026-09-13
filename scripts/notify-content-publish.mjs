@@ -12,7 +12,6 @@ if (!token || !repo) {
 }
 
 const requestId = randomUUID();
-const sourceSha = process.env.GITHUB_SHA?.trim() ?? "";
 await exec(
   "gh",
   [
@@ -22,8 +21,6 @@ await exec(
     "event_type=source-updated",
     "-f",
     `client_payload[request_id]=${requestId}`,
-    "-f",
-    `client_payload[source_sha]=${sourceSha}`,
   ],
   {
     encoding: "utf8",

@@ -123,14 +123,17 @@ export async function publishContent(directory, args) {
 }
 
 function reportStages(result) {
-  const failedAt =
-    result.status === "success" ? STAGES.length : STAGES.findIndex(([id]) => id === result.stage);
-  const until = failedAt === -1 ? STAGES.length : failedAt;
-  for (let index = 0; index <= until && index < STAGES.length; index += 1) {
+  if (result.status === "success") {
+    for (const [, label] of STAGES) console.log(`${label}：通过`);
+    return;
+  }
+  const stoppedAt = STAGES.findIndex(([id]) => id === result.stage);
+  for (let index = 0; index < STAGES.length; index += 1) {
     const [, label] = STAGES[index];
-    const failed = result.status !== "success" && index === failedAt;
-    if (failed || result.status === "success" || index < failedAt) {
-      console.log(`${label}：${failed ? "失败" : "通过"}`);
+    if (index < stoppedAt) console.log(`${label}：通过`);
+    else if (index === stoppedAt) {
+      console.log(`${label}：${result.status === "skipped" ? "跳过" : "失败"}`);
+      break;
     }
   }
 }
@@ -144,7 +147,7 @@ async function listRuns(gh, repo, extra = []) {
     "--workflow",
     WORKFLOW,
     "--json",
-    "databaseId,displayTitle,event,headSha,status,conclusion,createdAt,url",
+    "databaseId,displayTitle,event,headSha,status",
     ...extra,
   ]);
   return JSON.parse(stdout);

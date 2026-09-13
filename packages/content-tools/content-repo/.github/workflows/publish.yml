@@ -28,7 +28,6 @@ jobs:
     timeout-minutes: 30
     env:
       SOURCE_REPO: ${{ vars.SOURCE_REPO }}
-      GH_TOKEN: ${{ github.token }}
     steps:
       - name: 检出内容仓脚本
         uses: actions/checkout@v6
@@ -38,6 +37,8 @@ jobs:
       - name: 确定版本
         id: pin
         working-directory: content
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: node pin-publish-versions.js
 
       - name: 检出内容
@@ -87,6 +88,7 @@ jobs:
           PUBLISH_RESULT_PATH: ${{ github.workspace }}/publish-result.json
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ github.token }}
         run: node scripts/publish-site.mjs deploy
 
       - name: 保存发布结果
