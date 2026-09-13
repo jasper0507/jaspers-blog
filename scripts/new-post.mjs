@@ -1,11 +1,4 @@
-import { createPost, POST_CONTENT_DIRECTORY } from "../src/lib/post-rules.js";
+import { createContent } from "../packages/content-tools/create-content.js";
 
-const args = process.argv.slice(2);
-if (args.length !== 1) throw new Error("用法：npm run new:post -- <标题>");
-
-const title = args[0].trim();
-if (!title) throw new Error("标题不能为空");
-
-const { path, id } = await createPost(POST_CONTENT_DIRECTORY, title);
-console.log(`已创建 ${path}`);
-console.log(`公开网址 /posts/${id}/`);
+// 生产迁移前保留源码仓创建入口；独立发行包使用当前内容仓目录。
+await createContent("src/content", ["new:post", ...process.argv.slice(2)]);

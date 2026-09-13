@@ -9,7 +9,7 @@ test("复用公开投影时仍拒绝回退、损坏或缺失的号码计数器",
   const workspace = await mkdtemp(join(tmpdir(), "post-catalog-"));
   const directory = join(workspace, "posts");
   const counter = join(workspace, "post-next-id.json");
-  const previousDirectory = process.env.POST_CONTENT_DIR;
+  const previousDirectory = process.env.BLOG_CONTENT_DIR;
   // 只替换 Astro collection 边界，发布投影和稳定 ID 校验运行真实实现。
   const collection = `data:text/javascript,${encodeURIComponent(`
     export async function getCollection() {
@@ -32,7 +32,9 @@ test("复用公开投影时仍拒绝回退、损坏或缺失的号码计数器",
   });
   try {
     await mkdir(directory);
-    process.env.POST_CONTENT_DIR = directory;
+    process.env.BLOG_CONTENT_DIR = workspace;
+    await mkdir(join(workspace, "shuoshuo"));
+    await writeFile(join(workspace, "about.md"), "关于我");
     await writeFile(counter, '{"next": 2}');
     const { getPublishedPostCatalog } = await import(postsModule);
     const first = await getPublishedPostCatalog();
@@ -44,14 +46,14 @@ test("复用公开投影时仍拒绝回退、损坏或缺失的号码计数器",
     await writeFile(counter, "invalid JSON");
     await assert.rejects(getPublishedPostCatalog(), /号码计数器无效/);
     await rm(counter);
-    await assert.rejects(getPublishedPostCatalog(), /找不到技术文章号码计数器/);
+    await assert.rejects(getPublishedPostCatalog(), /缺少内容来源或必要状态/);
 
     await writeFile(counter, '{"next": 2}');
     assert.equal(await getPublishedPostCatalog(), first);
   } finally {
     hooks.deregister();
-    if (previousDirectory === undefined) delete process.env.POST_CONTENT_DIR;
-    else process.env.POST_CONTENT_DIR = previousDirectory;
+    if (previousDirectory === undefined) delete process.env.BLOG_CONTENT_DIR;
+    else process.env.BLOG_CONTENT_DIR = previousDirectory;
     await rm(workspace, { recursive: true, force: true });
   }
 });

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -16,6 +16,12 @@ test("预览启动失败只清理自己，保留其他场景的产物", async ()
   const current = join(temporaryRoot, "jasper-blog-acceptance-preview");
   const peer = join(temporaryRoot, "jasper-blog-acceptance-guard");
   try {
+    const content = join(temporaryRoot, "content");
+    await cp(join(root, "tests/fixtures/content"), content, { recursive: true });
+    await cp(
+      join(root, "tests/fixtures/posts-invalid-math/invalid.md"),
+      join(content, "posts/invalid.md"),
+    );
     await mkdir(peer);
     await writeFile(join(peer, "active-build"), "仍在构建");
     await assert.rejects(
@@ -26,8 +32,7 @@ test("预览启动失败只清理自己，保留其他场景的产物", async ()
           TMPDIR: temporaryRoot,
           JASPER_ACCEPTANCE_DIST: join(current, "dist"),
           JASPER_ACCEPTANCE_CACHE: join(current, "cache"),
-          JASPER_ACCEPTANCE_POSTS: join(root, "tests/fixtures/posts-invalid-math"),
-          JASPER_ACCEPTANCE_SHUOSHUO: join(root, "tests/fixtures/shuoshuo-empty"),
+          JASPER_ACCEPTANCE_CONTENT: content,
         },
       }),
       { stderr: /KaTeX parse error/ },
@@ -58,4 +63,16 @@ test("独立验收进程不会复用同一个场景目录", async () => {
     ),
   );
   assert.notEqual(results[0].stdout.trim(), results[1].stdout.trim());
+});
+
+test("构建内容预检拒绝未选择、空或不存在的来源，不回退到源码内容", async () => {
+  for (const selected of [undefined, "", "/missing-jasper-content-directory"]) {
+    const env = { ...process.env };
+    delete env.BLOG_CONTENT_DIR;
+    if (selected !== undefined) env.BLOG_CONTENT_DIR = selected;
+    await assert.rejects(
+      execFileAsync(process.execPath, ["scripts/check-site-markdown.mjs"], { cwd: root, env }),
+      /必须显式设置 BLOG_CONTENT_DIR|缺少内容来源或必要状态/,
+    );
+  }
 });
