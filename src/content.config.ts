@@ -1,9 +1,9 @@
 import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
-import { isPostFilename } from "./lib/post-rules.js";
-import { isShanghaiDateTime } from "./lib/shanghai-time.js";
-import { isShuoshuoStableId } from "./lib/shuoshuo-rules.js";
+import { isPostFilename } from "../packages/content-tools/post-rules.js";
+import { isShanghaiDateTime } from "../packages/content-tools/shanghai-time.js";
+import { isShuoshuoStableId } from "../packages/content-tools/shuoshuo-rules.js";
 import { getTagError } from "./lib/tags";
 
 import { contentSource } from "./lib/content-source.js";

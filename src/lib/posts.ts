@@ -1,6 +1,6 @@
 import { getCollection, render } from "astro:content";
 import type { CollectionEntry, RenderResult } from "astro:content";
-import { assertPostStableIds } from "./post-rules.js";
+import { assertPostStableIds } from "../../packages/content-tools/post-rules.js";
 import { contentSource } from "./content-source.js";
 import { getTag } from "./tags";
 

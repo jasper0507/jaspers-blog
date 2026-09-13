@@ -16,8 +16,8 @@ export function assertInOrder(source: string, needles: string[], message: string
   }
 }
 
-export async function pagefindFragmentText() {
-  const fragmentDir = join(dist(), "pagefind/fragment");
+export async function pagefindFragmentText(distDirectory = dist()) {
+  const fragmentDir = join(distDirectory, "pagefind/fragment");
   const names = await readdir(fragmentDir);
   const chunks = await Promise.all(
     names

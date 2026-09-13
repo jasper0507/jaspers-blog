@@ -2,7 +2,7 @@ import { preview as astroPreview } from "astro";
 import { execFile, type ExecFileException } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, rmSync, statSync } from "node:fs";
-import { cp, mkdir, readFile, rm } from "node:fs/promises";
+import { mkdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -169,40 +169,16 @@ export async function readDist(path: string) {
   return readFile(join(dist(), path), "utf8");
 }
 
-export async function build(
-  content: string | { posts: string; shuoshuo: string },
-  inspect?: (distDirectory: string) => Promise<void>,
-) {
+export async function build(content: string, inspect?: (distDirectory: string) => Promise<void>) {
   const workspace = createWorkspace();
   const occupancy: Occupancy = {
     dist: join(workspace, "dist"),
     cache: join(workspace, "cache"),
-    content:
-      typeof content === "string"
-        ? resolveContentDirectory(content, "内容")
-        : join(workspace, "content"),
+    content: resolveContentDirectory(content, "内容"),
   };
   await mkdir(occupancy.dist, { recursive: true });
   await mkdir(occupancy.cache, { recursive: true });
   try {
-    if (typeof content !== "string") {
-      await mkdir(occupancy.content);
-      await cp(
-        resolveContentDirectory(content.posts, "技术文章"),
-        join(occupancy.content, "posts"),
-        { recursive: true },
-      );
-      await cp(
-        resolveContentDirectory(content.shuoshuo, "说说"),
-        join(occupancy.content, "shuoshuo"),
-        { recursive: true },
-      );
-      await cp(
-        resolve(root, content.posts, "../post-next-id.json"),
-        join(occupancy.content, "post-next-id.json"),
-      );
-      await cp(join(root, "tests/fixtures/content/about.md"), join(occupancy.content, "about.md"));
-    }
     await runBuild(occupancy);
     if (inspect) await inspect(occupancy.dist);
   } finally {

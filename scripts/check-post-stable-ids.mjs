@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { assertPostStableIds, createPost } from "../src/lib/post-rules.js";
-import { createShuoshuoDraft, isShuoshuoStableId } from "../src/lib/shuoshuo-rules.js";
+import { assertPostStableIds, createPost } from "../packages/content-tools/post-rules.js";
+import {
+  createShuoshuoDraft,
+  isShuoshuoStableId,
+} from "../packages/content-tools/shuoshuo-rules.js";
 
 const root = await mkdtemp(join(tmpdir(), "newblog-post-id-"));
 const postsDirectory = join(root, "posts");

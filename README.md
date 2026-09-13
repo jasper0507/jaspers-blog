@@ -32,7 +32,9 @@
 ├── public/
 │   ├── fonts/              # 自托管拉丁字体与 Noto Sans SC 分包
 │   └── images/hero/        # 首页主视觉照片，丢入 jpg 即可
-├── scripts/                # 内容创建、搜索索引与领域验收脚本
+├── packages/
+│   └── content-tools/      # 可独立安装的内容创建工具与共享领域规则
+├── scripts/                # 源码仓创建入口、搜索索引与领域验收脚本
 ├── src/
 │   ├── components/         # 正文、标签、搜索与技术文章阅读
 │   ├── content/
@@ -41,7 +43,7 @@
 │   │   ├── posts/             # 技术文章 Markdown
 │   │   └── shuoshuo/          # 说说 Markdown
 │   ├── layouts/            # 页面公共布局
-│   ├── lib/                # 内容查询与领域规则
+│   ├── lib/                # 内容查询与网站侧规则
 │   ├── pages/              # 页面与 XML 路由
 │   ├── styles/             # 全局、文章、说说与搜索样式
 │   └── content.config.ts   # Content Collections 数据结构
@@ -275,4 +277,4 @@ npm install /tmp/jasper-blog-content-tools-0.1.0.tgz
 }
 ```
 
-随后运行 `npm run new:post -- "文章标题"` 或 `npm run new:shuoshuo`。命令只写当前内容仓，不访问 Git 或网络。工具沿用现有模板（`draft: false`），创建后仍需补齐文章摘要和正文或说说正文；未准备公开时设为 `draft: true`。计数器缺失或损坏时报错，重名不覆盖，失败不占号，删除不回收号码。工具与网站共用 `packages/content-tools` 中的领域实现，旧模块导出保留兼容。
+随后运行 `npm run new:post -- "文章标题"` 或 `npm run new:shuoshuo`。命令只写当前内容仓，不访问 Git 或网络。工具沿用现有模板（`draft: false`），创建后仍需补齐文章摘要和正文或说说正文；未准备公开时设为 `draft: true`。计数器缺失或损坏时报错，重名不覆盖，失败不占号，删除不回收号码。工具与网站共用 `packages/content-tools` 中的领域实现。

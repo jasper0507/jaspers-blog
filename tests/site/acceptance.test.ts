@@ -19,7 +19,7 @@ test("预览启动失败只清理自己，保留其他场景的产物", async ()
     const content = join(temporaryRoot, "content");
     await cp(join(root, "tests/fixtures/content"), content, { recursive: true });
     await cp(
-      join(root, "tests/fixtures/posts-invalid-math/invalid.md"),
+      join(root, "tests/fixtures/posts-invalid-math/posts/invalid.md"),
       join(content, "posts/invalid.md"),
     );
     await mkdir(peer);
@@ -75,4 +75,16 @@ test("构建内容预检拒绝未选择、空或不存在的来源，不回退�
       /必须显式设置 BLOG_CONTENT_DIR|缺少内容来源或必要状态/,
     );
   }
+});
+
+test("已选择完整内容目录时，残留的分目录环境变量不影响预检", async () => {
+  await execFileAsync(process.execPath, ["scripts/check-site-markdown.mjs"], {
+    cwd: root,
+    env: {
+      ...process.env,
+      BLOG_CONTENT_DIR: "tests/fixtures/content",
+      POST_CONTENT_DIR: "/missing-post-dir",
+      SHUOSHUO_CONTENT_DIR: "/missing-shuoshuo-dir",
+    },
+  });
 });
