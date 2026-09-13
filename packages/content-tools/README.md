@@ -15,4 +15,4 @@ jasper-content publish "发布 Go 并发笔记"
 
 `publish` 展示并提交写作内容（`posts/`、`shuoshuo/`、`about.md`、`post-next-id.json`）的新增、修改和删除，不夹带入口脚本、配置或工作流，不修改 `draft`。已有未推送内容提交会继续推送；无新内容改动且远端已是最新时不制造空提交，改为重新触发远端发布。推送成功不等于上线：命令关联本次内容提交或重试对应的工作流任务，按校验、构建、部署报告结果。推送失败或远端超前时保留本地提交、不强推。本机需已安装并登录 GitHub CLI。
 
-源码仓维护领域实现，内容仓无需复制实现或安装 Astro。远端发布工作流模板与接入说明由源码仓 `packages/content-tools/content-repo/` 维护。
+源码仓维护领域实现，内容仓无需复制实现或安装 Astro。创作者说明见 `content-repo/README.md`；工作流凭据与切换交接见源码仓 `docs/deployment.md`。
