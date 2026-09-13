@@ -1,8 +1,5 @@
 ---
-import BackToTop from "../../components/BackToTop.astro";
-import MarkdownBody from "../../components/MarkdownBody.astro";
-import PostTags from "../../components/PostTags.astro";
-import PostToc from "../../components/PostToc.astro";
+import PostReading from "../../components/PostReading.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { blogSettings } from "../../lib/site";
 import { getPublishedPostCatalog, type PublishedPost } from "../../lib/posts";
@@ -42,99 +39,15 @@ const structuredData = JSON.stringify({
 >
   <script slot="head" type="application/ld+json" set:html={structuredData} is:inline />
 
-  <article class="post-article" aria-labelledby="post-title" data-pagefind-body>
-    <header class="post-header">
-      <h1 id="post-title" tabindex="-1">{post.title}</h1>
-      <p class="post-description">{post.description}</p>
-      <div class="post-meta">
-        <time datetime={post.publishedAt.iso}>{post.publishedAt.compact}</time>
-        <PostTags tags={post.tags} />
-      </div>
-    </header>
-
-    <MarkdownBody>
-      <Content />
-    </MarkdownBody>
-  </article>
-
-  <PostToc headings={headings} />
-  <BackToTop />
+  <PostReading post={post} headings={headings}>
+    <Content />
+  </PostReading>
 </BaseLayout>
-
-<style>
-  /* 编辑长文壳：居中阅读栏，无纸面卡片 */
-  .post-article {
-    max-width: var(--reading-width);
-    margin-inline: auto;
-    min-width: 0;
-  }
-
-  .post-header {
-    margin-bottom: 3rem;
-    padding-bottom: 1.75rem;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .post-header h1 {
-    margin: 0;
-    font-family: var(--font-serif);
-    font-size: clamp(1.9rem, 3.6vw, 2.5rem);
-    font-weight: 600;
-    letter-spacing: var(--track-display);
-    line-height: var(--leading-display);
-    font-optical-sizing: auto;
-  }
-
-  .post-description {
-    max-width: 40rem;
-    margin: 0.9rem 0 0;
-    color: var(--muted);
-    font-family: var(--font-sans);
-    font-size: 1.0625rem;
-    line-height: 1.7;
-  }
-
-  .post-meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem 1.25rem;
-    margin-top: 1.5rem;
-    color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: var(--text-meta);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: var(--track-meta);
-  }
-
-  @media (max-width: 52rem) {
-    .post-header {
-      margin-bottom: 2.25rem;
-      padding-bottom: 1.35rem;
-    }
-
-    .post-header h1 {
-      font-size: 1.8rem;
-      line-height: 1.25;
-    }
-
-    .post-meta {
-      margin-top: 1.25rem;
-    }
-  }
-</style>
 
 <style is:global>
   .post-page {
-    --reading-width: 47.5rem;
     max-width: var(--shell-width);
     padding: var(--space-page-top) 0 var(--space-page-bottom);
-  }
-
-  .post-meta .post-tags {
-    justify-content: flex-end;
-    margin-inline-start: auto;
   }
 
   @media (max-width: 70rem) {

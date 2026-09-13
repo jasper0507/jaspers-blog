@@ -8,8 +8,8 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const fixtureRoot = join(root, "tests/fixtures/hero-images");
 
-export const HERO_DIRECTORY = "public/images/hero";
-export const HERO_PUBLIC_PREFIX = "/images/hero/";
+const HERO_DIRECTORY = "public/images/hero";
+const HERO_PUBLIC_PREFIX = "/images/hero/";
 
 function readDirectory(directory: string) {
   try {

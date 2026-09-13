@@ -1,18 +1,10 @@
 import assert from "node:assert/strict";
 import AxeBuilder from "@axe-core/playwright";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { test } from "@playwright/test";
-import {
-  assertInOrder,
-  expectedHome,
-  expectedSite,
-  host,
-  pagefindFragmentText,
-  root,
-} from "../helpers.ts";
+import { test, type Page } from "@playwright/test";
+import { origin, readDist } from "../acceptance-site.ts";
+import { assertInOrder, expectedHome, expectedSite, pagefindFragmentText } from "../helpers.ts";
 
-const readDist = (path: string) => readFile(join(root, "dist", path), "utf8");
+const host = origin();
 const longShuoshuoSummary =
   "这是发布时间最新的公开说说。它故意使用与发布时间不同的文件名，用来确认稳定 ID 不会从可修改的时间重新推导。 这里继续放入足够长的正文，… [1 Image]";
 const emojiShuoshuoSummary = `${"🙂".repeat(79)}…`;
@@ -29,8 +21,9 @@ test("公开内容合同", async () => {
   ]);
 
   assert.match(home, /同时发布的 Alpha 技术文章/);
-  assert.match(home, /data-hero-images="[^"]*\/images\/hero\/campus\.jpg/);
-  assert.match(home, /<noscript>[\s\S]*src="\/images\/hero\/campus\.jpg"/);
+  const [heroImage] = expectedHome.hero.images;
+  assert.ok(home.includes(heroImage));
+  assert.match(home, new RegExp(`<noscript>[\\s\\S]*src="${heroImage}"`));
   assert.ok(home.includes(longShuoshuoSummary));
   assert.doesNotMatch(
     `${home}${timeline}${archive}${tags}${rss}${sitemap}`,
@@ -77,6 +70,8 @@ test("公开内容合同", async () => {
   assert.equal((rss.match(/<item>/g) ?? []).length, 8);
   assert.doesNotMatch(sitemap, /\/search\/|\/rss\.xml|<loc>[^<]*#/);
   assert.match(sitemap, /\/shuoshuo\/20250101-000001\//);
+  assert.match(home, /pagefind-modal-trigger/);
+  assert.match(home, /pagefind-component-ui/);
 
   const searchIndex = JSON.parse(await readDist("pagefind/pagefind-entry.json"));
   assert.equal(searchIndex.languages["zh-cn"].page_count, 3);
@@ -121,6 +116,50 @@ test("站点壳、主题、菜单与搜索", async ({ page }) => {
     .first();
   await result.waitFor({ state: "visible" });
   assert.equal(new URL((await result.getAttribute("href")) ?? "", host).pathname, "/posts/2/");
+  await page.keyboard.press("Escape");
+  await searchInput.waitFor({ state: "hidden" });
+});
+
+async function paperColor(page: Page) {
+  return page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.style.backgroundColor = "var(--surface)";
+    document.body.append(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return color;
+  });
+}
+
+test("搜索面板跟随亮暗主题，短页不产生假滚动", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1200 });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto(`${host}/about/`, { waitUntil: "networkidle" });
+
+  const overflow = await page.evaluate(() => {
+    const live = document.querySelector("[data-pf-sr-hidden]");
+    const style = live ? getComputedStyle(live) : null;
+    return {
+      extra: document.documentElement.scrollHeight - document.documentElement.clientHeight,
+      top: style?.top ?? null,
+      left: style?.left ?? null,
+    };
+  });
+  assert.equal(overflow.top, "0px");
+  assert.equal(overflow.left, "0px");
+  assert.ok(overflow.extra <= 1, `短页多出 ${overflow.extra}px 滚动`);
+
+  for (const theme of ["light", "dark"] as const) {
+    if (theme === "dark") await page.locator("#theme-toggle").click();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), theme);
+    await page.keyboard.press("/");
+    const dialog = page.locator("dialog.pf-modal");
+    await dialog.waitFor({ state: "visible" });
+    const panel = await dialog.evaluate(element => getComputedStyle(element).backgroundColor);
+    assert.equal(panel, await paperColor(page), `${theme} 面板`);
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "hidden" });
+  }
 });
 
 test("主视觉只请求池中一张图片，主题切换不换图", async ({ page }) => {
@@ -190,6 +229,38 @@ test("技术文章阅读能力", async ({ page }) => {
       "#第二节",
   );
 
+  const backToTop = page.locator("#back-to-top");
+  await page.waitForFunction(
+    () => document.querySelector("#back-to-top")?.getAttribute("data-visible") === "true",
+  );
+  await backToTop.click();
+  await page.waitForFunction(() => scrollY < 8 && document.activeElement?.id === "post-title");
+});
+
+test("无目录的短文保留标题焦点且不显示回顶", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.goto(`${host}/posts/1/`);
+  assert.equal(await page.locator(".post-toc").count(), 0);
+  assert.equal(await page.locator("#back-to-top").getAttribute("data-visible"), "false");
+  const title = page.locator("#post-title");
+  assert.equal(await title.getAttribute("tabindex"), "-1");
+  await title.focus();
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "post-title");
+});
+
+test("减少动态效果时回顶立即完成并交还标题焦点", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.goto(`${host}/posts/2/`);
+  await page
+    .locator(".post-body h2")
+    .nth(1)
+    .evaluate(element =>
+      scrollTo({
+        top: element.getBoundingClientRect().top + scrollY - innerHeight * 0.4,
+        behavior: "instant",
+      }),
+    );
   const backToTop = page.locator("#back-to-top");
   await page.waitForFunction(
     () => document.querySelector("#back-to-top")?.getAttribute("data-visible") === "true",

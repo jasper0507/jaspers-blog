@@ -1,7 +1,6 @@
-import { formatShanghaiDateTime, isShanghaiDateTime, SHANGHAI_TIME_ZONE } from "./shanghai-time.js";
+import { formatShanghaiDateTime, isShanghaiDateTime } from "./shanghai-time.js";
 
 export const SHUOSHUO_CONTENT_DIRECTORY = "src/content/shuoshuo";
-export { SHANGHAI_TIME_ZONE as SHUOSHUO_TIME_ZONE };
 
 const stableIdPattern = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/;
 

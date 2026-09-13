@@ -16,34 +16,6 @@
   </svg>
 </button>
 
-<script is:inline>
-  (() => {
-    const button = document.querySelector("#back-to-top");
-    const header = document.querySelector(".post-header");
-    const title = document.querySelector("#post-title");
-    if (!(button instanceof HTMLButtonElement) || !(header instanceof HTMLElement)) return;
-
-    const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const setVisible = visible => {
-      button.dataset.visible = visible ? "true" : "false";
-      button.toggleAttribute("inert", !visible);
-      if (!visible && document.activeElement === button && title instanceof HTMLElement) {
-        title.focus();
-      }
-    };
-
-    button.addEventListener("click", () => {
-      window.scrollTo({ top: 0, behavior: reduceMotion() ? "auto" : "smooth" });
-    });
-
-    if (!("IntersectionObserver" in window)) return;
-
-    const observer = new IntersectionObserver(([entry]) => setVisible(!entry.isIntersecting));
-    observer.observe(header);
-  })();
-</script>
-
 <style>
   .back-to-top {
     position: fixed;
@@ -98,5 +70,11 @@
     stroke-width: 1.6;
     stroke-linecap: round;
     stroke-linejoin: round;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .back-to-top {
+      transition: none;
+    }
   }
 </style>

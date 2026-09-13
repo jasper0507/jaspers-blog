@@ -8,7 +8,7 @@
 
 一个以技术文章为核心、以说说承载轻量表达的中文个人网站。项目使用 Astro 生成静态页面，内容随 Git 推送到 Cloudflare Pages；站内搜索、标签、归档、RSS 与站点地图都在构建时生成。
 
-访问 [Jasper's Blog](https://jasper0507.me/)，或查看[更新日志](CHANGELOG.md)。
+访问 [Jasper's Blog](https://jasper0507.me/)。
 
 ## 🔥 Features
 
@@ -34,7 +34,7 @@
 │   └── images/hero/        # 首页主视觉照片，丢入 jpg 即可
 ├── scripts/                # 内容创建、搜索索引与领域验收脚本
 ├── src/
-│   ├── components/         # 正文、目录、标签与回到顶部
+│   ├── components/         # 正文、标签、搜索与技术文章阅读
 │   ├── content/
 │   │   ├── about.md           # 「关于我」正文
 │   │   ├── post-next-id.json  # 技术文章号码计数器（不要手改）
@@ -43,11 +43,11 @@
 │   ├── layouts/            # 页面公共布局
 │   ├── lib/                # 内容查询与领域规则
 │   ├── pages/              # 页面与 XML 路由
-│   ├── styles/             # 全局、文章与说说样式
+│   ├── styles/             # 全局、文章、说说与搜索样式
 │   └── content.config.ts   # Content Collections 数据结构
 ├── tests/
 │   ├── fixtures/           # 构建验收用内容
-│   └── site/               # Playwright 整站验收用例
+│   └── site/               # 站点验收用例
 ├── blog.config.ts          # 博客设置的唯一日常入口
 ├── astro.config.mjs        # Astro、Markdown 与代码高亮配置
 ├── pagefind.yml            # 搜索索引排除规则（公式）

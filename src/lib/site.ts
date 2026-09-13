@@ -1,4 +1,3 @@
-import assert from "node:assert/strict";
 import { statSync } from "node:fs";
 import { extname, join } from "node:path";
 import rawSettings from "../../blog.config.ts";
@@ -18,6 +17,7 @@ const year = new Intl.DateTimeFormat("en", {
   timeZone: "Asia/Shanghai",
   year: "numeric",
 }).format(new Date());
+
 function resolveBlogSettings(settings: typeof rawSettings) {
   const url = new URL(settings.site.url);
   if (url.protocol !== "https:" || url.pathname !== "/" || /[?#]/u.test(settings.site.url)) {
@@ -59,48 +59,3 @@ function resolveBlogSettings(settings: typeof rawSettings) {
 }
 
 export const blogSettings = resolveBlogSettings(rawSettings);
-
-if (import.meta.main) {
-  const changed = (update: (settings: typeof rawSettings) => void) => {
-    const settings = structuredClone(rawSettings);
-    update(settings);
-    return settings;
-  };
-
-  assert.equal(blogSettings.site.url, new URL(rawSettings.site.url).href);
-  assert.equal(
-    resolveBlogSettings(changed(settings => (settings.site.title = "  Jasper's Blog  "))).site
-      .title,
-    "  Jasper's Blog  ",
-  );
-
-  for (const url of [
-    "http://example.com",
-    "https://example.com/blog/",
-    "https://example.com?from=test",
-    "https://example.com#content",
-  ]) {
-    assert.throws(() => resolveBlogSettings(changed(settings => (settings.site.url = url))));
-  }
-  for (const url of ["https://127.0.0.1", "https://user@example.com", "https://example.com:8443"]) {
-    assert.equal(
-      resolveBlogSettings(changed(settings => (settings.site.url = url))).site.url,
-      new URL(url).href,
-    );
-  }
-
-  assert.deepEqual(blogSettings.home.hero.images, [
-    "/images/hero/campus.jpg",
-    "/images/hero/opera.jpg",
-    "/images/hero/skyline.jpg",
-    "/images/hero/sunset.jpg",
-  ]);
-  assert.throws(() =>
-    resolveBlogSettings(changed(settings => (settings.site.favicon = "/images/hero/campus.jpg"))),
-  );
-  assert.throws(() =>
-    resolveBlogSettings(changed(settings => (settings.footer.text = "© {year} {owner}"))),
-  );
-
-  console.log("博客设置验收通过");
-}

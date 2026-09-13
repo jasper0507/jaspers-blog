@@ -113,6 +113,65 @@ try {
     await rm(`${nextIdPath}.tmp`, { recursive: true });
   }
   assert.equal(await readNext(), 5, "原子替换失败不得改写号码计数器");
+
+  const unlinkError = new Error("撤回文件失败");
+  await mkdir(`${nextIdPath}.tmp`);
+  try {
+    const error = await createPost(postsDirectory, "回滚清理失败", {
+      unlink: async () => {
+        throw unlinkError;
+      },
+    }).then(
+      () => undefined,
+      caught => caught,
+    );
+    assert.ok(error instanceof AggregateError);
+    assert.match(error.message, /未能写入号码计数器，且无法撤回已创建的文件/);
+    assert.equal(error.errors[1], unlinkError);
+    assert.equal((await readdir(postsDirectory)).includes("回滚清理失败.md"), true);
+    assert.equal(await readNext(), 5);
+  } finally {
+    await rm(`${nextIdPath}.tmp`, { recursive: true, force: true });
+    await rm(join(postsDirectory, "回滚清理失败.md"), { force: true });
+    await rm(`${nextIdPath}.lock`, { recursive: true, force: true });
+  }
+
+  const lockError = new Error("锁目录非空");
+  const warnings = [];
+  const warn = console.warn;
+  console.warn = message => warnings.push(String(message));
+  try {
+    const created = await createPost(postsDirectory, "提交后锁失败", {
+      rmdir: async () => {
+        throw lockError;
+      },
+    });
+    assert.equal(created.id, 5);
+    assert.equal(await readNext(), 6);
+    assert.match(warnings.join("\n"), /未能释放锁/);
+  } finally {
+    console.warn = warn;
+    await rm(`${nextIdPath}.lock`, { recursive: true, force: true });
+  }
+
+  await mkdir(`${nextIdPath}.tmp`);
+  try {
+    const error = await createPost(postsDirectory, "失败后锁失败", {
+      rmdir: async () => {
+        throw lockError;
+      },
+    }).then(
+      () => undefined,
+      caught => caught,
+    );
+    assert.ok(error instanceof AggregateError);
+    assert.equal(error.errors[1], lockError);
+    assert.equal((await readdir(postsDirectory)).includes("失败后锁失败.md"), false);
+    assert.equal(await readNext(), 6);
+  } finally {
+    await rm(`${nextIdPath}.tmp`, { recursive: true, force: true });
+    await rm(`${nextIdPath}.lock`, { recursive: true, force: true });
+  }
 } finally {
   await rm(root, { recursive: true, force: true });
 }
