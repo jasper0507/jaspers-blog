@@ -1,14 +1,14 @@
 import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
-import { isPostFilename, POST_CONTENT_DIRECTORY } from "./lib/post-rules.js";
-import { isShanghaiDateTime } from "./lib/shanghai-time.js";
-import { isShuoshuoStableId, SHUOSHUO_CONTENT_DIRECTORY } from "./lib/shuoshuo-rules.js";
+import { isPostFilename } from "../packages/content-tools/post-rules.js";
+import { isShanghaiDateTime } from "../packages/content-tools/shanghai-time.js";
+import { isShuoshuoStableId } from "../packages/content-tools/shuoshuo-rules.js";
 import { getTagError } from "./lib/tags";
 
-declare const process: {
-  env: Record<string, string | undefined>;
-};
+import { contentSource } from "./lib/content-source.js";
+
+const source = contentSource();
 
 const publishedAt = z
   .string()
@@ -16,7 +16,7 @@ const publishedAt = z
   .transform(value => new Date(value));
 
 const postFiles = glob({
-  base: process.env.POST_CONTENT_DIR ?? `./${POST_CONTENT_DIRECTORY}`,
+  base: source.posts,
   pattern: "**/*.md",
   generateId: ({ entry }) => {
     const id = entry.match(/^(.+)\.md$/)?.[1] ?? "";
@@ -56,7 +56,7 @@ const posts = defineCollection({
 });
 
 const shuoshuoFiles = glob({
-  base: process.env.SHUOSHUO_CONTENT_DIR ?? `./${SHUOSHUO_CONTENT_DIRECTORY}`,
+  base: source.shuoshuo,
   pattern: "**/*.md",
   generateId: ({ entry }) => {
     const id = entry.match(/^(.+)\.md$/)?.[1] ?? "";
@@ -76,4 +76,9 @@ const shuoshuo = defineCollection({
     .strict(),
 });
 
-export const collections = { posts, shuoshuo };
+const about = defineCollection({
+  loader: glob({ base: source.root, pattern: "about.md" }),
+  schema: z.object({}).strict(),
+});
+
+export const collections = { posts, shuoshuo, about };

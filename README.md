@@ -32,7 +32,9 @@
 ├── public/
 │   ├── fonts/              # 自托管拉丁字体与 Noto Sans SC 分包
 │   └── images/hero/        # 首页主视觉照片，丢入 jpg 即可
-├── scripts/                # 内容创建、搜索索引与领域验收脚本
+├── packages/
+│   └── content-tools/      # 可独立安装的内容创建工具与共享领域规则
+├── scripts/                # 源码仓创建入口、搜索索引与领域验收脚本
 ├── src/
 │   ├── components/         # 正文、标签、搜索与技术文章阅读
 │   ├── content/
@@ -41,7 +43,7 @@
 │   │   ├── posts/             # 技术文章 Markdown
 │   │   └── shuoshuo/          # 说说 Markdown
 │   ├── layouts/            # 页面公共布局
-│   ├── lib/                # 内容查询与领域规则
+│   ├── lib/                # 内容查询与网站侧规则
 │   ├── pages/              # 页面与 XML 路由
 │   ├── styles/             # 全局、文章、说说与搜索样式
 │   └── content.config.ts   # Content Collections 数据结构
@@ -230,3 +232,49 @@ npm run preview
 ## ✨ Feedback & Suggestions
 
 发现缺陷或希望提出功能建议，请在 [GitHub Issues](https://github.com/jasper0507/jaspers-blog/issues) 新建 Issue；内容相关反馈也可以发送邮件至 [jasper0507.self@gmail.com](mailto:jasper0507.self@gmail.com)。
+
+## 独立内容目录与创建工具（过渡阶段）
+
+网站通过 `BLOG_CONTENT_DIR` 选择一个完整内容目录，路径相对于运行命令的目录，也可使用绝对路径：
+
+```text
+content/
+  posts/
+  shuoshuo/
+  about.md
+  post-next-id.json
+```
+
+技术文章、说说、关于我正文、Markdown 校验和号码校验全部使用该来源。两个内容子目录可以为空，`about.md` 可以为空但必须存在；号码计数器必须有效且大于所有既有文章 ID。迁入现有内容时原样保留文件名、稳定 ID 和计数器，不从文章数量重新生成计数器。
+
+```sh
+BLOG_CONTENT_DIR=/absolute/path/to/content npm run build:content
+BLOG_CONTENT_DIR=tests/fixtures/content npm run build:content
+BLOG_CONTENT_DIR=/absolute/path/to/content npx astro dev
+```
+
+`build:content` 未指定来源、来源不存在或必要状态缺失时直接失败，不回退到示例或源码内容。原有分别指定文章和说说目录的环境变量不再支持。`npm run check`、PR CI 和浏览器验收显式使用 `tests/fixtures/content` 公开示例；整站验收为不同测试隔离构建目录和缓存。
+
+当前 `npm run build`、`npm run dev`、源码仓的 `new:post` / `new:shuoshuo` 明确保留 `src/content` 过渡路径，原有 Pages 自动部署与内容跟踪不变。外部内容构建请使用 `build:content`。生产迁移、远端工具分发和统一发布工具由后续任务完成。
+
+本地打包后可把实际压缩包安装到独立内容仓，无需网站源码或 Astro：
+
+```sh
+# 在源码仓打包；产物放到临时目录，不发布远端 Release
+npm pack ./packages/content-tools --pack-destination /tmp
+# 在已有内容仓安装实际产物
+npm install /tmp/jasper-blog-content-tools-0.1.0.tgz
+```
+
+在内容仓 `package.json` 中配置：
+
+```json
+{
+  "scripts": {
+    "new:post": "jasper-content new:post",
+    "new:shuoshuo": "jasper-content new:shuoshuo"
+  }
+}
+```
+
+随后运行 `npm run new:post -- "文章标题"` 或 `npm run new:shuoshuo`。命令只写当前内容仓，不访问 Git 或网络。工具沿用现有模板（`draft: false`），创建后仍需补齐文章摘要和正文或说说正文；未准备公开时设为 `draft: true`。计数器缺失或损坏时报错，重名不覆盖，失败不占号，删除不回收号码。工具与网站共用 `packages/content-tools` 中的领域实现。

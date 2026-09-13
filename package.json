@@ -7,12 +7,12 @@
     "node": ">=24.11.0"
   },
   "scripts": {
-    "dev": "astro dev",
+    "dev": "BLOG_CONTENT_DIR=src/content astro dev",
     "preview": "astro preview",
-    "format": "prettier --no-error-on-unmatched-pattern --write \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card,search}.css\" \"scripts/**/*.mjs\" \"tests/site/**/*.ts\" \"playwright*.config.ts\" \"*.{json,mjs,ts}\" \"docs/**/*.md\"",
-    "format:check": "prettier --no-error-on-unmatched-pattern --check \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card,search}.css\" \"scripts/**/*.mjs\" \"tests/site/**/*.ts\" \"playwright*.config.ts\" \".github/workflows/*.{yml,yaml}\" \"*.{json,mjs,ts}\" \"docs/**/*.md\"",
-    "check": "astro check",
-    "build": "node scripts/check-site-markdown.mjs && astro build --force && node scripts/index-posts.mjs",
+    "format": "prettier --no-error-on-unmatched-pattern --write \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card,search}.css\" \"scripts/**/*.mjs\" \"packages/**/*.{js,json,md}\" \"tests/site/**/*.ts\" \"playwright*.config.ts\" \"*.{json,mjs,ts}\" \"docs/**/*.md\"",
+    "format:check": "prettier --no-error-on-unmatched-pattern --check \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card,search}.css\" \"scripts/**/*.mjs\" \"packages/**/*.{js,json,md}\" \"tests/site/**/*.ts\" \"playwright*.config.ts\" \".github/workflows/*.{yml,yaml}\" \"*.{json,mjs,ts}\" \"docs/**/*.md\"",
+    "check": "BLOG_CONTENT_DIR=tests/fixtures/content JASPER_ACCEPTANCE_CACHE=node_modules/.astro-check astro check",
+    "build": "BLOG_CONTENT_DIR=src/content npm run build:content",
     "new:post": "node scripts/new-post.mjs",
     "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
@@ -22,9 +22,10 @@
     "test:index-posts": "node scripts/check-index-posts.mjs",
     "test:markdown": "node --test tests/site/markdown.test.ts",
     "test:site": "playwright test",
-    "test:guard": "node --test tests/site/guard.test.ts tests/site/acceptance.test.ts",
+    "test:guard": "node --test tests/site/guard.test.ts tests/site/acceptance.test.ts tests/site/content-tools.test.ts",
     "test:browser-smoke": "playwright test --config=playwright.smoke.config.ts",
-    "test": "npm run format:check && npm run check && npm run test:fonts && npm run test:config && npm run test:content-rules && npm run test:index-posts && npm run test:markdown && npm run test:site && npm run test:guard"
+    "test": "npm run format:check && npm run check && npm run test:fonts && npm run test:config && npm run test:content-rules && npm run test:index-posts && npm run test:markdown && npm run test:site && npm run test:guard",
+    "build:content": "node scripts/check-site-markdown.mjs && astro build --force && node scripts/index-posts.mjs"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",

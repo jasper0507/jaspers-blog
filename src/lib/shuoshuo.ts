@@ -1,5 +1,5 @@
 import { getCollection, render } from "astro:content";
-import { SHANGHAI_TIME_ZONE } from "./shanghai-time.js";
+import { SHANGHAI_TIME_ZONE } from "../../packages/content-tools/shanghai-time.js";
 import { extractMarkdownContent } from "./site-markdown.js";
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "long",

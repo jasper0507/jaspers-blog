@@ -1,7 +1,11 @@
 ---
-import { Content } from "../content/about.md";
+import { getEntry, render } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { blogSettings } from "../lib/site";
+
+const about = await getEntry("about", "about");
+if (!about) throw new Error("缺少关于我正文");
+const { Content } = await render(about);
 
 const description = `关于 ${blogSettings.author.name} 与 ${blogSettings.site.title}。`;
 ---

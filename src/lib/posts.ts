@@ -1,6 +1,7 @@
 import { getCollection, render } from "astro:content";
 import type { CollectionEntry, RenderResult } from "astro:content";
-import { POST_CONTENT_DIRECTORY, assertPostStableIds } from "./post-rules.js";
+import { assertPostStableIds } from "../../packages/content-tools/post-rules.js";
+import { contentSource } from "./content-source.js";
 import { getTag } from "./tags";
 
 const isoDateFormatter = new Intl.DateTimeFormat("en-CA", {
@@ -57,7 +58,7 @@ let generation = 0;
 
 function publishedCatalogKey(entries: CollectionEntry<"posts">[]) {
   return [
-    process.env.POST_CONTENT_DIR ?? "",
+    contentSource().posts,
     ...[...entries]
       .sort((left, right) => left.id.localeCompare(right.id))
       .map(entry =>
@@ -79,7 +80,7 @@ export async function getPublishedPostCatalog() {
   const entries = await getCollection("posts");
   // 计数器不属于 collection；即使命中投影快照，也必须重新断言身份状态。
   await assertPostStableIds(
-    process.env.POST_CONTENT_DIR ?? `./${POST_CONTENT_DIRECTORY}`,
+    contentSource().posts,
     entries.map(entry => ({ filename: entry.id, id: entry.data.id })),
   );
   const key = publishedCatalogKey(entries);

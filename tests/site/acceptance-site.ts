@@ -17,14 +17,12 @@ const previewOrigin = `http://127.0.0.1:${previewPort}`;
 
 const ENV_DIST = "JASPER_ACCEPTANCE_DIST";
 const ENV_CACHE = "JASPER_ACCEPTANCE_CACHE";
-const ENV_POSTS = "JASPER_ACCEPTANCE_POSTS";
-const ENV_SHUOSHUO = "JASPER_ACCEPTANCE_SHUOSHUO";
+const ENV_CONTENT = "JASPER_ACCEPTANCE_CONTENT";
 
 type Occupancy = {
   dist: string;
   cache: string;
-  posts: string;
-  shuoshuo: string;
+  content: string;
 };
 
 function commandError(error: unknown) {
@@ -58,12 +56,10 @@ function definedEnv(env: NodeJS.ProcessEnv) {
 
 function occupancyEnv(occupancy: Occupancy) {
   return {
-    POST_CONTENT_DIR: occupancy.posts,
-    SHUOSHUO_CONTENT_DIR: occupancy.shuoshuo,
+    BLOG_CONTENT_DIR: occupancy.content,
     [ENV_DIST]: occupancy.dist,
     [ENV_CACHE]: occupancy.cache,
-    [ENV_POSTS]: occupancy.posts,
-    [ENV_SHUOSHUO]: occupancy.shuoshuo,
+    [ENV_CONTENT]: occupancy.content,
   };
 }
 
@@ -104,10 +100,9 @@ async function runPreview() {
 function occupancyFromEnv(): Occupancy {
   const dist = process.env[ENV_DIST] ?? "";
   const cache = process.env[ENV_CACHE] ?? "";
-  const posts = process.env[ENV_POSTS] ?? "";
-  const shuoshuo = process.env[ENV_SHUOSHUO] ?? "";
-  if (!dist || !cache || !posts || !shuoshuo) throw new Error("验收场景缺少占用信息");
-  return { dist, cache, posts, shuoshuo };
+  const content = process.env[ENV_CONTENT] ?? "";
+  if (!dist || !cache || !content) throw new Error("验收场景缺少占用信息");
+  return { dist, cache, content };
 }
 
 async function occupyAndServe() {
@@ -155,8 +150,7 @@ export function preview() {
   const occupancy: Occupancy = {
     dist: join(workspace, "dist"),
     cache: join(workspace, "cache"),
-    posts: resolveContentDirectory("tests/fixtures/posts-visual", "技术文章"),
-    shuoshuo: resolveContentDirectory("tests/fixtures/shuoshuo", "说说"),
+    content: resolveContentDirectory("tests/fixtures/content", "公开示例内容"),
   };
   return webServerConfig(occupancy);
 }
@@ -175,16 +169,12 @@ export async function readDist(path: string) {
   return readFile(join(dist(), path), "utf8");
 }
 
-export async function build(
-  content: { posts: string; shuoshuo: string },
-  inspect?: (distDirectory: string) => Promise<void>,
-) {
+export async function build(content: string, inspect?: (distDirectory: string) => Promise<void>) {
   const workspace = createWorkspace();
   const occupancy: Occupancy = {
     dist: join(workspace, "dist"),
     cache: join(workspace, "cache"),
-    posts: resolveContentDirectory(content.posts, "技术文章"),
-    shuoshuo: resolveContentDirectory(content.shuoshuo, "说说"),
+    content: resolveContentDirectory(content, "内容"),
   };
   await mkdir(occupancy.dist, { recursive: true });
   await mkdir(occupancy.cache, { recursive: true });

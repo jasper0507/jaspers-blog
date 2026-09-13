@@ -3,8 +3,6 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { formatShanghaiDateTime } from "./shanghai-time.js";
 
-export const POST_CONTENT_DIRECTORY = "src/content/posts";
-
 const POST_NEXT_ID_FILENAME = "post-next-id.json";
 const illegalInFilename = /[/\\:*?"<>|\r\n]/g;
 

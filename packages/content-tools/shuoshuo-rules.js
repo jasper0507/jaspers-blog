@@ -1,7 +1,5 @@
 import { formatShanghaiDateTime, isShanghaiDateTime } from "./shanghai-time.js";
 
-export const SHUOSHUO_CONTENT_DIRECTORY = "src/content/shuoshuo";
-
 const stableIdPattern = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/;
 
 export function createShuoshuoDraft() {

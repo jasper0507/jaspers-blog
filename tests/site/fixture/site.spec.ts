@@ -135,6 +135,7 @@ test("搜索面板跟随亮暗主题，短页不产生假滚动", async ({ page 
   await page.setViewportSize({ width: 1440, height: 1200 });
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto(`${host}/about/`, { waitUntil: "networkidle" });
+  assert.match(await page.locator("main").innerText(), /我是公开示例作者/);
 
   const overflow = await page.evaluate(() => {
     const live = document.querySelector("[data-pf-sr-hidden]");
