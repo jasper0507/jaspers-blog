@@ -67,7 +67,6 @@ async function applyPreparedRepo({ outputDir, contentRepo, pushUrl, env }) {
     "create",
     contentRepo,
     "--private",
-    "--yes",
     "--description",
     "Jasper's Blog 私有内容仓",
   ]);
