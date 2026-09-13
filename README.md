@@ -255,29 +255,22 @@ BLOG_CONTENT_DIR=/absolute/path/to/content npx astro dev
 
 `build:content` 未指定来源、来源不存在或必要状态缺失时直接失败，不回退到示例或源码内容。原有分别指定文章和说说目录的环境变量不再支持。`npm run check`、PR CI 和浏览器验收显式使用 `tests/fixtures/content` 公开示例；整站验收为不同测试隔离构建目录和缓存。
 
-当前 `npm run build`、`npm run dev`、源码仓的 `new:post` / `new:shuoshuo` 明确保留 `src/content` 过渡路径，原有 Pages 自动部署与内容跟踪不变。外部内容构建请使用 `build:content`。统一发布工作流模板与 `jasper-content publish` 已交付，见 `packages/content-tools/content-repo/`；正式建仓、凭据和生产切换由后续任务完成。
+当前 `npm run build`、`npm run dev`、源码仓的 `new:post` / `new:shuoshuo` 明确保留 `src/content` 过渡路径，原有 Pages 自动部署与内容跟踪不变；这仍是唯一正式写作与发布入口。外部内容构建请使用 `build:content`。
 
-本地打包后可把实际压缩包安装到独立内容仓，无需网站源码或 Astro：
+工具发行与内容仓准备：
 
 ```sh
-# 在源码仓打包；产物放到临时目录，不发布远端 Release
+node scripts/release-content-tools.mjs
+node scripts/prepare-content-repo.mjs --content src/content --output ../blog-content --tarball-url https://github.com/jasper0507/jaspers-blog/releases/download/content-tools-v0.1.0/jasper-blog-content-tools-0.1.0.tgz --repo jasper0507/blog-content --apply
+```
+
+同版本 GitHub Release 不会被覆盖。准备脚本复制当前内容快照（不提取旧历史），写入创作者说明、lockfile 和发布工作流，并在创建私有仓后关闭 Actions。创作者说明见 `packages/content-tools/content-repo/README.md`；凭据、工作流标识和切换交接见 [部署说明](docs/deployment.md)。生产凭据、启用触发与旧入口关闭由后续切换任务完成。
+
+本地也可只打包、安装到临时内容仓，无需网站源码或 Astro：
+
+```sh
 npm pack ./packages/content-tools --pack-destination /tmp
-# 在已有内容仓安装实际产物
 npm install /tmp/jasper-blog-content-tools-0.1.0.tgz
 ```
 
-在内容仓 `package.json` 中配置：
-
-```json
-{
-  "scripts": {
-    "new:post": "jasper-content new:post",
-    "new:shuoshuo": "jasper-content new:shuoshuo",
-    "publish": "jasper-content publish"
-  }
-}
-```
-
-完整内容仓模板（工作流、版本固定脚本、接入凭据说明）在 `packages/content-tools/content-repo/`。
-
-随后运行 `npm run new:post -- "文章标题"` 或 `npm run new:shuoshuo`。命令只写当前内容仓，不访问 Git 或网络。工具沿用现有模板（`draft: false`），创建后仍需补齐文章摘要和正文或说说正文；未准备公开时设为 `draft: true`。计数器缺失或损坏时报错，重名不覆盖，失败不占号，删除不回收号码。工具与网站共用 `packages/content-tools` 中的领域实现。
+命令只写当前内容仓，不访问 Git 或网络。工具沿用现有模板（`draft: false`），创建后仍需补齐文章摘要和正文或说说正文；未准备公开时设为 `draft: true`。计数器缺失或损坏时报错，重名不覆盖，失败不占号，删除不回收号码。工具与网站共用 `packages/content-tools` 中的领域实现。
