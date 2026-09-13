@@ -255,7 +255,7 @@ BLOG_CONTENT_DIR=/absolute/path/to/content npx astro dev
 
 `build:content` 未指定来源、来源不存在或必要状态缺失时直接失败，不回退到示例或源码内容。原有分别指定文章和说说目录的环境变量不再支持。`npm run check`、PR CI 和浏览器验收显式使用 `tests/fixtures/content` 公开示例；整站验收为不同测试隔离构建目录和缓存。
 
-当前 `npm run build`、`npm run dev`、源码仓的 `new:post` / `new:shuoshuo` 明确保留 `src/content` 过渡路径，原有 Pages 自动部署与内容跟踪不变。外部内容构建请使用 `build:content`。生产迁移、远端工具分发和统一发布工具由后续任务完成。
+当前 `npm run build`、`npm run dev`、源码仓的 `new:post` / `new:shuoshuo` 明确保留 `src/content` 过渡路径，原有 Pages 自动部署与内容跟踪不变。外部内容构建请使用 `build:content`。统一发布工作流模板与 `jasper-content publish` 已交付，见 `packages/content-tools/content-repo/`；正式建仓、凭据和生产切换由后续任务完成。
 
 本地打包后可把实际压缩包安装到独立内容仓，无需网站源码或 Astro：
 
@@ -272,9 +272,12 @@ npm install /tmp/jasper-blog-content-tools-0.1.0.tgz
 {
   "scripts": {
     "new:post": "jasper-content new:post",
-    "new:shuoshuo": "jasper-content new:shuoshuo"
+    "new:shuoshuo": "jasper-content new:shuoshuo",
+    "publish": "jasper-content publish"
   }
 }
 ```
+
+完整内容仓模板（工作流、版本固定脚本、接入凭据说明）在 `packages/content-tools/content-repo/`。
 
 随后运行 `npm run new:post -- "文章标题"` 或 `npm run new:shuoshuo`。命令只写当前内容仓，不访问 Git 或网络。工具沿用现有模板（`draft: false`），创建后仍需补齐文章摘要和正文或说说正文；未准备公开时设为 `draft: true`。计数器缺失或损坏时报错，重名不覆盖，失败不占号，删除不回收号码。工具与网站共用 `packages/content-tools` 中的领域实现。
