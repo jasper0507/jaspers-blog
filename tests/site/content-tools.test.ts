@@ -16,6 +16,7 @@ const packedFiles = [
   "create-content.js",
   "package.json",
   "post-rules.js",
+  "publish-content.js",
   "shanghai-time.js",
   "shuoshuo-rules.js",
 ];
@@ -70,7 +71,7 @@ async function installTool(workspace: string, content: string, packed: { filenam
     });
 }
 
-test("实际发行包只含创建工具，空仓延续号码且不覆盖重名文件", async () => {
+test("实际发行包只含内容工具，空仓延续号码且不覆盖重名文件", async () => {
   const workspace = await mkdtemp(join(tmpdir(), "content-tools-blank-"));
   try {
     const packed = await packTool(workspace);

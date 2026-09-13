@@ -1,0 +1,20 @@
+name: 通知内容仓发布
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: 跨仓通知
+        env:
+          CONTENT_DISPATCH_TOKEN: ${{ secrets.CONTENT_DISPATCH_TOKEN }}
+          CONTENT_REPO: ${{ vars.CONTENT_REPO }}
+        run: node scripts/notify-content-publish.mjs

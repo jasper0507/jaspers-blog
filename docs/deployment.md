@@ -37,6 +37,21 @@
 - 两个创建命令只写本地文件，不访问 Git 或网络，也不覆盖已有内容。
 - 技术文章图片依赖外部图床，仓库不校验图片是否存在或变化。
 
+## 统一发布流程（尚未切换生产）
+
+私有内容仓将是唯一正式发布执行位置。内容仓 `main` 推送、源码仓 `main` 更新发出的跨仓通知，以及无新内容时的 `workflow_dispatch` 重试，都进入同一条工作流：开始时固定两仓最新主分支提交，用该版本组合校验并构建，成功后由 Wrangler 上传现有 Cloudflare Pages 项目。
+
+模板、CLI 契约和凭据名称见 `packages/content-tools/content-repo/`。当前生产仍由本仓库的 Pages 自动 Git 部署提供；不要在未完成后续接入任务前写入生产凭据、启用正式触发或关闭该自动部署。公开源码 CI 继续只使用 `tests/fixtures/content`。
+
+创作者在内容仓使用：
+
+```sh
+npm run publish
+npm run publish -- "发布 Go 并发笔记"
+```
+
+推送成功不等于上线。校验或构建失败时内容已保存在内容仓，网站保留上一次成功版本；修复后可再次 `publish`，没有新改动也不会制造空提交。
+
 ## 日常发布
 
 全部改动都在 `src/content/**` 时，作者使用 GitHub ruleset 的 bypass 直接发布：

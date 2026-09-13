@@ -1,0 +1,99 @@
+name: 发布网站
+
+on:
+  push:
+    branches: [main]
+  repository_dispatch:
+    types: [source-updated]
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: 本次发布请求标识
+        required: false
+
+run-name: 发布 ${{ github.event.inputs.request_id || github.event.client_payload.request_id || github.sha }}
+
+concurrency:
+  group: site-publish
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  publish:
+    name: 发布
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SOURCE_REPO: ${{ vars.SOURCE_REPO }}
+    steps:
+      - name: 检出内容仓脚本
+        uses: actions/checkout@v6
+        with:
+          path: content
+
+      - name: 确定版本
+        id: pin
+        working-directory: content
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node pin-publish-versions.js
+
+      - name: 检出内容
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.pin.outputs.content_sha }}
+          path: content
+
+      - name: 检出源码
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ vars.SOURCE_REPO }}
+          ref: ${{ steps.pin.outputs.source_sha }}
+          path: site
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: site/.node-version
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: 安装依赖
+        working-directory: site
+        run: npm ci
+
+      - name: 校验并构建
+        working-directory: site
+        env:
+          BLOG_CONTENT_DIR: ${{ github.workspace }}/content
+          PUBLISH_CONTENT_SHA: ${{ steps.pin.outputs.content_sha }}
+          PUBLISH_SOURCE_SHA: ${{ steps.pin.outputs.source_sha }}
+          PUBLISH_RESULT_PATH: ${{ github.workspace }}/publish-result.json
+        run: node scripts/publish-site.mjs build
+
+      - name: 安装 Wrangler
+        working-directory: site
+        run: npm install wrangler@4 --no-save --no-fund --no-audit
+
+      - name: 部署
+        working-directory: site
+        env:
+          PUBLISH_CONTENT_SHA: ${{ steps.pin.outputs.content_sha }}
+          PUBLISH_SOURCE_SHA: ${{ steps.pin.outputs.source_sha }}
+          PUBLISH_SITE_URL: ${{ vars.SITE_URL }}
+          PAGES_PROJECT: ${{ vars.PAGES_PROJECT }}
+          PUBLISH_WRANGLER: ${{ github.workspace }}/site/node_modules/.bin/wrangler
+          PUBLISH_RESULT_PATH: ${{ github.workspace }}/publish-result.json
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/publish-site.mjs deploy
+
+      - name: 保存发布结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-result
+          path: publish-result.json
