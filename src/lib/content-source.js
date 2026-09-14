@@ -1,7 +1,7 @@
 import { statSync } from "node:fs";
 import { contentPaths } from "../../packages/content-tools/content-paths.js";
 
-/** 网站只有一个内容来源；过渡入口显式传入 src/content。 */
+/** 网站只有一个显式选择的完整内容来源。 */
 export function contentSource() {
   const selected = process.env.BLOG_CONTENT_DIR;
   if (!selected?.trim()) throw new Error("必须显式设置 BLOG_CONTENT_DIR 内容目录");

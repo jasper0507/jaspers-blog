@@ -7,14 +7,12 @@
     "node": ">=24.11.0"
   },
   "scripts": {
-    "dev": "BLOG_CONTENT_DIR=src/content astro dev",
+    "dev": "BLOG_CONTENT_DIR=tests/fixtures/content astro dev",
     "preview": "astro preview",
     "format": "prettier --no-error-on-unmatched-pattern --write \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card,search}.css\" \"scripts/**/*.mjs\" \"packages/**/*.{js,json,md}\" \"tests/site/**/*.ts\" \"playwright*.config.ts\" \"*.{json,mjs,ts}\" \"docs/**/*.md\"",
     "format:check": "prettier --no-error-on-unmatched-pattern --check \"src/**/*.{astro,js,ts}\" \"src/styles/{global,markdown-body,shuoshuo-card,search}.css\" \"scripts/**/*.mjs\" \"packages/**/*.{js,json,md}\" \"tests/site/**/*.ts\" \"playwright*.config.ts\" \".github/workflows/*.{yml,yaml}\" \"*.{json,mjs,ts}\" \"docs/**/*.md\"",
     "check": "BLOG_CONTENT_DIR=tests/fixtures/content JASPER_ACCEPTANCE_CACHE=node_modules/.astro-check astro check",
-    "build": "BLOG_CONTENT_DIR=src/content npm run build:content",
-    "new:post": "node scripts/new-post.mjs",
-    "new:shuoshuo": "node scripts/new-shuoshuo.mjs",
+    "build": "BLOG_CONTENT_DIR=tests/fixtures/content npm run build:content",
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "test:config": "node src/lib/hero-images.ts && node scripts/check-site.mjs",
     "test:fonts": "node scripts/check-fonts.mjs && node --test scripts/check-fetch-fonts.mjs",

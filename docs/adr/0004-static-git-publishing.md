@@ -1,5 +1,7 @@
 # 通过 Git 发布静态内容
 
+> 发布入口与单仓内容直推规则已由 [ADR-0034](0034-separate-content-repository.md) 取代；以下保留历史决策。实际切换状态见[部署说明](../deployment.md)。
+
 技术文章和说说都保存在仓库内，以 Markdown 编写并随 Git 推送触发 Cloudflare Pages 构建；不引入 CMS、数据库或管理后台。第一版默认在电脑端写作，通过一个最小命令生成带时间与稳定 ID 的说说文件，不建设手机发布桥梁。项目优先降低长期维护成本，让作者专注于内容，即使这意味着每次发布都需要提交代码仓库。
 
 2026-08-27 修订：创建命令只负责在本地生成内容，不访问 Git 或网络。普通内容发布先运行 `npm run build`，再直接使用 `git add`、`git commit`、`git push`；修改页面、脚本或依赖时才运行精简后的 `npm test`。不再维护发布包装、Git 同步模块或 Git hook。线上错误默认通过 `git revert` 后推送恢复，Cloudflare 历史部署回滚只作紧急手段。
