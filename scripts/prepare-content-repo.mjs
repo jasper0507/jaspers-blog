@@ -137,7 +137,7 @@ async function main() {
     seen.add(token.name);
   }
   await prepareContentRepo({
-    contentSource: values.content ?? join(defaultRoot, "src/content"),
+    contentSource: values.content,
     outputDir: values.output,
     tarballUrl: values["tarball-url"],
     contentRepo: values.repo ?? "jasper0507/blog-content",

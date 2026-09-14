@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Pagefind](https://img.shields.io/badge/Search-Pagefind-FFB400?style=for-the-badge)](https://pagefind.app/)
 
-一个以技术文章为核心、以说说承载轻量表达的中文个人网站。项目使用 Astro 生成静态页面，内容随 Git 推送到 Cloudflare Pages；站内搜索、标签、归档、RSS 与站点地图都在构建时生成。
+一个以技术文章为核心、以说说承载轻量表达的中文个人网站。项目使用 Astro 生成静态页面，私有内容仓统一构建并上传现有 Cloudflare Pages 项目；站内搜索、标签、归档、RSS 与站点地图都在构建时生成。
 
 访问 [Jasper's Blog](https://jasper0507.me/)。
 
@@ -21,7 +21,7 @@
 - [x] RSS（技术文章摘要 + 说说摘要）、Sitemap、Canonical URL、Open Graph 文本与结构化数据
 - [x] GFM、`==高亮==`、KaTeX、中文脚注，以及带文件名 / 行高亮 / diff 的 Shiki 代码块
 - [x] 拉丁字体与中文思源黑自托管，不依赖运行时字体 CDN
-- [x] 技术文章与说说创建命令；原始 Git 推送触发 Cloudflare Pages 发布
+- [x] 轻量创建与发布工具；内容推送与源码合并均触发内容仓统一发布
 - [x] GitHub Actions：PR 运行完整 Chromium/Axe 验证与 Firefox 冒烟，`main` 推送复核构建
 
 ## 🚀 项目结构
@@ -33,22 +33,17 @@
 │   ├── fonts/              # 自托管拉丁字体与 Noto Sans SC 分包
 │   └── images/hero/        # 首页主视觉照片，丢入 jpg 即可
 ├── packages/
-│   └── content-tools/      # 可独立安装的内容创建工具与共享领域规则
-├── scripts/                # 源码仓创建入口、搜索索引与领域验收脚本
+│   └── content-tools/      # 可独立安装的内容创建与发布工具、工作流模板及共享领域规则
+├── scripts/                # 工具发行、发布编排、搜索索引与领域验收脚本
 ├── src/
 │   ├── components/         # 正文、标签、搜索与技术文章阅读
-│   ├── content/
-│   │   ├── about.md           # 「关于我」正文
-│   │   ├── post-next-id.json  # 技术文章号码计数器（不要手改）
-│   │   ├── posts/             # 技术文章 Markdown
-│   │   └── shuoshuo/          # 说说 Markdown
 │   ├── layouts/            # 页面公共布局
 │   ├── lib/                # 内容查询与网站侧规则
 │   ├── pages/              # 页面与 XML 路由
 │   ├── styles/             # 全局、文章、说说与搜索样式
 │   └── content.config.ts   # Content Collections 数据结构
 ├── tests/
-│   ├── fixtures/           # 构建验收用内容
+│   ├── fixtures/           # 公开示例内容（含关于我与计数器）
 │   └── site/               # 站点验收用例
 ├── blog.config.ts          # 博客设置的唯一日常入口
 ├── astro.config.mjs        # Astro、Markdown 与代码高亮配置
@@ -75,79 +70,11 @@
 
 `/posts` 重定向到归档；旧搜索页 `/search` 重定向到首页。导航是「文章」（归档 / 标签）· 说说 · 关于 · 搜索放大镜。
 
-## ✍️ 日常使用
+## ✍️ 写作与网站维护
 
-### 通用流程
+技术文章、说说、「关于我」正文和号码计数器由私有内容仓维护。创作者只需克隆内容仓、`npm ci` 安装锁定工具，并使用创建与发布命令；详见[创作者说明](packages/content-tools/content-repo/README.md)。网站升级不要求创作者同步源码或更新工具。
 
-内容改动可以在 `main` 上创建并直接发布；源码、配置、依赖和 CI 改动必须使用 PR。
-
-1. 按下方说明创建技术文章、说说，或修改博客设置。
-2. 运行 `npm run dev`，打开 `http://localhost:4321` 检查页面。验收完整搜索时先停止开发服务器，再运行 `npm run build` 和 `npm run preview`；搜索入口是导航放大镜，焦点不在输入框时按 `/` 也可打开。
-3. 确认内容的 `draft`：`false` 会出现在本地预览并随下一次站点发布公开，`true` 会从页面、搜索、RSS 和站点地图中排除；草稿仍须填写完整字段和正文。
-4. 纯 `src/content/**` 改动运行 `npm run build` 后可直接推送；其他改动提交 PR，等待 `verify` 与 `browser-smoke` 通过后合并。
-
-### 发布技术文章
-
-运行项目命令创建技术文章；只提供标题（有空格时加引号）。公开网址由系统分配数字稳定 ID，不必也不允许指定号码：
-
-```sh
-npm run new:post -- "深度学习笔记"
-```
-
-命令会把标题写入模板，按标题生成 `src/content/posts/深度学习笔记.md`（去掉文件系统非法字符），并分配 `/posts/1/` 这类网址。同名文件不会被覆盖；创建失败时不会占用号码。改标题不会改文件名或网址。
-
-```md
----
-title: "深度学习笔记"
-description: "用于列表、搜索与页面元信息的简短摘要。"
-publishedAt: "2026-08-11T10:00:00+08:00"
-tags:
-  - "Astro"
-  - "前端开发"
-draft: true
-# 禁止修改
-id: 1
----
-
-从这里开始写正文。
-```
-
-- 模板自动填写标题、当前上海时间、`tags: []`、`draft: false` 和系统分配的 `id`；摘要与正文留空，补完前构建会失败。
-- `title`、`description`、`publishedAt`、`draft`、`id` 必填；文章不维护更新时间，`updatedAt` 和其他未知字段会使构建失败。
-- `id` 是正整数稳定身份，由创建命令写入；模板在该字段上方注明「禁止修改」。计数器文件 `src/content/post-next-id.json` 也不要手改。
-- `tags` 可省略或留空，同一篇文章内标签不得重复，也不需要预先登记。不同标签若生成相同网址，构建会失败（草稿也参与检查）。
-- `publishedAt` 必须是加引号的有效上海时间字符串 `"YYYY-MM-DDTHH:mm:ss+08:00"`；未加引号的 YAML 日期值、UTC `Z` 和其他时区均无效。
-- `draft: true` 不进入公开页面；准备发布时改为 `false`。发布时间只用于显示和排序，不提供定时发布。数字网址也不是发布时间顺序。
-- 正文不能为空。文章图片使用外部图床，并以普通 Markdown 图片语法引用。
-- 正文可用 GFM（表格、任务列表、删除线、自动链接、脚注）、`==高亮==`、`$...$` / `$$...$$` 公式和原生 `<details>`。代码块支持 `title="file.js"`、行高亮与 diff 标记。代码与行内代码中的 `==` 保持原样。
-- 保存后按通用流程预览；准备公开时确认 `draft: false`，再构建并用原始 Git 命令发布。
-
-### 发布说说
-
-运行命令创建带上海时间稳定 ID 的说说：
-
-```sh
-npm run new:shuoshuo
-```
-
-命令会生成 `src/content/shuoshuo/YYYYMMDD-HHmmss.md`。文件名形成 `/shuoshuo/YYYYMMDD-HHmmss/` 独立详情页网址，创建后不要重命名。编辑生成的文件：
-
-```md
----
-publishedAt: "2026-08-14T12:00:00+08:00"
-draft: false
----
-
-今天完成了博客的日常发布流程。
-```
-
-- 说说没有作者标题；时间流保留摘要折叠，独立详情页始终显示完整 Markdown。
-- 可以只有文字、只有 Markdown 图片，或两者都有。摘要从 Markdown AST 的普通文本和图片节点自动投影，最多 80 个用户感知字符；图片用 `[1 Image]`、`[N Images]` 计数并默认在折叠状态隐藏。
-- 代码、公式和原生 HTML 不单独参与摘要投影；只有这些节点、且没有普通文本或图片的说说会使构建失败。
-- 说说只允许 `publishedAt` 和 `draft` 两个字段；标题、摘要、标签等额外字段会使构建失败。
-- `publishedAt` 和文件名由命令按当前上海时间生成；可修改发布时间，但不要修改稳定 ID。发布时间格式要求与技术文章相同。同一秒内重复创建会因文件已存在而失败，下一秒重试即可。
-- 想暂不公开时改为 `draft: true`；准备公开时恢复为 `false`，再按通用流程预览和发布。
-- RSS 收录说说摘要，不含完整正文；说说不进入站内搜索、标签或归档。
+源码仓维护网站与工具，开发、默认构建和 CI 均使用公开示例内容。修改后提交 PR，等待 `verify` 与 `browser-smoke` 通过再合并；源码主分支更新通知私有内容仓发布。正式部署由内容仓统一执行，切换步骤及实际状态见[部署说明](docs/deployment.md)。
 
 ### 更新博客设置
 
@@ -157,25 +84,11 @@ draft: false
 
 不适合放进设置文件的内容使用固定位置：
 
-- “关于我”正文：[`src/content/about.md`](src/content/about.md)，可以留空但不能删除。
+- “关于我”正文：私有内容仓的 `about.md`，可以留空但不能删除。
 - 首页主视觉照片：[`public/images/hero/`](public/images/hero/)。只接受 `.jpg`，必须是 3:2（允许 1 像素误差）且至少 960×640；空目录、其它扩展名或不合格尺寸会使构建失败。增删就是加减文件。亮暗主题共用这一池，首页每次刷新随机展示一张；无脚本时使用文件名排序后的第一张。
 - 浏览器图标：推荐 [`public/favicon.svg`](public/favicon.svg)；也可以指向 `public/` 内其它 svg、png、ico，并在设置文件填写对应根相对路径。必须为 1:1，优先方形 SVG，PNG/ICO 至少提供 32×32 表示。
 
-修改博客设置后按通用流程预览并通过 PR 发布。Cloudflare Pages 使用 `npm run build` 和 `dist`，完整操作见 [Cloudflare Pages 部署与日常发布](docs/deployment.md)。
-
-### 站点发布
-
-纯内容改动在 `main` 上确认 `draft` 后，先构建，再使用原始 Git 命令发布：
-
-```sh
-npm run build
-git status
-git add -A
-git commit -m "发布新的技术文章"
-git push
-```
-
-普通内容发布只需生产构建，不运行 Playwright。修改页面、脚本、配置、依赖或 CI 时在分支上提交 PR；GitHub Actions 自动运行 `verify` 与 `browser-smoke`。推送或合并到 `main` 后，`build` 工作流与 Cloudflare Pages 都会构建；若线上版本有问题，执行 `git revert <错误提交>` 再推送。
+修改博客设置后本地预览并通过 PR 发布，完整操作见[部署说明](docs/deployment.md)。
 
 ## 💻 技术栈
 
@@ -202,75 +115,43 @@ npm ci
 npm run dev
 ```
 
-开发服务器默认位于 `http://localhost:4321`。要检查生产构建和完整搜索：
+开发、默认构建均使用 `tests/fixtures/content`，无需私有仓读取凭据。开发服务器默认位于 `http://localhost:4321`。要检查生产构建和完整搜索：
 
 ```sh
 npm run build
 npm run preview
 ```
 
-源码与内容仓库公开；`draft` 不是保密机制，敏感内容不得提交。构建产物不得依赖 Google Fonts 等第三方字体 CDN。
+源码仓公开、内容仓私有；原公开 Git 历史仍可读取。`draft` 控制网站发布，已公开页面仍可访问。构建产物不得依赖 Google Fonts 等第三方字体 CDN。
 
 ## 🧞 Commands
 
 所有命令均在项目根目录执行。
 
-| 命令                           | 作用                                               |
-| :----------------------------- | :------------------------------------------------- |
-| `npm ci`                       | 按 `package-lock.json` 安装依赖                    |
-| `npm run dev`                  | 启动本地开发服务器                                 |
-| `npm run build`                | 构建静态站点，并为已发布技术文章生成 Pagefind 索引 |
-| `npm run preview`              | 本地预览 `dist` 生产构建                           |
-| `npm run check`                | 运行 Astro 与 TypeScript 检查                      |
-| `npm run format`               | 使用 Prettier 格式化项目文件                       |
-| `npm run format:check`         | 检查项目文件格式，不修改文件                       |
-| `npm test`                     | 运行格式、类型、领域不变量和 Chromium 高层验收     |
-| `npm run test:browser-smoke`   | 运行 Firefox 核心交互冒烟                          |
-| `npm run new:post -- "<标题>"` | 按标题创建技术文章 Markdown，并分配数字网址        |
-| `npm run new:shuoshuo`         | 创建带上海时间稳定 ID 的说说 Markdown              |
+| 命令                         | 作用                                               |
+| :--------------------------- | :------------------------------------------------- |
+| `npm ci`                     | 按 `package-lock.json` 安装依赖                    |
+| `npm run dev`                | 启动本地开发服务器                                 |
+| `npm run build`              | 构建静态站点，并为已发布技术文章生成 Pagefind 索引 |
+| `npm run preview`            | 本地预览 `dist` 生产构建                           |
+| `npm run check`              | 运行 Astro 与 TypeScript 检查                      |
+| `npm run format`             | 使用 Prettier 格式化项目文件                       |
+| `npm run format:check`       | 检查项目文件格式，不修改文件                       |
+| `npm test`                   | 运行格式、类型、领域不变量和 Chromium 高层验收     |
+| `npm run test:browser-smoke` | 运行 Firefox 核心交互冒烟                          |
 
 ## ✨ Feedback & Suggestions
 
 发现缺陷或希望提出功能建议，请在 [GitHub Issues](https://github.com/jasper0507/jaspers-blog/issues) 新建 Issue；内容相关反馈也可以发送邮件至 [jasper0507.self@gmail.com](mailto:jasper0507.self@gmail.com)。
 
-## 独立内容目录与创建工具（过渡阶段）
+## 独立内容来源
 
-网站通过 `BLOG_CONTENT_DIR` 选择一个完整内容目录，路径相对于运行命令的目录，也可使用绝对路径：
+网站通过 `BLOG_CONTENT_DIR` 选择包含 `posts/`、`shuoshuo/`、`about.md` 和 `post-next-id.json` 的完整内容目录。内容子目录可以为空，关于我可以为空但必须存在，号码计数器必须大于所有既有文章 ID。
 
-```text
-content/
-  posts/
-  shuoshuo/
-  about.md
-  post-next-id.json
-```
-
-技术文章、说说、关于我正文、Markdown 校验和号码校验全部使用该来源。两个内容子目录可以为空，`about.md` 可以为空但必须存在；号码计数器必须有效且大于所有既有文章 ID。迁入现有内容时原样保留文件名、稳定 ID 和计数器，不从文章数量重新生成计数器。
+`npm run dev`、`npm run build`、类型检查与公开 CI 固定使用公开示例。生产工作流显式选择私有内容仓并运行 `scripts/publish-site.mjs`，来源缺失直接失败。维护者若需要单独验证一个完整目录，可运行：
 
 ```sh
 BLOG_CONTENT_DIR=/absolute/path/to/content npm run build:content
-BLOG_CONTENT_DIR=tests/fixtures/content npm run build:content
-BLOG_CONTENT_DIR=/absolute/path/to/content npx astro dev
 ```
 
-`build:content` 未指定来源、来源不存在或必要状态缺失时直接失败，不回退到示例或源码内容。原有分别指定文章和说说目录的环境变量不再支持。`npm run check`、PR CI 和浏览器验收显式使用 `tests/fixtures/content` 公开示例；整站验收为不同测试隔离构建目录和缓存。
-
-当前 `npm run build`、`npm run dev`、源码仓的 `new:post` / `new:shuoshuo` 明确保留 `src/content` 过渡路径，原有 Pages 自动部署与内容跟踪不变；这仍是唯一正式写作与发布入口。外部内容构建请使用 `build:content`。
-
-工具发行与内容仓准备：
-
-```sh
-node scripts/release-content-tools.mjs
-node scripts/prepare-content-repo.mjs --content src/content --output ../blog-content --tarball-url https://github.com/jasper0507/jaspers-blog/releases/download/content-tools-v0.1.0/jasper-blog-content-tools-0.1.0.tgz --repo jasper0507/blog-content --apply
-```
-
-同版本 GitHub Release 不会被覆盖。准备脚本复制当前内容快照（不提取旧历史），写入创作者说明、lockfile 和发布工作流，并在创建私有仓后关闭 Actions。创作者说明见 `packages/content-tools/content-repo/README.md`；凭据、工作流标识和切换交接见 [部署说明](docs/deployment.md)。生产凭据、启用触发与旧入口关闭由后续切换任务完成。
-
-本地也可只打包、安装到临时内容仓，无需网站源码或 Astro：
-
-```sh
-npm pack ./packages/content-tools --pack-destination /tmp
-npm install /tmp/jasper-blog-content-tools-0.1.0.tgz
-```
-
-命令只写当前内容仓，不访问 Git 或网络。工具沿用现有模板（`draft: false`），创建后仍需补齐文章摘要和正文或说说正文；未准备公开时设为 `draft: true`。计数器缺失或损坏时报错，重名不覆盖，失败不占号，删除不回收号码。工具与网站共用 `packages/content-tools` 中的领域实现。
+真实内容不再由源码仓跟踪。旧工作区可能仍有被忽略的 `src/content/` 副本；它不参与构建，也不是写作入口。迁移保留稳定 ID 和计数器，不改写历史。工具发行与部署配置见[维护说明](docs/deployment.md)。

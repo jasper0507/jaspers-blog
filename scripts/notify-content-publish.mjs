@@ -7,8 +7,8 @@ const token = process.env.CONTENT_DISPATCH_TOKEN?.trim();
 const repo = process.env.CONTENT_REPO?.trim();
 
 if (!token || !repo) {
-  console.log("未配置 CONTENT_DISPATCH_TOKEN 或 CONTENT_REPO，跳过跨仓通知（尚未启用正式触发）");
-  process.exit(0);
+  console.error("缺少跨仓发布配置：需要 CONTENT_DISPATCH_TOKEN 和 CONTENT_REPO");
+  process.exit(1);
 }
 
 const requestId = randomUUID();

@@ -14,7 +14,7 @@ This repository uses a single-context domain layout. See `docs/agents/domain.md`
 
 ### Publishing
 
-页面、脚本、配置、依赖、测试和 CI 的改动走 PR，等 `verify` 与 `browser-smoke` 通过后再合并。直接推 `main` 仅限全部改动都在 `src/content/**` 的文章或说说发布。详见 `docs/adr/0004-static-git-publishing.md`。
+源码仓全部改动走 PR，等 `verify` 与 `browser-smoke` 通过后再合并。写作内容由私有内容仓维护，内容推送与源码合并统一进入内容仓发布。部署配置、首次切换或故障恢复时读取 `docs/deployment.md`；两仓职责见 `docs/adr/0034-separate-content-repository.md`。
 
 ### Verification
 

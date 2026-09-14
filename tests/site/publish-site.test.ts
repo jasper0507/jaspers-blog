@@ -242,13 +242,14 @@ test("已有更新任务时构建成功也不上传，以免旧结果覆盖", { 
   await assert.rejects(readFile(dir.wranglerLog));
 });
 
-test("未配置跨仓凭据时跳过通知；配置后使用授权令牌触发同一流程", async t => {
+test("跨仓配置缺失时明确失败；配置后使用授权令牌触发同一流程", async t => {
   const dir = await workspace(t);
-  const skipped = await runNode(
-    notifyScript,
-    envFor(dir, { CONTENT_REPO: "", CONTENT_DISPATCH_TOKEN: "" }),
-  );
-  assert.match(skipped.stdout, /尚未启用正式触发/);
+  for (const config of [
+    { CONTENT_REPO: "", CONTENT_DISPATCH_TOKEN: "dispatch-token" },
+    { CONTENT_REPO: "jasper0507/blog-content", CONTENT_DISPATCH_TOKEN: "" },
+  ]) {
+    await assert.rejects(runNode(notifyScript, envFor(dir, config)), /缺少跨仓发布配置/);
+  }
   assert.equal(JSON.parse(await readFile(dir.statePath, "utf8")).dispatches.length, 0);
   await runNode(
     notifyScript,

@@ -1,6 +1,9 @@
 # 依赖
 node_modules/
 
+# 写作内容属于私有内容仓；旧工作区副本只保留在本机
+/src/content/
+
 # 构建产物
 dist/
 dist-settings/
