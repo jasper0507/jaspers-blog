@@ -272,6 +272,7 @@ test("内容仓工作流接收两种触发与重试，并固定检出已确定�
   );
   assert.match(source, /push:[\s\S]*branches:\s*\[[^\]]*main/);
   assert.match(source, /repository_dispatch:[\s\S]*source-updated/);
+  assert.match(source, /uses: actions\/upload-artifact@v7/);
   assert.match(source, /workflow_dispatch:/);
   assert.match(source, /concurrency:[\s\S]*group:\s*site-publish[\s\S]*cancel-in-progress:\s*true/);
   assert.match(source, /ref:\s*\$\{\{\s*steps\.pin\.outputs\.content_sha\s*\}\}/);
