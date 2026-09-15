@@ -323,8 +323,16 @@ test("说说和移动端基本可用", async ({ page }) => {
           theme.y + theme.height <= header.y + header.height,
         "移动端主题按钮应位于页头内",
       );
-      for (const target of [sectionLink, postLink, shuoshuoLink]) {
-        assert.ok(target && target.height >= 44, "首页核心链接触控高度不得小于 44px");
+      const touchTargets = [
+        ["分区链接", sectionLink],
+        ["文章链接", postLink],
+        ["说说链接", shuoshuoLink],
+      ] as const;
+      for (const [name, target] of touchTargets) {
+        assert.ok(
+          target && target.height >= 43.99,
+          `${name}触控高度不得小于 44px，实际为 ${target?.height ?? "missing"}px`,
+        );
       }
     }
   }

@@ -134,19 +134,11 @@ function jsonFields(args) {
 
 function handleApi(args) {
   failIf("api");
-  const method = takeFlag(args, ["-X", "--method"]) ?? "GET";
+  takeFlag(args, ["-X", "--method"]);
   const jq = takeFlag(args, ["--jq"]);
   const fields = takeRepeated(args, ["-f", "--raw-field", "-F"]);
   const path = args[0] ?? "";
   const state = loadState();
-  const permissions = path.match(/^repos\/([^/]+\/[^/]+)\/actions\/permissions$/);
-  if (permissions && method === "PUT") {
-    const enabled = fields.find(field => field.startsWith("enabled="))?.slice("enabled=".length);
-    state.actionsPermissions = state.actionsPermissions ?? {};
-    state.actionsPermissions[permissions[1]] = enabled === "true";
-    saveState(state);
-    return;
-  }
   const commit = path.match(/^repos\/([^/]+\/[^/]+)\/commits\/main$/);
   if (commit) {
     const sha = state.commits?.[commit[1]]?.main;
@@ -265,15 +257,6 @@ function handleRepo(args) {
     const jq = takeFlag(args, ["--jq"]);
     const name = args.find(item => item && !item.startsWith("-"));
     const sourceRepo = state.sourceRepo ?? "jasper0507/jaspers-blog";
-    const known = new Set([
-      sourceRepo,
-      ...(state.createdRepos ?? []).map(item => item.name),
-      ...(state.existingRepos ?? []),
-    ]);
-    if (name && !known.has(name)) {
-      console.error(`Could not resolve to a Repository: ${name}`);
-      process.exit(1);
-    }
     const nameWithOwner = name ?? sourceRepo;
     if (jq === ".nameWithOwner") {
       process.stdout.write(`${nameWithOwner}\n`);
@@ -284,27 +267,6 @@ function handleRepo(args) {
       return;
     }
     process.stdout.write(`${JSON.stringify({ nameWithOwner, visibility: "PRIVATE" })}\n`);
-    return;
-  }
-  if (sub === "create") {
-    failIf("repo-create");
-    takeFlag(args, ["--description", "-d"]);
-    const name = args.find(item => item && !item.startsWith("-"));
-    const isPrivate = args.includes("--private");
-    state.createdRepos = state.createdRepos ?? [];
-    if (!name) {
-      console.error("需要仓库名");
-      process.exit(1);
-    }
-    if (
-      state.createdRepos.some(item => item.name === name) ||
-      (state.existingRepos ?? []).includes(name)
-    ) {
-      console.error(`already exists: ${name}`);
-      process.exit(1);
-    }
-    state.createdRepos.push({ name, private: isPrivate });
-    saveState(state);
     return;
   }
   console.error(`未模拟的 gh repo ${sub}`);
