@@ -6,15 +6,19 @@ import { join, relative } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 import { contentPaths } from "./content-paths.js";
+import {
+  PUBLISH_REQUEST_ID_FIELD,
+  PUBLISH_RESULT_ARTIFACT,
+  PUBLISH_WORKFLOW,
+  RETRY_WITHOUT_WRITING_MESSAGE,
+  matchPublishRun,
+  parsePublishResult,
+  pinnedContentWarning,
+  publishStageLines,
+} from "./publish-task.js";
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_MESSAGE = "更新博客内容";
-const WORKFLOW = "publish.yml";
-const STAGES = [
-  ["validate", "校验"],
-  ["build", "构建"],
-  ["deploy", "部署"],
-];
 
 function pollMs() {
   const value = Number(process.env.JASPER_PUBLISH_POLL_MS ?? 2000);
@@ -127,23 +131,24 @@ export async function publishContent(directory, args) {
     }
   }
   if (pushed) console.log(`已推送 ${sha}`);
-  else console.log("没有写作内容改动，重新触发发布");
+  else console.log(RETRY_WITHOUT_WRITING_MESSAGE);
 
   let runInfo;
   try {
     if (pushed) {
-      runInfo = await waitForRun(gh, repo, item => item.event === "push" && item.headSha === sha, [
-        "--commit",
-        sha,
-      ]);
+      runInfo = await waitForRun(gh, repo, { pushedSha: sha }, ["--commit", sha]);
     } else {
       const requestId = randomUUID();
-      await gh(["workflow", "run", WORKFLOW, "-R", repo, "--field", `request_id=${requestId}`]);
-      runInfo = await waitForRun(
-        gh,
+      await gh([
+        "workflow",
+        "run",
+        PUBLISH_WORKFLOW,
+        "-R",
         repo,
-        item => item.event === "workflow_dispatch" && item.displayTitle.includes(requestId),
-      );
+        "--field",
+        `${PUBLISH_REQUEST_ID_FIELD}=${requestId}`,
+      ]);
+      runInfo = await waitForRun(gh, repo, { requestId });
     }
   } catch {
     console.log("无法确认远端结果");
@@ -160,7 +165,9 @@ export async function publishContent(directory, args) {
     unfinished();
     return;
   }
-  reportStages(result);
+  for (const line of publishStageLines(result)) console.log(line);
+  const warning = pinnedContentWarning(sha, result);
+  if (warning) console.log(warning);
   if (result.contentSha) console.log(`内容提交 ${result.contentSha}`);
   if (result.sourceSha) console.log(`源码提交 ${result.sourceSha}`);
   if (result.status === "success" && result.url) {
@@ -171,22 +178,6 @@ export async function publishContent(directory, args) {
   unfinished();
 }
 
-function reportStages(result) {
-  if (result.status === "success") {
-    for (const [, label] of STAGES) console.log(`${label}：通过`);
-    return;
-  }
-  const stoppedAt = STAGES.findIndex(([id]) => id === result.stage);
-  for (let index = 0; index < STAGES.length; index += 1) {
-    const [, label] = STAGES[index];
-    if (index < stoppedAt) console.log(`${label}：通过`);
-    else if (index === stoppedAt) {
-      console.log(`${label}：${result.status === "skipped" ? "跳过" : "失败"}`);
-      break;
-    }
-  }
-}
-
 async function listRuns(gh, repo, extra = []) {
   const { stdout } = await gh([
     "run",
@@ -194,7 +185,7 @@ async function listRuns(gh, repo, extra = []) {
     "-R",
     repo,
     "--workflow",
-    WORKFLOW,
+    PUBLISH_WORKFLOW,
     "--json",
     "databaseId,displayTitle,event,headSha,status",
     ...extra,
@@ -202,11 +193,10 @@ async function listRuns(gh, repo, extra = []) {
   return JSON.parse(stdout);
 }
 
-async function waitForRun(gh, repo, match, extra = []) {
+async function waitForRun(gh, repo, claim, extra = []) {
   const deadline = Date.now() + timeoutMs();
   while (Date.now() < deadline) {
-    const runs = await listRuns(gh, repo, extra);
-    const found = runs.find(match);
+    const found = matchPublishRun(await listRuns(gh, repo, extra), claim);
     if (found?.status === "completed") return found;
     await delay(pollMs());
   }
@@ -223,11 +213,11 @@ async function downloadResult(gh, repo, runId) {
       "-R",
       repo,
       "-n",
-      "publish-result",
+      PUBLISH_RESULT_ARTIFACT,
       "-D",
       directory,
     ]);
-    return JSON.parse(await readFile(join(directory, "publish-result.json"), "utf8"));
+    return parsePublishResult(await readFile(join(directory, "publish-result.json"), "utf8"));
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

@@ -3,6 +3,11 @@ import { writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import {
+  PUBLISH_WORKFLOW,
+  formatPublishResult,
+  initialPublishResult,
+} from "../packages/content-tools/publish-task.js";
 import { indexPublishedPosts } from "./lib/index-published-posts.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -30,7 +35,7 @@ async function run(command, args, options = {}) {
 }
 
 async function writeResult(path, result) {
-  await writeFile(path, `${JSON.stringify(result, null, 2)}\n`);
+  await writeFile(path, formatPublishResult(result));
 }
 
 async function newerRunExists(runId, repo, workflow) {
@@ -79,7 +84,7 @@ async function deploy(result, resultPath, dist) {
   const siteUrl = required("PUBLISH_SITE_URL");
   const project = required("PAGES_PROJECT");
   const wrangler = process.env.PUBLISH_WRANGLER?.trim() || "wrangler";
-  const workflow = process.env.PUBLISH_WORKFLOW?.trim() || "publish.yml";
+  const workflow = process.env.PUBLISH_WORKFLOW?.trim() || PUBLISH_WORKFLOW;
   const runId = process.env.GITHUB_RUN_ID?.trim();
   const repo = process.env.GITHUB_REPOSITORY?.trim();
   result.stage = "deploy";
@@ -136,12 +141,7 @@ export async function publishSite(phase = "all") {
   const resultPath =
     process.env.PUBLISH_RESULT_PATH?.trim() || join(sourceDir, "publish-result.json");
   const dist = process.env.JASPER_ACCEPTANCE_DIST?.trim() || join(sourceDir, "dist");
-  const result = {
-    contentSha,
-    sourceSha,
-    stage: "validate",
-    status: "failure",
-  };
+  const result = initialPublishResult({ contentSha, sourceSha });
 
   if (phase !== "deploy") await validateAndBuild(result, resultPath, dist);
   if (phase === "build") {
