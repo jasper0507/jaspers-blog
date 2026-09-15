@@ -251,7 +251,7 @@ test("已有未推送内容提交时继续推送，不空提交也不误认为�
   assert.equal(await git(content, ["rev-list", "--count", "HEAD"]), commitsBefore);
   assert.equal(await git(content, ["rev-parse", "origin/main"]), localSha);
   assert.match(stdout, /已上线 https:\/\/jasper0507\.me/);
-  assert.doesNotMatch(stdout, /重新触发发布/);
+  assert.doesNotMatch(stdout, /没有新的写作要提交/);
   const latest = JSON.parse(await readFile(statePath, "utf8")).runs.at(-1);
   assert.equal(latest.event, "push");
   assert.equal(latest.headSha, localSha);
@@ -281,7 +281,7 @@ test("未设置上游且无新改动时重试，不把同提交的历史成功�
   });
   await writeFile(statePath, `${JSON.stringify(before, null, 2)}\n`);
   const { stdout } = await run(["publish"]);
-  assert.match(stdout, /重新触发发布/);
+  assert.match(stdout, /没有新的写作要提交；将按仓库里此刻的内容和网站再发一次/);
   assert.match(stdout, /已上线 https:\/\/jasper0507\.me/);
   assert.equal(await git(content, ["rev-parse", "HEAD"]), sha);
   const retry = JSON.parse(await readFile(statePath, "utf8")).runs.find(
@@ -324,6 +324,7 @@ test("无新内容时不空提交，重试关联新任务且不把历史成功�
   await writeFile(statePath, `${JSON.stringify(before, null, 2)}\n`);
   const commitsBefore = await git(content, ["rev-list", "--count", "HEAD"]);
   const failure = await expectFailure(run(["publish"]));
+  assert.match(output(failure), /没有新的写作要提交；将按仓库里此刻的内容和网站再发一次/);
   assert.match(output(failure), /内容已保存但未上线/);
   assert.match(output(failure), /校验：失败/);
   assert.match(output(failure), /号码计数器无效/);

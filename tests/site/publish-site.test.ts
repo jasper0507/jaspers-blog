@@ -6,6 +6,10 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import {
+  PUBLISH_REQUEST_ID_FIELD,
+  PUBLISH_RESULT_ARTIFACT,
+} from "../../packages/content-tools/publish-task.js";
 
 const exec = promisify(execFile);
 const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -274,6 +278,8 @@ test("内容仓工作流接收两种触发与重试，并固定检出已确定�
   assert.match(source, /repository_dispatch:[\s\S]*source-updated/);
   assert.match(source, /uses: actions\/upload-artifact@v7/);
   assert.match(source, /workflow_dispatch:/);
+  assert.match(source, new RegExp(`${PUBLISH_REQUEST_ID_FIELD}:`));
+  assert.match(source, new RegExp(`name:\\s*${PUBLISH_RESULT_ARTIFACT}`));
   assert.match(source, /concurrency:[\s\S]*group:\s*site-publish[\s\S]*cancel-in-progress:\s*true/);
   assert.match(source, /ref:\s*\$\{\{\s*steps\.pin\.outputs\.content_sha\s*\}\}/);
   assert.match(source, /ref:\s*\$\{\{\s*steps\.pin\.outputs\.source_sha\s*\}\}/);
