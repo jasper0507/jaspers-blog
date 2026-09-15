@@ -56,7 +56,7 @@ npm run publish -- "自定义提交说明"
 ```
 
 命令只提交 `posts/`、`shuoshuo/`、`about.md` 和 `post-next-id.json`。推送成功表示内容已保存；
-只有关联任务的校验、构建和部署全部成功才表示上线。完整创作规则见内容仓 README。
+推送失败时远端没有该提交。只有关联任务的校验、构建和部署全部成功才表示上线。完整创作规则见内容仓 README。
 
 每个 `publish-result` 记录：
 

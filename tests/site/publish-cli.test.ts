@@ -207,7 +207,7 @@ test("远端内容超前时明确失败，保留本地提交且不强推", async
   const failure = await expectFailure(run(["publish"]));
   const text = output(failure);
   assert.match(text, /远端内容超前，无法推送/);
-  assert.match(text, /内容已保存但未上线/);
+  assert.doesNotMatch(text, /内容已保存但未上线/);
   assert.doesNotMatch(text, /已上线/);
   assert.equal(await git(content, ["log", "-1", "--pretty=%s"]), "更新博客内容");
   assert.equal(
@@ -227,7 +227,7 @@ test("推送被拒绝时保留本地提交并报告推送失败", async t => {
   const text = output(failure);
   assert.match(text, /推送失败/);
   assert.match(text, /模拟远端拒绝/);
-  assert.match(text, /内容已保存但未上线/);
+  assert.doesNotMatch(text, /内容已保存但未上线/);
   assert.doesNotMatch(text, /已上线/);
   assert.equal(await git(content, ["log", "-1", "--pretty=%s"]), "更新博客内容");
   assert.notEqual(

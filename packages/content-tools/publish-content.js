@@ -122,7 +122,7 @@ export async function publishContent(directory, args) {
       pushed = !pushWasUpToDate(result);
     } catch (error) {
       console.log(describePushError(error));
-      unfinished();
+      process.exitCode = 1;
       return;
     }
   }
