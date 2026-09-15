@@ -1,75 +1,108 @@
-# 内容仓统一发布与网站维护
+# 发布与维护
 
-## 职责与入口
+## 正式发布入口
 
-公开源码仓 `jasper0507/jaspers-blog` 维护网站、博客设置、首页主视觉、字体、依赖与实际工具实现。私有内容仓 `jasper0507/blog-content` 维护 `posts/`、`shuoshuo/`、`about.md` 和 `post-next-id.json`；正文图片继续使用现有图床。
+私有内容仓 `jasper0507/blog-content` 的 `.github/workflows/publish.yml` 是唯一生产发布入口：
 
-切换后，内容仓 `.github/workflows/publish.yml` 是唯一正式发布执行入口：内容主分支推送、源码主分支更新的 `source-updated` 通知、无改动时的手动重试都进入该流程。开始时固定两仓最新 `main` 的准确提交，校验并构建，再用 Wrangler 上传现有 Pages 项目、`main` 分支和 `dist` 静态产物，保留 `https://jasper0507.me`。
+- 内容仓 `main` 推送直接触发。
+- 源码仓 `main` 更新通过 `repository_dispatch` 触发。
+- `npm run publish` 在没有写作改动时使用 `workflow_dispatch` 重试。
 
-创作者只克隆内容仓、安装轻量工具，不需要源码副本、Astro、本地构建或新的 GitHub 登录流程。日常命令、格式、草稿保存和失败重试见[创作者说明](../packages/content-tools/content-repo/README.md)。
+工作流开始时固定两仓最新 `main` 提交，以该版本组合完成内容校验、Astro 构建和 Pagefind
+索引，最后通过 Wrangler 上传现有 Cloudflare Pages 项目 `jasper-blog`。并发组
+`site-publish` 会取消旧任务，部署前也会跳过已落后于更新任务的结果。
+
+Cloudflare Pages 的自动生产和预览 Git 部署均保持关闭。项目继续使用 `main` 生产分支，保留
+`jasper0507.me`、`blog.jasper0507.cc.cd` 和 `newblog-8ki.pages.dev`。不要重新启用 Git
+部署，否则会产生第二个生产入口。
+
+## 仓库配置
+
+凭据只保存在 GitHub Actions Secrets，不进入仓库、本地工作区或 artifact。
+
+| 仓库   | 名称                     | 类型     | 值或权限                            |
+| ------ | ------------------------ | -------- | ----------------------------------- |
+| 内容仓 | `SOURCE_REPO`            | variable | `jasper0507/jaspers-blog`           |
+| 内容仓 | `PAGES_PROJECT`          | variable | `jasper-blog`                       |
+| 内容仓 | `SITE_URL`               | variable | `https://jasper0507.me`             |
+| 内容仓 | `CLOUDFLARE_ACCOUNT_ID`  | secret   | Pages 项目所属账户                  |
+| 内容仓 | `CLOUDFLARE_API_TOKEN`   | secret   | Cloudflare Pages Edit               |
+| 源码仓 | `CONTENT_REPO`           | variable | `jasper0507/blog-content`           |
+| 源码仓 | `CONTENT_DISPATCH_TOKEN` | secret   | 仅限内容仓，Contents Read and write |
+
+内容仓工作流的 `GITHUB_TOKEN` 使用 `contents: read` 和 `actions: write`。源码仓默认令牌不能
+访问私有仓，因此跨仓通知使用单独的细粒度令牌。通知配置缺失会失败，避免源码已合并却被误报为
+已经上线。
+
+轮换令牌时先写入新 Secret，再手动触发一次对应流程验证。不要在日志或 Issue 中粘贴令牌值。
 
 ## 源码维护
 
-`npm run dev`、`npm run build`、类型检查和 CI 固定使用 `tests/fixtures/content`。生产工作流显式设置 `BLOG_CONTENT_DIR`，缺少必要内容或计数器时失败，不回退到示例。真实内容和生产日志留在私有仓工作流。
+源码仓的开发、构建和 CI 固定使用 `tests/fixtures/content`，不访问真实内容或私有仓凭据。
+所有源码变更通过 PR，等待 `verify` 与 `browser-smoke` 成功后合并。合并后确认：
 
-源码所有变更通过 PR，等待 `verify`（静态检查、领域测试、Chromium 和 Axe）与 `browser-smoke`（Firefox）成功且基于最新 `main` 后合并。源码主分支通知内容仓发布，无需等待下一次文章推送。公开 `build` 仅复核示例构建，不部署。源码不再有内容直推 bypass 例外。
+1. 源码仓的“通知内容仓发布”任务成功。
+2. 内容仓出现 `repository_dispatch` 发布任务。
+3. 该任务的校验、构建和部署均成功。
+4. `publish-result` 中的 `sourceSha` 与合并提交一致。
 
-## 远端配置
+## 内容发布
 
-凭据仅通过 GitHub Secrets 写入，不提交到两仓或创作者工作区。配置值由维护者管理。
+创作者只在私有内容仓运行：
 
-| 仓库   | 名称                     | 类型     | 用途                                      |
-| ------ | ------------------------ | -------- | ----------------------------------------- |
-| 内容仓 | `SOURCE_REPO`            | variable | `jasper0507/jaspers-blog`                 |
-| 内容仓 | `PAGES_PROJECT`          | variable | 从现有 Pages 项目核实的名称，不创建新项目 |
-| 内容仓 | `SITE_URL`               | variable | `https://jasper0507.me`                   |
-| 内容仓 | `CLOUDFLARE_ACCOUNT_ID`  | secret   | 现有项目所属账户                          |
-| 内容仓 | `CLOUDFLARE_API_TOKEN`   | secret   | 该账户的 Pages 上传权限                   |
-| 源码仓 | `CONTENT_REPO`           | variable | `jasper0507/blog-content`                 |
-| 源码仓 | `CONTENT_DISPATCH_TOKEN` | secret   | 限定内容仓的 GitHub App 令牌或 PAT        |
+```sh
+npm run publish
+npm run publish -- "自定义提交说明"
+```
 
-跨仓通知调用 `repository_dispatch`。细粒度令牌需要目标内容仓的 **Contents: write** 权限（仅 Actions: write 不足），见 [GitHub API 权限说明](https://docs.github.com/en/rest/repos/repos#create-a-repository-dispatch-event)。源码默认 `GITHUB_TOKEN` 不能跨仓读取私有内容。缺少通知令牌或目标标识会明确失败，不能将未发布误报为成功。
+命令只提交 `posts/`、`shuoshuo/`、`about.md` 和 `post-next-id.json`。推送成功表示内容已保存；
+只有关联任务的校验、构建和部署全部成功才表示上线。完整创作规则见内容仓 README。
 
-内容仓工作流的 `GITHUB_TOKEN` 使用 `contents: read` 和 `actions: write` 读取版本并查询任务。部署凭据仅注入部署步骤。工作流模板和 `pin-publish-versions.js` 由源码仓维护，改动后由维护者同步到内容仓；不会随工具升级自动覆盖。
+每个 `publish-result` 记录：
 
-## 首次切换顺序
+| 字段         | 含义                              |
+| ------------ | --------------------------------- |
+| `contentSha` | 本次内容仓提交                    |
+| `sourceSha`  | 本次源码仓提交                    |
+| `stage`      | `validate`、`build` 或 `deploy`   |
+| `status`     | `success`、`failure` 或 `skipped` |
+| `url`        | 仅部署成功时的网站地址            |
+| `error`      | 失败或跳过原因                    |
 
-以下是 #55 已授权执行的切换顺序。实际结果见下方执行记录；今后涉及外部配置或恢复时仍按授权范围操作。
+若初始化、依赖安装或必要配置读取失败，artifact 可能尚未生成；以私有工作流状态和日志为准。
 
-1. 暂停两仓写作与合并，检查两仓工作区、暂存区及远端最新主分支。逐文件核对当前正文、文件名、文章和说说稳定 ID、计数器。以准备阶段快照为基线检查后续增量；两边都改过时先解决冲突，保护未提交文件，不用旧快照覆盖新内容。同步时保持内容仓 Actions 关闭。
-2. 核实现有 Cloudflare Pages 项目、账户、域名、当前部署和 Git 构建设置，记录恢复所需的原值。配置上表变量与 Secrets，内容仓仍不启用发布。将本次创作者说明同步到内容仓；内容没有增量时不制造空内容提交。
-3. 推送源码分支并创建 PR，等待 `verify` 与 `browser-smoke` 成功。先关闭现有 Pages 的自动生产分支部署和预览分支部署，并确认没有旧 Git 构建仍会上传。然后合并源码 PR；此时内容仓 Actions 仍关闭，首次通知可能失败，启用后必须重试并确认成功。务必在移除真实内容的源码进入 `main` 前关闭 Pages 自动 Git 部署，避免示例构建成为生产版本。
-4. 启用内容仓 Actions。在内容仓推送本次创作者说明更新，验证一次 `push` 发布；再重跑源码合并对应的通知任务，验证一次 `repository_dispatch` 发布。两次都记录实际两仓提交、任务链接和结果。第二次验证应在没有新的内容推送时成功，证明源码更新能独立上线。
-5. 核对正式域名、代表性技术文章和说说稳定网址、「关于我」、RSS、站点地图及有公开文章时的搜索。核对草稿 URL 不可访问且不进入页面、RSS、搜索和站点地图。确认旧 Git 自动部署关闭、两个触发都只通过内容仓上传后恢复写作。
+## 故障恢复
 
-Cloudflare 支持停用 Git 自动部署并保留现有项目进行 Wrangler 上传；不新建或迁移项目类型。设置入口及生产/预览开关见 [Git 集成说明](https://developers.cloudflare.com/pages/configuration/git-integration/)和[分支部署控制](https://developers.cloudflare.com/pages/configuration/branch-build-controls/)。
+- 校验、构建或部署失败：保留提交和上一个成功站点，修复后重新运行 `npm run publish`。
+- 没有新内容需要重试：直接运行 `npm run publish`，命令不会创建空提交。
+- 内容错误：在内容仓 `git revert <提交>`，再运行发布命令。
+- 源码错误：创建 revert PR，通过检查后合并。
+- 紧急恢复：可在 Cloudflare Pages 回滚到已知成功部署，随后仍须修正 Git 并重新发布。
 
-## 发布结果与恢复
+发布失败时不强推、不自动撤销内容、不自动解决冲突。若必须临时恢复 Pages Git 部署，先停用内容仓
+工作流，确认源码提交含有完整生产内容，并取得单独授权；恢复后只能保留一个正式入口。
 
-版本固定成功后在私有工作流记录两仓提交，发布脚本写入的 artifact `publish-result` 包含 `contentSha`、`sourceSha`、`stage`（`validate` / `build` / `deploy`）、`status`（`success` / `failure` / `skipped`）、失败原因及仅成功时提供的 `url`。初始化、依赖安装或进入部署前缺配置等失败应查看私有任务日志；artifact 可能缺失或仍是前一阶段的结果，最终上线结论必须结合本次工作流成功状态。不要把私有生产日志复制到公开源码 CI 或 PR。
+## 内容工具发行
 
-并发组 `site-publish` 取消旧任务，上传前检查更新任务并跳过旧结果；保持现有基本串行机制，不保证每个中间提交都上线。发布命令通过请求 ID 或内容提交关联本次任务，不把历史成功误认为本次成功。
+`packages/content-tools` 是无运行时依赖的创建与发布工具。发布新版本时：
 
-推送成功仅代表内容保存；校验、构建或部署失败时保留提交和上次成功站点，不自动撤销。修复后再次运行 `npm run publish`；没有新改动时重试工作流，不制造空提交。源码通知失败可重跑对应 Actions 任务。
+1. 更新 `packages/content-tools/package.json` 的版本和对应说明。
+2. 运行工具与发布测试。
+3. 执行 `node scripts/release-content-tools.mjs` 创建不可覆盖的 GitHub Release 资源。
+4. 在内容仓更新固定资源 URL 和 lockfile，运行 `npm ci` 验证。
+5. 提交内容仓维护文件；创作者随后重新运行 `npm ci`。
 
-确需撤销内容时，由作者在内容仓 `git revert` 后发布；源码撤销走 PR。紧急情况下可由维护者回滚 Pages 到已知成功部署，之后修正 Git。若首次切换失败，保持新流程为唯一入口并修复重试；恢复旧 Git 部署必须先停用新发布、恢复仍包含真实内容的源码版本并取得批准，不能从已隔离源码的示例构建恢复生产。
+普通网站更新不要求升级内容工具。源码仓中的 `packages/content-tools/content-repo/` 保存内容仓维护
+文件的参考版本；同步时只修改维护文件，不覆盖写作内容或号码计数器。
 
-## 工具发行
+## 发布后检查
 
-内容仓锁定 `@jasper-blog/content-tools@0.1.0`，发行地址为 `https://github.com/jasper0507/jaspers-blog/releases/download/content-tools-v0.1.0/jasper-blog-content-tools-0.1.0.tgz`。锁定安装使用 `npm ci`，普通网站升级不要求更新该包。
+涉及内容规则、路由或发布流程的变更至少检查：
 
-工具升级时，开发者先更改版本并运行 `node scripts/release-content-tools.mjs`，经授权上传新 Release；同版本拒绝覆盖。再更新内容仓依赖与 lockfile，创作者重新 `npm ci`。`prepare-content-repo.mjs` 仅用于从显式 `--content` 指定的快照初始化新的空目录和仓库，不用于覆盖既有内容仓或同步增量。
+- `https://jasper0507.me/`
+- 一篇代表性技术文章和一条说说的稳定网址
+- `/about/`、`/rss.xml`、`/sitemap-index.xml`
+- 存在公开技术文章时的 Pagefind 搜索
+- 草稿不出现在页面、搜索、RSS 和站点地图
 
-## #55 执行记录
-
-2026-09-14 本地准备检查：两仓工作区起始干净；内容仓为私有、默认分支 `main`，本地与远端均为 `3be83f63865614d1ce259a02efaa854ae3aed4d2`。33 个写作文件逐字节一致，包括关于我、所有稳定 ID 和号码计数器，无需同步增量。源码起始提交为 `8622854e69d6e0fc0eeebbf917f70c392c90d4b3`。真实文件仅停止 Git 跟踪，本机旧副本保留并忽略；切换执行前必须重新核对是否有新写作改动。
-
-已完成远端配置与切换：现有 Pages 项目为 `jasper-blog`，保留原 `newblog-8ki.pages.dev`、`blog.jasper0507.cc.cd` 和 `jasper0507.me` 域名，生产分支仍为 `main`。自动生产 Git 部署已关闭，自动预览分支设为 `none`；关闭时无运行中的旧部署。所需变量和 Secrets 已配置，内容仓 Actions 已启用，未扩大其允许的第三方 Actions 范围。源码隔离 [PR #61](https://github.com/jasper0507/jaspers-blog/pull/61) 的 `verify` 与 `browser-smoke` 通过后合并。
-
-[内容推送发布](https://github.com/jasper0507/blog-content/actions/runs/34820002024)与[源码通知发布](https://github.com/jasper0507/blog-content/actions/runs/34843280381)均完成校验、构建及部署，结果为 `deploy/success`；第二次没有新的内容推送。两仓准确提交和生产结果保存在私有工作流的版本记录及 `publish-result` artifact，私有日志不复制到公开 CI。线上首页、代表性文章 `/posts/29/`、说说 `/shuoshuo/20260804-112805/`、关于我、RSS、站点地图和 Pagefind 均可访问；实际搜索命中原文章稳定网址。生产快照包含 29 篇公开技术文章和 1 条公开说说，没有真实草稿；草稿隔离由公开示例的整站验收覆盖，不为验收向生产写入测试草稿。旧公开 Git 历史仍可读取；本次没有改写或迁移历史提交。
-
-本地验收在不含 `src/content/`、不含私有仓副本的临时源码目录完成（仅复用本机已安装依赖）：`npm test` 的格式、类型、字体、配置、领域和 Markdown 检查通过；受沙箱限制的浏览器与进程测试获批后单独重跑，Chromium 13 项、发布及保护场景 45 项通过。保护场景有 1 项曾因并行构建的 Astro 临时文件缺失失败，停止其他构建后仅重跑该场景通过。另行 `npm run build` 与 Firefox 冒烟 1 项通过。code-review：Standards 无发现；Spec 的 1 项结果文件说明已修正，生产验收结果见上文。
-
-## 字体维护
-
-字体资源仍由源码仓自托管。运行 `npm run fonts:fetch` 更新中文分包期间暂停其他字体更新和构建；`npm run test:fonts` 验证已提交资源与更新事务。普通构建不访问字体下载网络。
+生产环境不为验收创建测试草稿；草稿隔离使用公开示例内容验证。

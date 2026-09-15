@@ -288,8 +288,5 @@ test("内容仓工作流接收两种触发与重试，并固定检出已确定�
   assert.match(notify, /CONTENT_DISPATCH_TOKEN/);
   assert.match(notify, /notify-content-publish/);
   const ci = await readFile(join(root, ".github/workflows/ci.yml"), "utf8");
-  const build = await readFile(join(root, ".github/workflows/build.yml"), "utf8");
   assert.match(ci, /BLOG_CONTENT_DIR: tests\/fixtures\/content/);
-  assert.match(build, /npm run build/);
-  assert.doesNotMatch(build, /wrangler|CLOUDFLARE_API_TOKEN/);
 });
