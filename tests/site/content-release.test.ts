@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,6 +11,10 @@ import { releaseContentTools } from "../../scripts/release-content-tools.mjs";
 
 const exec = promisify(execFile);
 const root = fileURLToPath(new URL("../../", import.meta.url));
+const version = JSON.parse(readFileSync(join(root, "packages/content-tools/package.json"), "utf8"))
+  .version as string;
+const releaseTag = `content-tools-v${version}`;
+const releaseFilename = `jasper-blog-content-tools-${version}.tgz`;
 const fakeGh = fileURLToPath(new URL("./fixture/fake-gh.mjs", import.meta.url));
 const packedFiles = [
   "README.md",
@@ -71,8 +76,8 @@ test("发行包只含创建与发布工具，并上传到未占用的 GitHub Rel
   const state = JSON.parse(await readFile(testWorkspace.statePath, "utf8"));
   const log = await readFile(testWorkspace.logPath, "utf8");
 
-  assert.equal(packed.tag, "content-tools-v0.1.0");
-  assert.equal(packed.filename, "jasper-blog-content-tools-0.1.0.tgz");
+  assert.equal(packed.tag, releaseTag);
+  assert.equal(packed.filename, releaseFilename);
   assert.deepEqual(files, packedFiles);
   assert.equal(state.releases.length, 1);
   assert.equal(state.releases[0].tag, packed.tag);
@@ -84,7 +89,7 @@ test("发行包只含创建与发布工具，并上传到未占用的 GitHub Rel
 test("已发布同版本时拒绝覆盖发行资源", async t => {
   const testWorkspace = await workspace(t);
   const state = JSON.parse(await readFile(testWorkspace.statePath, "utf8"));
-  state.releases.push({ tag: "content-tools-v0.1.0", assets: ["existing.tgz"] });
+  state.releases.push({ tag: releaseTag, assets: ["existing.tgz"] });
   await writeFile(testWorkspace.statePath, `${JSON.stringify(state)}\n`);
 
   await assert.rejects(
@@ -97,5 +102,5 @@ test("已发布同版本时拒绝覆盖发行资源", async t => {
   );
 
   const after = JSON.parse(await readFile(testWorkspace.statePath, "utf8"));
-  assert.deepEqual(after.releases, [{ tag: "content-tools-v0.1.0", assets: ["existing.tgz"] }]);
+  assert.deepEqual(after.releases, [{ tag: releaseTag, assets: ["existing.tgz"] }]);
 });

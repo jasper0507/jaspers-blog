@@ -100,29 +100,29 @@ const retryRun = {
   status: "completed",
 };
 
-test("有推送时认领同一笔头提交的推送任务", () => {
+test("有推送时认领同一笔头提交触发的发布任务", () => {
   assert.equal(matchPublishRun([retryRun, pushRun], { pushedSha: "11".repeat(20) }), pushRun);
 });
 
-test("无推送时用请求编号认领调度任务", () => {
+test("无推送时用请求编号认领发布任务", () => {
   assert.equal(
     matchPublishRun([pushRun, retryRun], { requestId: "0f0f0f0f-aaaa-bbbb-cccc-ddddeeeeffff" }),
     retryRun,
   );
 });
 
-test("请求编号认领不会选中同头提交的推送任务", () => {
+test("请求编号认领不会选中同头提交、由推送触发的发布任务", () => {
   assert.equal(
     matchPublishRun([pushRun], { requestId: "0f0f0f0f-aaaa-bbbb-cccc-ddddeeeeffff" }),
     undefined,
   );
 });
 
-test("推送认领不会选中同头提交的调度任务", () => {
+test("推送认领不会选中同头提交、由重试触发的发布任务", () => {
   assert.equal(matchPublishRun([retryRun], { pushedSha: "11".repeat(20) }), undefined);
 });
 
-test("两个调度任务按请求编号区分，不以头提交当主键", () => {
+test("两次重试按请求编号区分，不以头提交当主键", () => {
   const older = { ...retryRun, displayTitle: "发布 aaaa-1111" };
   const newer = { ...retryRun, displayTitle: "发布 bbbb-2222" };
   assert.equal(matchPublishRun([older, newer], { requestId: "bbbb-2222" }), newer);
