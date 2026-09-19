@@ -22,7 +22,7 @@ const structuredData = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "BlogPosting",
   headline: post.title,
-  description: post.description,
+  description: post.description.trim() || blogSettings.site.description,
   url: postUrl.href,
   mainEntityOfPage: postUrl.href,
   datePublished: post.publishedAt.iso,

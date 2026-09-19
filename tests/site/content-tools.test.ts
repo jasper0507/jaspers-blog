@@ -20,6 +20,8 @@ const packedFiles = [
   "publish-task.js",
   "shanghai-time.js",
   "shuoshuo-rules.js",
+  "tag-rules.js",
+  "validate-content.js",
 ];
 
 async function packTool(workspace: string) {
@@ -113,11 +115,7 @@ test("发行包在已有公开内容上创建后，既有网址、草稿排除�
     await run("new:post", "独立创建");
     const created = join(content, "posts/独立创建.md");
     assert.match(await readFile(created, "utf8"), /^id: 7$/m);
-    await writeFile(
-      created,
-      (await readFile(created, "utf8")).replace('description: ""', 'description: "独立目录摘要"') +
-        "\n独立目录正文。\n",
-    );
+    await writeFile(created, `${await readFile(created, "utf8")}\n独立目录正文。\n`);
     await run("new:shuoshuo");
     const knownShuoshuo = new Set([
       "20240101-000001.md",
@@ -149,7 +147,13 @@ test("发行包在已有公开内容上创建后，既有网址、草稿排除�
         await readFile(join(output, "posts/2/index.html"), "utf8"),
         /视觉验收专用技术文章/,
       );
-      assert.match(await readFile(join(output, "posts/7/index.html"), "utf8"), /独立目录正文/);
+      const createdHtml = await readFile(join(output, "posts/7/index.html"), "utf8");
+      assert.match(createdHtml, /独立目录正文/);
+      assert.doesNotMatch(createdHtml, /<p class="post-description">/);
+      assert.match(
+        createdHtml,
+        /name="description" content="Jasper 的个人技术博客，记录技术文章与说说。"/,
+      );
       assert.match(await readFile(join(output, "about/index.html"), "utf8"), /我是公开示例作者/);
       assert.match(
         await readFile(join(output, `shuoshuo/${added.slice(0, -3)}/index.html`), "utf8"),

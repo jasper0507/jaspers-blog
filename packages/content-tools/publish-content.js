@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { relative } from "node:path";
 import { promisify } from "node:util";
 import { contentPaths } from "./content-paths.js";
+import { validateContent } from "./validate-content.js";
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_MESSAGE = "更新博客内容";
@@ -51,6 +52,42 @@ function describePushError(error) {
   return `推送失败：${text}`;
 }
 
+function parseStatusZ(stdout) {
+  if (!stdout) return [];
+  const entries = [];
+  const parts = stdout.split("\0").filter(Boolean);
+  for (let index = 0; index < parts.length;) {
+    const item = parts[index];
+    const code = item.slice(0, 2);
+    const path = item.slice(3);
+    if (code.includes("R") || code.includes("C")) {
+      entries.push({ code, path, orig: parts[index + 1] });
+      index += 2;
+      continue;
+    }
+    entries.push({ code, path });
+    index += 1;
+  }
+  return entries;
+}
+
+function statusLabel(code) {
+  if (code === "??" || code.includes("A")) return "新文件";
+  if (code.includes("D")) return "已删除";
+  if (code.includes("R")) return "已重命名";
+  return "已修改";
+}
+
+function formatWritingStatus(stdout) {
+  return parseStatusZ(stdout)
+    .map(entry =>
+      entry.orig
+        ? `${statusLabel(entry.code)}  ${entry.orig} -> ${entry.path}`
+        : `${statusLabel(entry.code)}  ${entry.path}`,
+    )
+    .join("\n");
+}
+
 /** @param {string} directory @param {string[]} args */
 export async function publishContent(directory, args) {
   if (args.length > 1) {
@@ -68,10 +105,18 @@ export async function publishContent(directory, args) {
         ...(extra.env ?? {}),
       },
     });
-  const status = (await git(["status", "--short", "--", ...paths])).stdout.trim();
+  const status = (await git(["status", "-z", "--", ...paths])).stdout;
+  if (!status) {
+    const unpushedFiles = await unpushedWritingFiles(git, paths);
+    if (unpushedFiles !== null && unpushedFiles.length === 0) {
+      console.log(NOTHING_TO_PUBLISH);
+      return;
+    }
+  }
+  await validateContent(directory);
   if (status) {
     console.log("待提交：");
-    console.log(status);
+    console.log(formatWritingStatus(status));
     await git(["add", "-A", "--", ...paths]);
     await git(["commit", "--only", "-m", message, "--", ...paths]);
   }

@@ -68,14 +68,15 @@ make publish
 make publish m="自定义提交说明"
 ```
 
-发布命令只提交写作内容与号码计数器并推送；上线由远端工作流完成，命令不等待收据。草稿会保存到私有仓，
+发布命令先校验写作内容，再提交写作路径与号码计数器并推送；失败则中文报错且不提交。上线由远端工作流完成，命令不等待收据。草稿会保存到私有仓，
 但从页面、搜索、RSS 和站点地图排除。完整格式与失败重试说明见
 [内容仓 README](packages/content-tools/content-repo/README.md)。
 
 生产发布、凭据、故障恢复和工具发行见[维护手册](docs/deployment.md)。架构边界见
 [ADR-0034](docs/adr/0034-separate-content-repository.md)、
 [ADR-0035](docs/adr/0035-creator-publish-ends-at-push.md)、
-[ADR-0036](docs/adr/0036-make-as-daily-command-surface.md)。
+[ADR-0036](docs/adr/0036-make-as-daily-command-surface.md)、
+[ADR-0037](docs/adr/0037-publish-validates-content-locally.md)。
 
 ## 站点能力
 

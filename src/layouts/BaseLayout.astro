@@ -24,7 +24,7 @@ const { github, email } = blogSettings.author;
 const footerCopyright = blogSettings.footer.copyright;
 const pageData = Astro.props;
 const title = pageData.title ? `${pageData.title} | ${siteTitle}` : siteTitle;
-const description = pageData.description ?? defaultDescription;
+const description = pageData.description?.trim() || defaultDescription;
 const canonical = new URL(Astro.url.pathname, url);
 const path = Astro.url.pathname;
 const inArticles = ["/posts/", "/tags/", "/archives/"].some(prefix => path.startsWith(prefix));

@@ -2,7 +2,7 @@ import { getCollection, render } from "astro:content";
 import type { CollectionEntry, RenderResult } from "astro:content";
 import { assertPostStableIds } from "../../packages/content-tools/post-rules.js";
 import { contentSource } from "./content-source.js";
-import { getTag } from "./tags";
+import { getTag } from "../../packages/content-tools/tag-rules.js";
 
 const isoDateFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Shanghai",
@@ -130,7 +130,7 @@ async function createPublishedCatalog(
         id: entry.data.id,
         href: `/posts/${entry.data.id}/`,
         title: entry.data.title,
-        description: entry.data.description,
+        description: entry.data.description.trim(),
         publishedAt: {
           value: entry.data.publishedAt,
           iso: entry.data.publishedAt.toISOString(),

@@ -113,7 +113,9 @@ test("有内容改动时只提交写作文件并推送，不夹带入口文件",
   assert.equal(files, "posts/alpha.md\nshuoshuo/20240101-000002.md");
   assert.equal(staged, "package.json");
   assert.equal(await readFile(join(content, "posts/draft.md"), "utf8"), beforeDraft);
-  assert.match(stdout, /posts\/alpha\.md/);
+  assert.match(stdout, /已修改  posts\/alpha.md/);
+  assert.match(stdout, /已删除  shuoshuo\/20240101-000002.md/);
+  assert.doesNotMatch(stdout, /\?\?/);
   assert.match(stdout, new RegExp(`已推送 ${sha}`));
   assert.doesNotMatch(stdout, /已上线/);
   assert.equal(await git(content, ["rev-parse", "origin/main"]), sha);
@@ -265,5 +267,50 @@ id: 7
     await readFile(join(content, ".github/workflows/publish.yml"), "utf8"),
     "name: keep\n",
   );
+  assert.match(stdout, /新文件  posts\/new-note.md/);
+  assert.doesNotMatch(stdout, /\?\?/);
   assert.match(stdout, new RegExp(`已推送 ${sha}`));
+});
+
+test("空摘要有正文可以发布，空正文在提交前失败", async t => {
+  const { content, run } = await setup(t);
+  await writeFile(
+    join(content, "posts/empty-desc.md"),
+    `---
+title: 空摘要
+description: ""
+publishedAt: "2026-09-19T12:00:00+08:00"
+tags: []
+draft: false
+id: 7
+---
+
+有正文。
+`,
+  );
+  await writeFile(join(content, "post-next-id.json"), '{"next":8}\n');
+  const { stdout } = await run(["publish"]);
+  assert.match(stdout, /新文件  posts\/empty-desc.md/);
+  assert.doesNotMatch(stdout, /\?\?/);
+  assert.match(stdout, /已推送/);
+
+  await writeFile(
+    join(content, "posts/empty-body.md"),
+    `---
+title: 空正文
+description: ""
+publishedAt: "2026-09-19T12:00:00+08:00"
+tags: []
+draft: false
+id: 8
+---
+`,
+  );
+  await writeFile(join(content, "post-next-id.json"), '{"next":9}\n');
+  const before = await git(content, ["rev-parse", "HEAD"]);
+  const failure = await expectFailure(run(["publish"]));
+  assert.match(output(failure), /技术文章 empty-body 的正文不能为空/);
+  assert.doesNotMatch(output(failure), /已推送/);
+  assert.doesNotMatch(output(failure), /\?\?/);
+  assert.equal(await git(content, ["rev-parse", "HEAD"]), before);
 });

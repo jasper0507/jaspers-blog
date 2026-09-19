@@ -64,7 +64,9 @@ const shuoshuoCount = publishedShuoshuo.length;
               <h3>
                 <a href={latestPost.href}>{latestPost.title}</a>
               </h3>
-              <p class="post-preview-description">{latestPost.description}</p>
+              {latestPost.description ? (
+                <p class="post-preview-description">{latestPost.description}</p>
+              ) : null}
             </article>
           ) : (
             <p class="empty-state">技术文章尚未发布。</p>

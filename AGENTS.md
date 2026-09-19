@@ -14,7 +14,7 @@ This repository uses a single-context domain layout. See `docs/agents/domain.md`
 
 ### Publishing
 
-源码仓全部改动走 PR，等 `verify` 与 `browser-smoke` 通过后再合并。写作内容由私有内容仓维护，内容推送与源码合并统一进入内容仓发布。部署配置、首次切换或故障恢复时读取 `docs/deployment.md`；两仓职责见 `docs/adr/0034-separate-content-repository.md`。创作者发布命令以推送为终点，见 `docs/adr/0035-creator-publish-ends-at-push.md`；日用入口为 Make，见 `docs/adr/0036-make-as-daily-command-surface.md`。
+源码仓全部改动走 PR，等 `verify` 与 `browser-smoke` 通过后再合并。写作内容由私有内容仓维护，内容推送与源码合并统一进入内容仓发布。部署配置、首次切换或故障恢复时读取 `docs/deployment.md`；两仓职责见 `docs/adr/0034-separate-content-repository.md`。创作者发布命令以推送为终点，见 `docs/adr/0035-creator-publish-ends-at-push.md`；推送前本机校验写作规则且文章摘要可空，见 `docs/adr/0037-publish-validates-content-locally.md`；日用入口为 Make，见 `docs/adr/0036-make-as-daily-command-surface.md`。
 
 ### Verification
 
