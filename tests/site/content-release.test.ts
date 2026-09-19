@@ -27,6 +27,8 @@ const packedFiles = [
   "publish-task.js",
   "shanghai-time.js",
   "shuoshuo-rules.js",
+  "tag-rules.js",
+  "validate-content.js",
 ];
 
 async function workspace(t: { after: (fn: () => Promise<void>) => void }) {

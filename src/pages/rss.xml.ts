@@ -13,7 +13,7 @@ export const GET: APIRoute = async () => {
   const items = [
     ...posts.map(post => ({
       title: post.title,
-      description: post.description,
+      description: post.description.trim() || description,
       pubDate: post.publishedAt.value,
       link: new URL(post.href, url).href,
     })),

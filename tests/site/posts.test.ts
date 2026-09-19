@@ -24,9 +24,6 @@ test("复用公开投影时仍拒绝回退、损坏或缺失的号码计数器",
   const hooks = registerHooks({
     resolve(specifier, context, nextResolve) {
       if (specifier === "astro:content") return { url: collection, shortCircuit: true };
-      if (context.parentURL === postsModule && specifier === "./tags") {
-        return nextResolve("./tags.js", context);
-      }
       return nextResolve(specifier, context);
     },
   });
