@@ -3,11 +3,5 @@
   "type": "module",
   "engines": {
     "node": ">=24.11.0"
-  },
-  "scripts": {
-    "help": "printf '%s\\n' 'npm run new:post -- \"标题\"' 'npm run new:shuoshuo' 'npm run publish -- \"提交说明\"'",
-    "new:post": "jasper-content new:post",
-    "new:shuoshuo": "jasper-content new:shuoshuo",
-    "publish": "jasper-content publish"
   }
 }

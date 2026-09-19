@@ -1,34 +1,11 @@
 import { execFile } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
+import { relative } from "node:path";
 import { promisify } from "node:util";
 import { contentPaths } from "./content-paths.js";
-import {
-  PUBLISH_REQUEST_ID_FIELD,
-  PUBLISH_RESULT_ARTIFACT,
-  PUBLISH_WORKFLOW,
-  RETRY_WITHOUT_WRITING_MESSAGE,
-  matchPublishRun,
-  parsePublishResult,
-  pinnedContentWarning,
-  publishStageLines,
-} from "./publish-task.js";
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_MESSAGE = "更新博客内容";
-
-function pollMs() {
-  const value = Number(process.env.JASPER_PUBLISH_POLL_MS ?? 2000);
-  return Number.isFinite(value) && value > 0 ? value : 2000;
-}
-
-function timeoutMs() {
-  const value = Number(process.env.JASPER_PUBLISH_TIMEOUT_MS ?? 30 * 60 * 1000);
-  return Number.isFinite(value) && value > 0 ? value : 30 * 60 * 1000;
-}
+const NOTHING_TO_PUBLISH = "没有新的写作要提交";
 
 function writingPaths(directory) {
   const { root, ...paths } = contentPaths(directory);
@@ -66,17 +43,6 @@ async function run(command, args, options) {
   }
 }
 
-function repoFromRemote(url) {
-  const match = url.trim().match(/github\.com[:/]([^/]+)\/([^/.]+?)(?:\.git)?$/);
-  if (!match) throw new Error("无法从 origin 识别 GitHub 仓库");
-  return `${match[1]}/${match[2]}`;
-}
-
-function unfinished() {
-  console.log("内容已保存但未上线");
-  process.exitCode = 1;
-}
-
 function describePushError(error) {
   const text = error instanceof Error ? error.message : String(error);
   if (/non-fast-forward|fetch first|remote contains work that you do/i.test(text)) {
@@ -102,9 +68,6 @@ export async function publishContent(directory, args) {
         ...(extra.env ?? {}),
       },
     });
-  const gh = ghArgs => run("gh", ghArgs, { cwd: directory, env: process.env });
-  const fetchUrl = (await git(["remote", "get-url", "origin"])).stdout.trim();
-  const repo = repoFromRemote(fetchUrl);
   const status = (await git(["status", "--short", "--", ...paths])).stdout.trim();
   if (status) {
     console.log("待提交：");
@@ -114,111 +77,24 @@ export async function publishContent(directory, args) {
   }
   const sha = (await git(["rev-parse", "HEAD"])).stdout.trim();
   const unpushedFiles = await unpushedWritingFiles(git, paths);
-  let pushed = false;
-
-  if (unpushedFiles === null || unpushedFiles.length > 0) {
-    if (!status && unpushedFiles?.length) {
-      console.log("待推送：");
-      console.log(unpushedFiles.join("\n"));
-    }
-    try {
-      const result = await git(["push", "-u", "origin", "HEAD"], { env: { LC_ALL: "C" } });
-      pushed = !pushWasUpToDate(result);
-    } catch (error) {
-      console.log(describePushError(error));
-      process.exitCode = 1;
+  if (unpushedFiles !== null && unpushedFiles.length === 0) {
+    console.log(NOTHING_TO_PUBLISH);
+    return;
+  }
+  if (!status && unpushedFiles?.length) {
+    console.log("待推送：");
+    console.log(unpushedFiles.join("\n"));
+  }
+  try {
+    const result = await git(["push", "-u", "origin", "HEAD"], { env: { LC_ALL: "C" } });
+    if (pushWasUpToDate(result)) {
+      console.log(NOTHING_TO_PUBLISH);
       return;
     }
-  }
-  if (pushed) console.log(`已推送 ${sha}`);
-  else console.log(RETRY_WITHOUT_WRITING_MESSAGE);
-
-  let runInfo;
-  try {
-    if (pushed) {
-      runInfo = await waitForRun(gh, repo, { pushedSha: sha }, ["--commit", sha]);
-    } else {
-      const requestId = randomUUID();
-      await gh([
-        "workflow",
-        "run",
-        PUBLISH_WORKFLOW,
-        "-R",
-        repo,
-        "--field",
-        `${PUBLISH_REQUEST_ID_FIELD}=${requestId}`,
-      ]);
-      runInfo = await waitForRun(gh, repo, { requestId });
-    }
-  } catch {
-    console.log("无法确认远端结果");
-    unfinished();
+  } catch (error) {
+    console.log(describePushError(error));
+    process.exitCode = 1;
     return;
   }
-
-  console.log(`发布任务 ${runInfo.databaseId}`);
-  let result;
-  try {
-    result = await downloadResult(gh, repo, runInfo.databaseId);
-  } catch {
-    console.log("无法确认远端结果");
-    unfinished();
-    return;
-  }
-  for (const line of publishStageLines(result)) console.log(line);
-  const warning = pinnedContentWarning(sha, result);
-  if (warning) console.log(warning);
-  if (result.contentSha) console.log(`内容提交 ${result.contentSha}`);
-  if (result.sourceSha) console.log(`源码提交 ${result.sourceSha}`);
-  if (result.status === "success" && result.url) {
-    console.log(`已上线 ${result.url}`);
-    return;
-  }
-  if (result.error) console.log(result.error);
-  unfinished();
-}
-
-async function listRuns(gh, repo, extra = []) {
-  const { stdout } = await gh([
-    "run",
-    "list",
-    "-R",
-    repo,
-    "--workflow",
-    PUBLISH_WORKFLOW,
-    "--json",
-    "databaseId,displayTitle,event,headSha,status",
-    ...extra,
-  ]);
-  return JSON.parse(stdout);
-}
-
-async function waitForRun(gh, repo, claim, extra = []) {
-  const deadline = Date.now() + timeoutMs();
-  while (Date.now() < deadline) {
-    const found = matchPublishRun(await listRuns(gh, repo, extra), claim);
-    if (found?.status === "completed") return found;
-    await delay(pollMs());
-  }
-  throw new Error("无法确认远端结果");
-}
-
-async function downloadResult(gh, repo, runId) {
-  const directory = await mkdtemp(join(tmpdir(), "publish-result-"));
-  try {
-    await gh([
-      "run",
-      "download",
-      String(runId),
-      "-R",
-      repo,
-      "-n",
-      PUBLISH_RESULT_ARTIFACT,
-      "-D",
-      directory,
-    ]);
-    return parsePublishResult(await readFile(join(directory, "publish-result.json"), "utf8"));
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
+  console.log(`已推送 ${sha}`);
 }

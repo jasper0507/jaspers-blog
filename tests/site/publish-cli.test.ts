@@ -10,8 +10,6 @@ import { promisify } from "node:util";
 
 const exec = promisify(execFile);
 const root = fileURLToPath(new URL("../../", import.meta.url));
-const fakeGh = fileURLToPath(new URL("./fixture/fake-gh.mjs", import.meta.url));
-const sourceSha = "aa".repeat(20);
 
 async function packTool(workspace: string) {
   const { stdout } = await exec("npm", [
@@ -48,24 +46,11 @@ function output(error: { stdout?: string; stderr?: string }) {
   return `${error.stdout ?? ""}\n${error.stderr ?? ""}`;
 }
 
-async function writeGh(bin: string) {
-  await mkdir(bin, { recursive: true });
-  const path = join(bin, "gh");
-  await writeFile(
-    path,
-    `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(fakeGh)} "$@"\n`,
-  );
-  await chmod(path, 0o755);
-}
-
 async function setup(t: { after: (fn: () => Promise<void>) => void }) {
   const workspace = await mkdtemp(join(tmpdir(), "publish-cli-"));
   t.after(() => rm(workspace, { recursive: true, force: true }));
   const content = join(workspace, "content");
   const remote = join(workspace, "remote.git");
-  const bin = join(workspace, "bin");
-  const statePath = join(workspace, "gh-state.json");
-  const logPath = join(workspace, "gh-log.jsonl");
   await mkdir(content);
   await exec("git", ["init", "--bare", "--initial-branch=main", remote]);
   await cp(join(root, "tests/fixtures/content"), content, { recursive: true });
@@ -74,52 +59,10 @@ async function setup(t: { after: (fn: () => Promise<void>) => void }) {
   await git(content, ["init", "-b", "main"]);
   await git(content, ["config", "user.email", "test@example.com"]);
   await git(content, ["config", "user.name", "Test"]);
-  await git(content, ["remote", "add", "origin", "git@github.com:jasper0507/blog-content.git"]);
-  await git(content, ["remote", "set-url", "--push", "origin", remote]);
+  await git(content, ["remote", "add", "origin", remote]);
   await git(content, ["add", "-A"]);
   await git(content, ["commit", "-m", "初始内容"]);
-  const head = await git(content, ["rev-parse", "HEAD"]);
-  await writeFile(
-    statePath,
-    `${JSON.stringify(
-      {
-        repo: "jasper0507/blog-content",
-        sourceSha,
-        nextRunId: 1,
-        commits: {
-          "jasper0507/blog-content": { main: head },
-          "jasper0507/jaspers-blog": { main: sourceSha },
-        },
-        runs: [],
-        dispatches: [],
-        pushResult: {
-          stage: "deploy",
-          status: "success",
-          url: "https://jasper0507.me",
-          sourceSha,
-        },
-        workflowResult: {
-          stage: "deploy",
-          status: "success",
-          url: "https://jasper0507.me",
-          sourceSha,
-        },
-      },
-      null,
-      2,
-    )}\n`,
-  );
-  await writeGh(bin);
-  await writeFile(
-    join(remote, "hooks/post-receive"),
-    `#!/bin/sh\nexport FAKE_GH_STATE=${JSON.stringify(statePath)}\nwhile read oldrev newrev refname; do\n  ${JSON.stringify(process.execPath)} ${JSON.stringify(fakeGh)} record-push "$newrev"\ndone\n`,
-    { mode: 0o755 },
-  );
-  await chmod(join(remote, "hooks/post-receive"), 0o755);
-  await git(content, ["push", "-u", "origin", "main"], {
-    PATH: `${bin}:${process.env.PATH}`,
-    FAKE_GH_STATE: statePath,
-  });
+  await git(content, ["push", "-u", "origin", "main"]);
   const packed = await packTool(workspace);
   await exec(
     "npm",
@@ -138,22 +81,14 @@ async function setup(t: { after: (fn: () => Promise<void>) => void }) {
   const run = (args: string[], extra: NodeJS.ProcessEnv = {}) =>
     exec(join(content, "node_modules/.bin/jasper-content"), args, {
       cwd: content,
-      env: {
-        ...process.env,
-        PATH: `${bin}:${process.env.PATH}`,
-        FAKE_GH_STATE: statePath,
-        FAKE_GH_LOG: logPath,
-        JASPER_PUBLISH_POLL_MS: "20",
-        JASPER_PUBLISH_TIMEOUT_MS: "2000",
-        ...extra,
-      },
+      env: { ...process.env, ...extra },
       encoding: "utf8",
     });
-  return { workspace, content, remote, statePath, logPath, run, bin };
+  return { workspace, content, remote, run };
 }
 
-test("有内容改动时只提交写作文件，推送后关联本次任务并报告上线", async t => {
-  const { content, run, statePath } = await setup(t);
+test("有内容改动时只提交写作文件并推送，不夹带入口文件", async t => {
+  const { content, run } = await setup(t);
   await writeFile(
     join(content, "posts/alpha.md"),
     `${await readFile(join(content, "posts/alpha.md"), "utf8")}\n补一段。\n`,
@@ -173,20 +108,15 @@ test("有内容改动时只提交写作文件，推送后关联本次任务并�
     .sort()
     .join("\n");
   const staged = await git(content, ["diff", "--cached", "--name-only"]);
-  const state = JSON.parse(await readFile(statePath, "utf8"));
   const sha = await git(content, ["rev-parse", "HEAD"]);
-  const latest = state.runs.at(-1);
   assert.equal(message, "发布 Go 并发笔记");
   assert.equal(files, "posts/alpha.md\nshuoshuo/20240101-000002.md");
   assert.equal(staged, "package.json");
   assert.equal(await readFile(join(content, "posts/draft.md"), "utf8"), beforeDraft);
   assert.match(stdout, /posts\/alpha\.md/);
-  assert.match(stdout, /已上线 https:\/\/jasper0507\.me/);
-  assert.match(stdout, new RegExp(`内容提交 ${sha}`));
-  assert.match(stdout, new RegExp(`源码提交 ${sourceSha}`));
-  assert.match(stdout, /校验：通过[\s\S]*构建：通过[\s\S]*部署：通过/);
-  assert.equal(latest.event, "push");
-  assert.equal(latest.headSha, sha);
+  assert.match(stdout, new RegExp(`已推送 ${sha}`));
+  assert.doesNotMatch(stdout, /已上线/);
+  assert.equal(await git(content, ["rev-parse", "origin/main"]), sha);
   assert.equal(await git(content, ["show", "HEAD:package.json"]), '{"private":true}');
   assert.doesNotMatch(await git(content, ["show", "HEAD:package.json"]), /echo no/);
 });
@@ -207,7 +137,7 @@ test("远端内容超前时明确失败，保留本地提交且不强推", async
   const failure = await expectFailure(run(["publish"]));
   const text = output(failure);
   assert.match(text, /远端内容超前，无法推送/);
-  assert.doesNotMatch(text, /内容已保存但未上线/);
+  assert.doesNotMatch(text, /已推送/);
   assert.doesNotMatch(text, /已上线/);
   assert.equal(await git(content, ["log", "-1", "--pretty=%s"]), "更新博客内容");
   assert.equal(
@@ -227,7 +157,7 @@ test("推送被拒绝时保留本地提交并报告推送失败", async t => {
   const text = output(failure);
   assert.match(text, /推送失败/);
   assert.match(text, /模拟远端拒绝/);
-  assert.doesNotMatch(text, /内容已保存但未上线/);
+  assert.doesNotMatch(text, /已推送/);
   assert.doesNotMatch(text, /已上线/);
   assert.equal(await git(content, ["log", "-1", "--pretty=%s"]), "更新博客内容");
   assert.notEqual(
@@ -236,8 +166,8 @@ test("推送被拒绝时保留本地提交并报告推送失败", async t => {
   );
 });
 
-test("已有未推送内容提交时继续推送，不空提交也不误认为完成", async t => {
-  const { content, run, statePath } = await setup(t);
+test("已有未推送内容提交时继续推送，不空提交", async t => {
+  const { content, run } = await setup(t);
   await writeFile(
     join(content, "posts/alpha.md"),
     `${await readFile(join(content, "posts/alpha.md"), "utf8")}\n未推送的修改。\n`,
@@ -250,152 +180,39 @@ test("已有未推送内容提交时继续推送，不空提交也不误认为�
   assert.equal(await git(content, ["rev-parse", "HEAD"]), localSha);
   assert.equal(await git(content, ["rev-list", "--count", "HEAD"]), commitsBefore);
   assert.equal(await git(content, ["rev-parse", "origin/main"]), localSha);
-  assert.match(stdout, /已上线 https:\/\/jasper0507\.me/);
+  assert.match(stdout, new RegExp(`已推送 ${localSha}`));
   assert.doesNotMatch(stdout, /没有新的写作要提交/);
-  const latest = JSON.parse(await readFile(statePath, "utf8")).runs.at(-1);
-  assert.equal(latest.event, "push");
-  assert.equal(latest.headSha, localSha);
 });
 
-test("未设置上游且无新改动时重试，不把同提交的历史成功当作本次结果", async t => {
-  const { content, run, statePath } = await setup(t);
-  await git(content, ["branch", "--unset-upstream"]);
+test("无新写作且已同步时不空提交，打印没有新的写作要提交", async t => {
+  const { content, run } = await setup(t);
   const sha = await git(content, ["rev-parse", "HEAD"]);
-  const before = JSON.parse(await readFile(statePath, "utf8"));
-  before.runs.push({
-    databaseId: 90,
-    displayTitle: `发布 ${sha}`,
-    event: "push",
-    headSha: sha,
-    status: "completed",
-    conclusion: "success",
-    createdAt: "2026-01-01T00:00:00Z",
-    url: "https://github.com/jasper0507/blog-content/actions/runs/90",
-    result: {
-      contentSha: sha,
-      sourceSha,
-      stage: "deploy",
-      status: "success",
-      url: "https://jasper0507.me",
-    },
-  });
-  await writeFile(statePath, `${JSON.stringify(before, null, 2)}\n`);
-  const { stdout } = await run(["publish"]);
-  assert.match(stdout, /没有新的写作要提交；将按仓库里此刻的内容和网站再发一次/);
-  assert.match(stdout, /已上线 https:\/\/jasper0507\.me/);
-  assert.equal(await git(content, ["rev-parse", "HEAD"]), sha);
-  const retry = JSON.parse(await readFile(statePath, "utf8")).runs.find(
-    (item: { event: string; databaseId: number }) => item.event === "workflow_dispatch",
-  );
-  assert.ok(retry);
-  assert.notEqual(retry.databaseId, 90);
-  assert.match(retry.displayTitle, /^发布 /);
-  assert.doesNotMatch(retry.displayTitle, new RegExp(sha));
-});
-
-test("无新内容时不空提交，重试关联新任务且不把历史成功当作本次结果", async t => {
-  const { content, run, statePath } = await setup(t);
-  const sha = await git(content, ["rev-parse", "HEAD"]);
-  const before = JSON.parse(await readFile(statePath, "utf8"));
-  before.workflowResult = {
-    stage: "validate",
-    status: "failure",
-    error: "号码计数器无效",
-    contentSha: sha,
-    sourceSha,
-  };
-  before.runs.push({
-    databaseId: 90,
-    displayTitle: `发布 ${sha}`,
-    event: "push",
-    headSha: sha,
-    status: "completed",
-    conclusion: "success",
-    createdAt: "2026-01-01T00:00:00Z",
-    url: "https://github.com/jasper0507/blog-content/actions/runs/90",
-    result: {
-      contentSha: sha,
-      sourceSha,
-      stage: "deploy",
-      status: "success",
-      url: "https://jasper0507.me",
-    },
-  });
-  await writeFile(statePath, `${JSON.stringify(before, null, 2)}\n`);
   const commitsBefore = await git(content, ["rev-list", "--count", "HEAD"]);
-  const failure = await expectFailure(run(["publish"]));
-  assert.match(output(failure), /没有新的写作要提交；将按仓库里此刻的内容和网站再发一次/);
-  assert.match(output(failure), /内容已保存但未上线/);
-  assert.match(output(failure), /校验：失败/);
-  assert.match(output(failure), /号码计数器无效/);
+  const { stdout } = await run(["publish"]);
+  assert.match(stdout, /没有新的写作要提交/);
+  assert.doesNotMatch(stdout, /已推送/);
   assert.equal(await git(content, ["rev-parse", "HEAD"]), sha);
   assert.equal(await git(content, ["rev-list", "--count", "HEAD"]), commitsBefore);
-  const state = JSON.parse(await readFile(statePath, "utf8"));
-  const retry = state.runs.find(
-    (runItem: { event: string; databaseId: number }) => runItem.event === "workflow_dispatch",
-  );
-  assert.ok(retry);
-  assert.notEqual(retry.databaseId, 90);
-  assert.match(retry.displayTitle, /^发布 /);
+  assert.equal(await git(content, ["rev-parse", "origin/main"]), sha);
 });
 
-test("推送后校验失败时保留提交且不宣称上线", async t => {
-  const { content, run, statePath } = await setup(t);
-  const state = JSON.parse(await readFile(statePath, "utf8"));
-  state.pushResult = {
-    stage: "validate",
-    status: "failure",
-    error: "缺少内容来源或必要状态：about.md",
-    sourceSha,
-  };
-  await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
-  await writeFile(join(content, "about.md"), "# 关于我\n改过。\n");
-  const failure = await expectFailure(run(["publish"]));
-  assert.match(output(failure), /内容已保存但未上线/);
-  assert.match(output(failure), /校验：失败/);
-  assert.doesNotMatch(output(failure), /已上线/);
-  assert.match(await git(content, ["log", "-1", "--pretty=%s"]), /更新博客内容/);
-  assert.equal(
-    await git(content, ["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"]),
-    "about.md",
-  );
-  const remoteSha = await git(content, ["rev-parse", "origin/main"]);
-  assert.equal(remoteSha, await git(content, ["rev-parse", "HEAD"]));
-});
-
-test("远端任务仍在进行时继续等待，完成后才报告上线", async t => {
-  const { content, run, statePath } = await setup(t);
-  const state = JSON.parse(await readFile(statePath, "utf8"));
-  state.pushResult.pending = true;
-  state.completeAfterLists = 2;
-  state.listCalls = 0;
-  await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
-  await writeFile(join(content, "about.md"), "# 关于我\n等待任务。\n");
-  const { stdout } = await run(["publish"]);
-  assert.match(stdout, /已上线 https:\/\/jasper0507\.me/);
-  const after = JSON.parse(await readFile(statePath, "utf8"));
-  assert.ok(after.listCalls >= 2);
-  assert.equal(after.runs.at(-1).status, "completed");
-});
-
-test("无法确认远端任务时不把历史成功当作本次发布", async t => {
-  const { content, run, statePath } = await setup(t);
-  await writeFile(join(content, "shuoshuo/20240101-000001.md"), "draft: true\n");
-  const failure = await expectFailure(run(["publish"], { FAKE_GH_FAIL: "run-list" }));
-  assert.match(output(failure), /无法确认远端结果/);
-  assert.match(output(failure), /内容已保存但未上线/);
-  assert.doesNotMatch(output(failure), /已上线/);
+test("未设置上游且无新改动、远端已有该提交时不推送", async t => {
+  const { content, run } = await setup(t);
+  await git(content, ["branch", "--unset-upstream"]);
   const sha = await git(content, ["rev-parse", "HEAD"]);
-  const state = JSON.parse(await readFile(statePath, "utf8"));
-  assert.ok(state.runs.some((item: { headSha: string }) => item.headSha === sha));
+  const { stdout } = await run(["publish"]);
+  assert.match(stdout, /没有新的写作要提交/);
+  assert.doesNotMatch(stdout, /已推送/);
+  assert.equal(await git(content, ["rev-parse", "HEAD"]), sha);
 });
 
 test("省略说明时用默认文案，并忽略 npm 隐式 message", async t => {
   const { content, run } = await setup(t);
   await writeFile(join(content, "about.md"), "# 关于我\n默认说明。\n");
   const { stdout } = await run(["publish"], { npm_config_message: "不该使用" });
+  const sha = await git(content, ["rev-parse", "HEAD"]);
   assert.equal(await git(content, ["log", "-1", "--pretty=%s"]), "更新博客内容");
-  assert.match(stdout, /已上线 https:\/\/jasper0507\.me/);
+  assert.match(stdout, new RegExp(`已推送 ${sha}`));
 });
 
 test("提交说明中的空格引号与 shell 字符只作为数据", async t => {
@@ -404,33 +221,6 @@ test("提交说明中的空格引号与 shell 字符只作为数据", async t =>
   await writeFile(join(content, "about.md"), "# 关于我\n特殊字符。\n");
   await run(["publish", message]);
   assert.equal(await git(content, ["log", "-1", "--pretty=%s"]), message);
-});
-
-test("经 npm 参数分隔传入自定义说明", async t => {
-  const { content, bin, statePath, logPath } = await setup(t);
-  await writeFile(
-    join(content, "package.json"),
-    `${JSON.stringify({ private: true, scripts: { publish: "jasper-content publish" } })}\n`,
-  );
-  await writeFile(join(content, "about.md"), "# 关于我\n经 npm 发布。\n");
-  const { stdout } = await exec("npm", ["run", "publish", "--", "发布 Go 并发笔记"], {
-    cwd: content,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      PATH: `${bin}:${process.env.PATH}`,
-      FAKE_GH_STATE: statePath,
-      FAKE_GH_LOG: logPath,
-      JASPER_PUBLISH_POLL_MS: "20",
-      JASPER_PUBLISH_TIMEOUT_MS: "2000",
-    },
-  });
-  assert.equal(await git(content, ["log", "-1", "--pretty=%s"]), "发布 Go 并发笔记");
-  assert.equal(
-    await git(content, ["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"]),
-    "about.md",
-  );
-  assert.match(stdout, /已上线 https:\/\/jasper0507\.me/);
 });
 
 test("多于一个提交说明参数时报用法错误", async t => {
@@ -465,6 +255,7 @@ id: 7
     .filter(Boolean)
     .sort()
     .join("\n");
+  const sha = await git(content, ["rev-parse", "HEAD"]);
   assert.equal(files, "post-next-id.json\nposts/new-note.md");
   assert.equal(
     await git(content, ["diff", "--cached", "--name-only"]),
@@ -474,72 +265,5 @@ id: 7
     await readFile(join(content, ".github/workflows/publish.yml"), "utf8"),
     "name: keep\n",
   );
-  assert.match(stdout, /已上线 https:\/\/jasper0507\.me/);
-});
-
-test("推送后构建失败时保留提交且不宣称上线", async t => {
-  const { content, run, statePath } = await setup(t);
-  const state = JSON.parse(await readFile(statePath, "utf8"));
-  state.pushResult = {
-    stage: "build",
-    status: "failure",
-    error: "页面构建失败",
-    sourceSha,
-  };
-  await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
-  await writeFile(join(content, "about.md"), "# 关于我\n构建失败。\n");
-  const failure = await expectFailure(run(["publish"]));
-  const text = output(failure);
-  assert.match(text, /校验：通过/);
-  assert.match(text, /构建：失败/);
-  assert.match(text, /页面构建失败/);
-  assert.match(text, /内容已保存但未上线/);
-  assert.doesNotMatch(text, /已上线/);
-  assert.equal(await git(content, ["log", "-1", "--pretty=%s"]), "更新博客内容");
-});
-
-test("推送后部署失败时保留提交且不宣称上线", async t => {
-  const { content, run, statePath } = await setup(t);
-  const state = JSON.parse(await readFile(statePath, "utf8"));
-  state.pushResult = {
-    stage: "deploy",
-    status: "failure",
-    error: "上传失败",
-    sourceSha,
-  };
-  await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
-  await writeFile(join(content, "about.md"), "# 关于我\n部署失败。\n");
-  const failure = await expectFailure(run(["publish"]));
-  const text = output(failure);
-  assert.match(text, /校验：通过[\s\S]*构建：通过[\s\S]*部署：失败/);
-  assert.match(text, /上传失败/);
-  assert.match(text, /内容已保存但未上线/);
-  assert.doesNotMatch(text, /已上线/);
-});
-
-test("无法下载发布结果时不宣称成功", async t => {
-  const { content, run } = await setup(t);
-  await writeFile(join(content, "about.md"), "# 关于我\n结果丢失。\n");
-  const failure = await expectFailure(run(["publish"], { FAKE_GH_FAIL: "run-download" }));
-  const text = output(failure);
-  assert.match(text, /无法确认远端结果/);
-  assert.match(text, /内容已保存但未上线/);
-  assert.doesNotMatch(text, /已上线/);
-});
-
-test("查询超时时不宣称成功", async t => {
-  const { content, run, statePath } = await setup(t);
-  const state = JSON.parse(await readFile(statePath, "utf8"));
-  state.pushResult.pending = true;
-  await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
-  await writeFile(join(content, "about.md"), "# 关于我\n查询超时。\n");
-  const failure = await expectFailure(run(["publish"], { JASPER_PUBLISH_TIMEOUT_MS: "80" }));
-  const text = output(failure);
-  assert.match(text, /无法确认远端结果/);
-  assert.match(text, /内容已保存但未上线/);
-  assert.doesNotMatch(text, /已上线/);
-  assert.equal(
-    await git(content, ["rev-parse", "HEAD"]),
-    await git(content, ["rev-parse", "origin/main"]),
-  );
+  assert.match(stdout, new RegExp(`已推送 ${sha}`));
 });

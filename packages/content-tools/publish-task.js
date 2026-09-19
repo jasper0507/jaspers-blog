@@ -3,8 +3,6 @@
 export const PUBLISH_WORKFLOW = "publish.yml";
 export const PUBLISH_RESULT_ARTIFACT = "publish-result";
 export const PUBLISH_REQUEST_ID_FIELD = "request_id";
-export const RETRY_WITHOUT_WRITING_MESSAGE =
-  "没有新的写作要提交；将按仓库里此刻的内容和网站再发一次";
 
 const STAGES = [
   ["validate", "校验"],

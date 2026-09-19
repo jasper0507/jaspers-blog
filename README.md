@@ -24,26 +24,26 @@ RSS 和站点地图，并完整支持键盘操作、亮暗主题和移动端布�
 
 ## 本地开发
 
-需要 Node.js 24（最低 `24.11.0`）和 npm：
+需要 Node.js 24（最低 `24.11.0`）。忘记命令时运行 `make`。
 
 ```sh
 git clone git@github.com:jasper0507/jaspers-blog.git
 cd jaspers-blog
-npm ci
-npm run dev
+make init
+make dev
 ```
 
 开发服务器默认运行在 `http://localhost:4321`。常用命令：
 
-| 命令                         | 用途                                       |
-| ---------------------------- | ------------------------------------------ |
-| `npm run dev`                | 使用公开示例启动开发服务器                 |
-| `npm run build`              | 校验示例内容、构建站点并生成 Pagefind 索引 |
-| `npm run preview`            | 预览最近一次生产构建                       |
-| `npm run check`              | 运行 Astro 与 TypeScript 检查              |
-| `npm test`                   | 运行格式、类型、领域规则和 Chromium 验收   |
-| `npm run test:browser-smoke` | 运行 Firefox 核心场景                      |
-| `npm run fonts:fetch`        | 更新自托管 Noto Sans SC 中文字体分包       |
+| 命令               | 用途                                       |
+| ------------------ | ------------------------------------------ |
+| `make dev`         | 使用公开示例启动开发服务器                 |
+| `make build`       | 校验示例内容、构建站点并生成 Pagefind 索引 |
+| `make preview`     | 预览最近一次生产构建                       |
+| `make check`       | 运行 Astro 与 TypeScript 检查              |
+| `make test`        | 运行格式、类型、领域规则和 Chromium 验收   |
+| `make test-smoke`  | 运行 Firefox 核心场景                      |
+| `make fonts-fetch` | 更新自托管 Noto Sans SC 中文字体分包       |
 
 如需验证另一个完整内容目录，显式指定：
 
@@ -62,18 +62,20 @@ BLOG_CONTENT_DIR=/absolute/path/to/content npm run build:content
 创作只在私有内容仓进行：
 
 ```sh
-npm run new:post -- "文章标题"
-npm run new:shuoshuo
-npm run publish
-npm run publish -- "自定义提交说明"
+make post t="文章标题"
+make shuoshuo
+make publish
+make publish m="自定义提交说明"
 ```
 
-发布命令只提交写作内容与号码计数器，推送后等待远端校验、构建和部署。草稿会保存到私有仓，
+发布命令只提交写作内容与号码计数器并推送；上线由远端工作流完成，命令不等待收据。草稿会保存到私有仓，
 但从页面、搜索、RSS 和站点地图排除。完整格式与失败重试说明见
 [内容仓 README](packages/content-tools/content-repo/README.md)。
 
 生产发布、凭据、故障恢复和工具发行见[维护手册](docs/deployment.md)。架构边界见
-[ADR-0034](docs/adr/0034-separate-content-repository.md)。
+[ADR-0034](docs/adr/0034-separate-content-repository.md)、
+[ADR-0035](docs/adr/0035-creator-publish-ends-at-push.md)、
+[ADR-0036](docs/adr/0036-make-as-daily-command-surface.md)。
 
 ## 站点能力
 

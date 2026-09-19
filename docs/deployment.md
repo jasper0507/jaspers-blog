@@ -6,7 +6,7 @@
 
 - 内容仓 `main` 推送直接触发。
 - 源码仓 `main` 更新通过 `repository_dispatch` 触发。
-- `npm run publish` 在没有写作改动时使用 `workflow_dispatch` 重试。
+- 创作者命令不在没有写作改动时重试；开发者可在 Actions 使用 `workflow_dispatch` 手动重跑。
 
 工作流开始时固定两仓最新 `main` 提交，以该版本组合完成内容校验、Astro 构建和 Pagefind
 索引，最后通过 Wrangler 上传现有 Cloudflare Pages 项目 `jasper-blog`。并发组
@@ -51,12 +51,13 @@ Cloudflare Pages 的自动生产和预览 Git 部署均保持关闭。项目继�
 创作者只在私有内容仓运行：
 
 ```sh
-npm run publish
-npm run publish -- "自定义提交说明"
+make publish
+make publish m="自定义提交说明"
 ```
 
-命令只提交 `posts/`、`shuoshuo/`、`about.md` 和 `post-next-id.json`。推送成功表示内容已保存；
-推送失败时远端没有该提交。只有关联任务的校验、构建和部署全部成功才表示上线。完整创作规则见内容仓 README。
+命令只提交 `posts/`、`shuoshuo/`、`about.md` 和 `post-next-id.json` 并推送。推送成功表示内容已保存，
+命令到此结束；推送失败时远端没有该提交。上线由本工作流的校验、构建和部署完成，本机不等待收据。
+完整创作规则见内容仓 README。
 
 每个 `publish-result` 记录：
 
@@ -73,8 +74,8 @@ npm run publish -- "自定义提交说明"
 
 ## 故障恢复
 
-- 校验、构建或部署失败：保留提交和上一个成功站点，修复后重新运行 `npm run publish`。
-- 没有新内容需要重试：直接运行 `npm run publish`，命令不会创建空提交，而是按仓库里此刻的内容和网站再开一次发布任务。
+- 校验、构建或部署失败：保留提交和上一个成功站点。有内容要改时再运行 `make publish`；没有新写作时在 Actions 重跑「发布网站」。
+- 没有新内容：`make publish` 打印「没有新的写作要提交」后退出，不创建空提交，也不额外触发发布任务。
 - 内容错误：在内容仓 `git revert <提交>`，再运行发布命令。
 - 源码错误：创建 revert PR，通过检查后合并。
 - 紧急恢复：可在 Cloudflare Pages 回滚到已知成功部署，随后仍须修正 Git 并重新发布。
@@ -89,8 +90,8 @@ npm run publish -- "自定义提交说明"
 1. 更新 `packages/content-tools/package.json` 的版本和对应说明。
 2. 运行工具与发布测试。
 3. 执行 `node scripts/release-content-tools.mjs` 创建不可覆盖的 GitHub Release 资源。
-4. 在内容仓更新固定资源 URL 和 lockfile，运行 `npm ci` 验证。
-5. 提交内容仓维护文件；创作者随后重新运行 `npm ci`。
+4. 在内容仓更新固定资源 URL 和 lockfile，运行 `make init` 验证。
+5. 提交内容仓维护文件；创作者随后重新运行 `make init`。
 
 普通网站更新不要求升级内容工具。源码仓中的 `packages/content-tools/content-repo/` 保存内容仓维护
 文件的参考版本；同步时只修改维护文件，不覆盖写作内容或号码计数器。
