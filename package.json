@@ -20,7 +20,7 @@
     "test:index-posts": "node scripts/check-index-posts.mjs",
     "test:markdown": "node --test tests/site/markdown.test.ts",
     "test:site": "playwright test",
-    "test:guard": "node --test tests/site/guard.test.ts tests/site/acceptance.test.ts tests/site/content-tools.test.ts tests/site/publish-cli.test.ts tests/site/publish-site.test.ts tests/site/publish-task.test.ts tests/site/content-release.test.ts",
+    "test:guard": "node --test tests/site/guard.test.ts tests/site/acceptance.test.ts tests/site/content-tools.test.ts tests/site/publish-cli.test.ts tests/site/publish-site.test.ts tests/site/publish-task.test.ts tests/site/content-release.test.ts tests/site/makefile.test.ts",
     "test:browser-smoke": "playwright test --config=playwright.smoke.config.ts",
     "test": "npm run format:check && npm run check && npm run test:fonts && npm run test:config && npm run test:content-rules && npm run test:index-posts && npm run test:markdown && npm run test:site && npm run test:guard",
     "build:content": "node scripts/check-site-markdown.mjs && astro build --force && node scripts/index-posts.mjs"
