@@ -18,6 +18,8 @@ npm ci
 
 ## 创建
 
+忘记命令时运行 `npm run help`。
+
 ```sh
 npm run new:post -- "文章标题"
 npm run new:shuoshuo
