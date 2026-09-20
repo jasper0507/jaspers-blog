@@ -24,6 +24,10 @@ const FIELDS = new Set(["title", "description", "id", "publishedAt", "tags", "dr
  */
 
 /**
+ * @typedef {{ id?: number, tags?: string[] }} PostCollectionFields
+ */
+
+/**
  * @typedef {{ href: string, names: [string, string], message: string }} TagUrlConflict
  */
 
@@ -69,7 +73,7 @@ function normalizeTags(tags) {
 
 /**
  * @param {unknown} data
- * @returns {{ ok: true, value: PostFrontmatter } | { ok: false, issues: PostWritingIssue[] }}
+ * @returns {{ ok: true, value: PostFrontmatter } | { ok: false, issues: PostWritingIssue[], collection: PostCollectionFields }}
  */
 export function normalizePostFrontmatter(data) {
   /** @type {PostWritingIssue[]} */
@@ -143,7 +147,12 @@ export function normalizePostFrontmatter(data) {
     id = record.id;
   }
 
-  if (issues.length) return { ok: false, issues };
+  /** @type {PostCollectionFields} */
+  const collection = {};
+  if (id !== undefined) collection.id = id;
+  if (tags !== undefined) collection.tags = tags;
+
+  if (issues.length) return { ok: false, issues, collection };
   return {
     ok: true,
     value: { title, description, id, publishedAt, tags, draft },

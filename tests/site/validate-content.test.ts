@@ -56,6 +56,24 @@ test("空摘要且有正文可以通过", async t => {
   await validateContent(directory);
 });
 
+test("标题非法时仍报告重复稳定 ID 和标签网址冲突", async t => {
+  const directory = await workspace(t);
+  await writeFile(
+    join(directory, "posts/broken.md"),
+    postSource({ title: " ", id: 1, tags: "\n  - C++\n  - C#" }),
+  );
+  await assert.rejects(
+    () => validateContent(directory),
+    error => {
+      const text = String(error);
+      assert.match(text, /posts\/broken.md：标题不能为空/);
+      assert.match(text, /技术文章「alpha」与「broken」使用了相同的稳定 ID：1/);
+      assert.match(text, /标签「C\+\+」与「C#」生成了相同的网址：\/tags\/c\//);
+      return true;
+    },
+  );
+});
+
 test("空正文、未加引号的发布时间和标签网址冲突会中文失败", async t => {
   const directory = await workspace(t);
   await writeFile(
