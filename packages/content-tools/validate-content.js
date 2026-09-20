@@ -150,9 +150,12 @@ function inspectPost(relative, source) {
     for (const issue of result.issues) errors.push(`${prefix}：${issue.message}`);
   }
   if (!body.trim()) errors.push(`技术文章 ${filename} 的正文不能为空`);
+  const collection = result.ok
+    ? { id: result.value.id, tags: result.value.tags }
+    : result.collection;
   return {
     errors,
-    post: result.ok ? { filename, id: result.value.id, tags: result.value.tags } : undefined,
+    post: { filename, id: collection.id, tags: collection.tags },
   };
 }
 
@@ -215,24 +218,22 @@ export async function validateContent(directory) {
 
   errors.push(...(await inspectAbout(paths.about)));
 
-  const posts = [];
+  const tagRecords = [];
+  const idRecords = [];
   for (const relative of await markdownEntries(paths.posts)) {
     const source = await readFile(join(paths.posts, relative), "utf8");
     const { errors: postErrors, post } = inspectPost(relative, source);
     errors.push(...postErrors);
-    if (post) posts.push(post);
+    if (!post) continue;
+    if (post.tags !== undefined) tagRecords.push({ id: post.filename, tags: post.tags });
+    if (post.id !== undefined) idRecords.push({ filename: post.filename, id: post.id });
   }
-  for (const conflict of findTagUrlConflicts(
-    posts.map(post => ({ id: post.filename, tags: post.tags })),
-  )) {
+  for (const conflict of findTagUrlConflicts(tagRecords)) {
     errors.push(conflict.message);
   }
 
   try {
-    await assertPostStableIds(
-      paths.posts,
-      posts.map(post => ({ filename: post.filename, id: post.id })),
-    );
+    await assertPostStableIds(paths.posts, idRecords);
   } catch (error) {
     errors.push(error instanceof Error ? error.message : String(error));
   }
