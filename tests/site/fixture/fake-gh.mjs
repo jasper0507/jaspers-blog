@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-import { mkdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, writeFileSync, appendFileSync } from "node:fs";
 
 function statePath() {
   const path = process.env.FAKE_GH_STATE;
@@ -71,53 +70,6 @@ function runFields(run) {
   };
 }
 
-function addRun(state, fields) {
-  const databaseId = state.nextRunId;
-  state.nextRunId += 1;
-  const run = {
-    databaseId,
-    displayTitle: fields.displayTitle,
-    event: fields.event,
-    headSha: fields.headSha,
-    status: fields.status ?? "completed",
-    conclusion: fields.conclusion,
-    createdAt: fields.createdAt ?? new Date().toISOString(),
-    url: `https://github.com/${state.repo}/actions/runs/${databaseId}`,
-    result: fields.result,
-  };
-  state.runs.push(run);
-  return run;
-}
-
-function resultFor(state, kind, sha) {
-  const template = kind === "push" ? state.pushResult : state.workflowResult;
-  return {
-    contentSha: template.contentSha ?? sha,
-    sourceSha: template.sourceSha ?? state.sourceSha,
-    stage: template.stage,
-    status: template.status,
-    url: template.status === "success" ? (template.url ?? "https://jasper0507.me") : undefined,
-    error: template.error,
-  };
-}
-
-function recordPush(sha) {
-  const state = loadState();
-  const result = resultFor(state, "push", sha);
-  const pending = Boolean(state.pushResult?.pending);
-  addRun(state, {
-    displayTitle: `发布 ${sha}`,
-    event: "push",
-    headSha: sha,
-    status: pending ? "in_progress" : "completed",
-    conclusion: pending ? null : result.status === "success" ? "success" : "failure",
-    result,
-  });
-  state.commits = state.commits ?? {};
-  state.commits[state.repo] = { main: sha };
-  saveState(state);
-}
-
 function pickJson(run, fields) {
   const body = runFields(run);
   if (fields.length === 0) return body;
@@ -177,38 +129,10 @@ function handleRun(args) {
     const commit = takeFlag(args, ["--commit"]);
     const fields = jsonFields(args);
     const state = loadState();
-    state.listCalls = (state.listCalls ?? 0) + 1;
-    if (state.completeAfterLists && state.listCalls >= state.completeAfterLists) {
-      for (const run of state.runs) {
-        if (run.status === "in_progress") {
-          run.status = "completed";
-          run.conclusion = run.result?.status === "success" ? "success" : "failure";
-        }
-      }
-    }
-    saveState(state);
     let runs = state.runs;
     if (commit) runs = runs.filter(run => run.headSha === commit);
     if (workflow && workflow !== "publish.yml" && workflow !== "发布网站") runs = [];
     process.stdout.write(`${JSON.stringify(runs.map(run => pickJson(run, fields)))}\n`);
-    return;
-  }
-  if (sub === "download") {
-    failIf("run-download");
-    const id = Number(args.shift());
-    const name = takeFlag(args, ["-n", "--name"]);
-    const dir = takeFlag(args, ["-D", "--dir"]);
-    if (name !== "publish-result") {
-      console.error(`未模拟的 artifact ${name}`);
-      process.exit(1);
-    }
-    const run = loadState().runs.find(item => item.databaseId === id);
-    if (!run?.result) {
-      console.error(`任务 ${id} 没有发布结果`);
-      process.exit(1);
-    }
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, "publish-result.json"), `${JSON.stringify(run.result, null, 2)}\n`);
     return;
   }
   console.error(`未模拟的 gh run ${sub}`);
@@ -273,51 +197,16 @@ function handleRepo(args) {
   process.exit(1);
 }
 
-function handleWorkflow(args) {
-  const sub = args.shift();
-  if (sub !== "run") {
-    console.error(`未模拟的 gh workflow ${sub}`);
-    process.exit(1);
-  }
-  failIf("workflow-run");
-  takeFlag(args, ["-R", "--repo"]);
-  args.shift();
-  const fields = takeRepeated(args, ["-f", "--field"]);
-  let requestId = "";
-  for (const field of fields) {
-    if (field.startsWith("request_id=")) requestId = field.slice("request_id=".length);
-  }
-  const state = loadState();
-  const sha = state.commits?.[state.repo]?.main;
-  const result = resultFor(state, "workflow", sha);
-  addRun(state, {
-    displayTitle: `发布 ${requestId}`,
-    event: "workflow_dispatch",
-    headSha: sha,
-    conclusion: result.status === "success" ? "success" : "failure",
-    result,
-  });
-  saveState(state);
-}
-
 async function runFakeGh(argv) {
   const args = [...argv];
   log({ args });
   const command = args.shift();
-  if (command === "record-push") {
-    recordPush(args[0]);
-    return;
-  }
   if (command === "api") {
     handleApi(args);
     return;
   }
   if (command === "run") {
     handleRun(args);
-    return;
-  }
-  if (command === "workflow") {
-    handleWorkflow(args);
     return;
   }
   if (command === "release") {

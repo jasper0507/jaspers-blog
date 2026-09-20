@@ -54,8 +54,6 @@ interface PublishedCatalog {
 }
 
 let snapshot: { key: string; catalog: PublishedCatalog } | undefined;
-let inflight: { key: string; promise: Promise<PublishedCatalog> } | undefined;
-let generation = 0;
 
 function publishedCatalogKey(entries: CollectionEntry<"posts">[]) {
   return [
@@ -86,24 +84,11 @@ export async function getPublishedPostCatalog() {
   );
   const key = publishedCatalogKey(entries);
   if (snapshot?.key === key) return snapshot.catalog;
-  if (inflight?.key === key) return inflight.promise;
-
-  const currentGeneration = ++generation;
-  const promise = createPublishedCatalog(entries)
-    .then(catalog => {
-      if (currentGeneration === generation) snapshot = { key, catalog };
-      return catalog;
-    })
-    .finally(() => {
-      if (inflight?.promise === promise) inflight = undefined;
-    });
-  inflight = { key, promise };
-  return promise;
+  snapshot = { key, catalog: createPublishedCatalog(entries) };
+  return snapshot.catalog;
 }
 
-async function createPublishedCatalog(
-  entries: CollectionEntry<"posts">[],
-): Promise<PublishedCatalog> {
+function createPublishedCatalog(entries: CollectionEntry<"posts">[]): PublishedCatalog {
   const conflicts = findTagUrlConflicts(
     entries.map(entry => ({ id: entry.id, tags: entry.data.tags })),
   );

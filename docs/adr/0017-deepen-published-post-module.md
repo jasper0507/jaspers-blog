@@ -7,3 +7,5 @@ module 只提供一个已发布技术文章快照，包含技术文章、归档�
 技术文章与说说继续是两个独立 module，首页与 RSS 只在输出层组合两者；迁移一次替换全部调用方，不增加兼容 adapter、统一内容层或缓存。两者即使当前使用相同的紧凑日期格式，也各自在 implementation 内拥有日期投影，不为这几行代码建立共享日期 interface。现有整站构建、交互和视觉冒烟继续保留，技术文章 fixture 改为穿过新 interface 验证草稿排除、排序、日期、permalink、归档、标签和正文渲染，标签网址冲突通过预期构建失败的 fixture 验证；本重构不改变访客或作者行为。
 
 2026-09-12 修订：同一内容输入复用这一快照。生产构建实测 `getPublishedPostCatalog` 被调用 59 次（每页搜索开关也会重建目录），合计约 70ms，不是用户可感知瓶颈，但生命周期应留在发布 module 内。implementation 按 collection 内容与 `POST_CONTENT_DIR` 作为失效键；输入不变则复用，开发中改稿或验收切换样本则重建。这不是跨进程 TTL 缓存，也不新增 interface 或 repository adapter。
+
+2026-09-20 修订：内容来源统一为 `BLOG_CONTENT_DIR` 后，失效键使用该来源的技术文章目录与 collection 内容。投影构造没有异步操作，直接同步构造并保存快照，删除 Promise 去重与代次状态。collection 读取和稳定 ID 校验仍为异步操作；每次读取都先校验计数器，即使命中快照也不跳过。
