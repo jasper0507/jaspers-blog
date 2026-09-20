@@ -47,7 +47,6 @@ async function workspace(t: { after: (fn: () => Promise<void>) => void }) {
       {
         repo: "jasper0507/blog-content",
         sourceSha,
-        nextRunId: 3,
         commits: {
           "jasper0507/blog-content": { main: contentSha },
           "jasper0507/jaspers-blog": { main: sourceSha },
