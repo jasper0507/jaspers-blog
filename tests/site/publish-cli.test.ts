@@ -272,6 +272,34 @@ id: 7
   assert.match(stdout, new RegExp(`已推送 ${sha}`));
 });
 
+test("非法头信息在提交前失败，不提交也不推送", async t => {
+  const { content, run } = await setup(t);
+  await writeFile(
+    join(content, "posts/dup-tags.md"),
+    `---
+title: 重复标签
+description: ""
+publishedAt: "2026-09-19T12:00:00+08:00"
+tags:
+  - "Astro"
+  - " Astro "
+draft: false
+id: 7
+---
+
+正文。
+`,
+  );
+  await writeFile(join(content, "post-next-id.json"), '{"next":8}\n');
+  const before = await git(content, ["rev-parse", "HEAD"]);
+  const remoteBefore = await git(content, ["rev-parse", "origin/main"]);
+  const failure = await expectFailure(run(["publish"]));
+  assert.match(output(failure), /标签不得重复/);
+  assert.doesNotMatch(output(failure), /已推送/);
+  assert.equal(await git(content, ["rev-parse", "HEAD"]), before);
+  assert.equal(await git(content, ["rev-parse", "origin/main"]), remoteBefore);
+});
+
 test("空摘要有正文可以发布，空正文在提交前失败", async t => {
   const { content, run } = await setup(t);
   await writeFile(

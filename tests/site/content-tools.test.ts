@@ -16,6 +16,7 @@ const packedFiles = [
   "create-content.js",
   "package.json",
   "post-rules.js",
+  "post-writing-rules.js",
   "publish-content.js",
   "publish-task.js",
   "shanghai-time.js",
@@ -178,6 +179,56 @@ test("发行包在已有公开内容上创建后，既有网址、草稿排除�
       assert.match(indexed, /独立目录正文/);
       assert.doesNotMatch(indexed, /不可公开的草稿正文|独立说说正文|我是公开示例作者/);
     });
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test("发行包安装后采用新写作规则，且无 Astro 或 Zod 运行时依赖", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "content-tools-rules-"));
+  try {
+    const packed = await packTool(workspace);
+    const content = join(workspace, "content");
+    await cp("tests/fixtures/content", content, { recursive: true });
+    await installTool(workspace, content, packed);
+    const installed = join(content, "node_modules/@jasper-blog/content-tools");
+    const manifest = JSON.parse(await readFile(join(installed, "package.json"), "utf8"));
+    assert.equal(Object.keys(manifest.dependencies ?? {}).length, 0);
+    const { normalizePostFrontmatter } = (await import(
+      join(installed, "post-writing-rules.js")
+    )) as typeof import("../../packages/content-tools/post-writing-rules.js");
+    const { validateContent } = (await import(
+      join(installed, "validate-content.js")
+    )) as typeof import("../../packages/content-tools/validate-content.js");
+    const result = normalizePostFrontmatter({
+      title: "标题",
+      description: "",
+      publishedAt: "2026-09-19T12:00:00+08:00",
+      tags: ["Astro", " Astro "],
+      draft: false,
+      id: 1,
+    });
+    if (result.ok) assert.fail("发行包应拒绝去空白后的重复标签");
+    assert.match(result.issues[0]?.message ?? "", /标签不得重复/);
+
+    await writeFile(
+      join(content, "posts/dup-tags.md"),
+      `---
+title: "重复"
+description: ""
+publishedAt: "2026-09-19T12:00:00+08:00"
+tags:
+  - "Astro"
+  - " Astro "
+draft: false
+id: 7
+---
+
+正文。
+`,
+    );
+    await writeFile(join(content, "post-next-id.json"), '{"next": 8}\n');
+    await assert.rejects(() => validateContent(content), /标签不得重复/);
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }

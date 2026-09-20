@@ -2,13 +2,11 @@ import { glob, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { contentPaths } from "./content-paths.js";
 import { assertPostStableIds, isPostFilename } from "./post-rules.js";
+import { findTagUrlConflicts, normalizePostFrontmatter } from "./post-writing-rules.js";
 import { isShanghaiDateTime } from "./shanghai-time.js";
 import { isShuoshuoStableId } from "./shuoshuo-rules.js";
-import { getTag, getTagError } from "./tag-rules.js";
 
-const POST_FIELDS = new Set(["title", "description", "publishedAt", "tags", "draft", "id"]);
 const SHUOSHUO_FIELDS = new Set(["publishedAt", "draft"]);
-const POST_REQUIRED = ["title", "description", "publishedAt", "draft", "id"];
 const SHUOSHUO_REQUIRED = ["publishedAt", "draft"];
 
 function parseDoubleQuoted(text) {
@@ -144,52 +142,18 @@ function inspectPost(relative, source) {
     return { errors, post: undefined };
   }
   const { data, quoted, body } = document;
-  errors.push(...unknownFields(data, POST_FIELDS, prefix));
-  for (const key of POST_REQUIRED) {
-    if (!fieldPresent(data, key)) errors.push(`${prefix}：缺少 ${key}`);
+  if (fieldPresent(data, "publishedAt") && !quoted.publishedAt) {
+    errors.push(`${prefix}：发布时间必须是加引号的上海时间 YYYY-MM-DDTHH:mm:ss+08:00`);
   }
-  if (fieldPresent(data, "title")) {
-    if (typeof data.title !== "string") errors.push(`${prefix}：标题必须是文字`);
-    else if (!data.title.trim()) errors.push(`${prefix}：标题不能为空`);
-  }
-  if (fieldPresent(data, "description") && typeof data.description !== "string") {
-    errors.push(`${prefix}：摘要必须是文字`);
-  }
-  if (fieldPresent(data, "publishedAt")) {
-    const error = inspectPublishedAt(data.publishedAt, quoted.publishedAt, prefix);
-    if (error) errors.push(error);
-  }
-  if (fieldPresent(data, "draft") && typeof data.draft !== "boolean") {
-    errors.push(`${prefix}：draft 必须是 true 或 false`);
-  }
-  if (fieldPresent(data, "id")) {
-    if (typeof data.id !== "number" || !Number.isInteger(data.id) || data.id < 1) {
-      errors.push(`${prefix}：id 必须是正整数`);
-    }
-  }
-  let tags = [];
-  if (Object.hasOwn(data, "tags") && data.tags !== null && data.tags !== undefined) {
-    if (!Array.isArray(data.tags)) errors.push(`${prefix}：标签必须是列表`);
-    else {
-      tags = data.tags;
-      if (new Set(tags).size !== tags.length) errors.push(`${prefix}：标签不得重复`);
-      for (const tag of tags) {
-        if (typeof tag !== "string" || !tag.trim()) {
-          errors.push(`${prefix}：标签不能为空`);
-          continue;
-        }
-        const error = getTagError(tag.trim());
-        if (error) errors.push(`${prefix}：${error}`);
-      }
-      tags = tags.filter(tag => typeof tag === "string").map(tag => tag.trim());
-    }
+  const result = normalizePostFrontmatter(data);
+  if (!result.ok) {
+    for (const issue of result.issues) errors.push(`${prefix}：${issue.message}`);
   }
   if (!body.trim()) errors.push(`技术文章 ${filename} 的正文不能为空`);
-  const post =
-    fieldPresent(data, "id") && typeof data.id === "number"
-      ? { filename, id: data.id, tags }
-      : undefined;
-  return { errors, post };
+  return {
+    errors,
+    post: result.ok ? { filename, id: result.value.id, tags: result.value.tags } : undefined,
+  };
 }
 
 function inspectShuoshuo(relative, source) {
@@ -252,22 +216,16 @@ export async function validateContent(directory) {
   errors.push(...(await inspectAbout(paths.about)));
 
   const posts = [];
-  const tagHrefs = new Map();
   for (const relative of await markdownEntries(paths.posts)) {
     const source = await readFile(join(paths.posts, relative), "utf8");
     const { errors: postErrors, post } = inspectPost(relative, source);
     errors.push(...postErrors);
-    if (!post) continue;
-    posts.push(post);
-    for (const tag of post.tags) {
-      if (!tag) continue;
-      const { href, name } = getTag(tag);
-      const owner = tagHrefs.get(href);
-      if (owner && owner !== name) {
-        errors.push(`标签「${owner}」与「${name}」生成了相同的网址：${href}`);
-      }
-      tagHrefs.set(href, name);
-    }
+    if (post) posts.push(post);
+  }
+  for (const conflict of findTagUrlConflicts(
+    posts.map(post => ({ id: post.filename, tags: post.tags })),
+  )) {
+    errors.push(conflict.message);
   }
 
   try {

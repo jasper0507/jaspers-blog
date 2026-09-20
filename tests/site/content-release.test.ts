@@ -23,6 +23,7 @@ const packedFiles = [
   "create-content.js",
   "package.json",
   "post-rules.js",
+  "post-writing-rules.js",
   "publish-content.js",
   "publish-task.js",
   "shanghai-time.js",

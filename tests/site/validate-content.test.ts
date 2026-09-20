@@ -99,6 +99,33 @@ test("缺少必填字段或未知字段会失败", async t => {
   await assert.rejects(() => validateContent(directory), /不能包含未知字段 updatedAt/);
 });
 
+test("去空白后重复的标签、tags: null 和不安全整数会失败", async t => {
+  const directory = await workspace(t);
+  await writeFile(
+    join(directory, "posts/trim-dup.md"),
+    postSource({ title: "去空白重复", id: 7, tags: '\n  - "Astro"\n  - " Astro "' }),
+  );
+  await writeFile(
+    join(directory, "posts/null-tags.md"),
+    postSource({ title: "空标签", id: 8 }).replace("tags: []", "tags: null"),
+  );
+  await writeFile(
+    join(directory, "posts/unsafe-id.md"),
+    postSource({ title: "不安全整数", id: Number.MAX_SAFE_INTEGER + 1 }),
+  );
+  await writeFile(join(directory, "post-next-id.json"), '{"next": 10}\n');
+  await assert.rejects(
+    () => validateContent(directory),
+    error => {
+      const text = String(error);
+      assert.match(text, /posts\/trim-dup.md：标签不得重复/);
+      assert.match(text, /posts\/null-tags.md：标签必须是列表/);
+      assert.match(text, /posts\/unsafe-id.md：id 必须是正整数/);
+      return true;
+    },
+  );
+});
+
 test("刚创建的空正文文章不能通过", async t => {
   const directory = await workspace(t);
   const created = await readFile(join(root, "packages/content-tools/post-rules.js"), "utf8");
