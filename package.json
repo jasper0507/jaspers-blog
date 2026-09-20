@@ -16,7 +16,7 @@
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "test:config": "node src/lib/hero-images.ts && node scripts/check-site.mjs",
     "test:fonts": "node scripts/check-fonts.mjs && node --test scripts/check-fetch-fonts.mjs",
-    "test:content-rules": "node scripts/check-post-stable-ids.mjs && node --test tests/site/posts.test.ts tests/site/validate-content.test.ts",
+    "test:content-rules": "node scripts/check-post-stable-ids.mjs && node --test tests/site/posts.test.ts tests/site/validate-content.test.ts tests/site/post-writing-rules.test.ts",
     "test:index-posts": "node scripts/check-index-posts.mjs",
     "test:markdown": "node --test tests/site/markdown.test.ts",
     "test:site": "playwright test",

@@ -4,9 +4,9 @@ import { z } from "astro/zod";
 import { isPostFilename } from "../packages/content-tools/post-rules.js";
 import { isShanghaiDateTime } from "../packages/content-tools/shanghai-time.js";
 import { isShuoshuoStableId } from "../packages/content-tools/shuoshuo-rules.js";
-import { getTagError } from "../packages/content-tools/tag-rules.js";
 
 import { contentSource } from "./lib/content-source.js";
+import { postsSchema } from "./lib/posts-schema.ts";
 
 const source = contentSource();
 
@@ -26,33 +26,7 @@ const postFiles = glob({
 });
 const posts = defineCollection({
   loader: postFiles,
-  schema: z
-    .object({
-      title: z.string().trim().min(1),
-      description: z.string().trim(),
-      id: z.number().int().positive(),
-      publishedAt,
-      tags: z
-        .array(
-          z
-            .string()
-            .trim()
-            .min(1)
-            .superRefine((tag, context) => {
-              const error = getTagError(tag);
-              if (error) {
-                context.addIssue({
-                  code: "custom",
-                  message: error,
-                });
-              }
-            }),
-        )
-        .default([])
-        .refine(tags => new Set(tags).size === tags.length, "标签不得重复"),
-      draft: z.boolean(),
-    })
-    .strict(),
+  schema: postsSchema,
 });
 
 const shuoshuoFiles = glob({

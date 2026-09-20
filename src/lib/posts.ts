@@ -1,8 +1,9 @@
 import { getCollection, render } from "astro:content";
 import type { CollectionEntry, RenderResult } from "astro:content";
 import { assertPostStableIds } from "../../packages/content-tools/post-rules.js";
-import { contentSource } from "./content-source.js";
+import { findTagUrlConflicts } from "../../packages/content-tools/post-writing-rules.js";
 import { getTag } from "../../packages/content-tools/tag-rules.js";
+import { contentSource } from "./content-source.js";
 
 const isoDateFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Shanghai",
@@ -103,18 +104,13 @@ export async function getPublishedPostCatalog() {
 async function createPublishedCatalog(
   entries: CollectionEntry<"posts">[],
 ): Promise<PublishedCatalog> {
-  const tagHrefOwners = new Map<string, string>();
+  const conflicts = findTagUrlConflicts(
+    entries.map(entry => ({ id: entry.id, tags: entry.data.tags })),
+  );
+  if (conflicts[0]) throw new Error(conflicts[0].message);
 
   for (const entry of entries) {
     if (!entry.body?.trim()) throw new Error(`技术文章 ${entry.id} 的正文不能为空`);
-    for (const tagName of entry.data.tags) {
-      const { href } = getTag(tagName);
-      const tagOwner = tagHrefOwners.get(href);
-      if (tagOwner && tagOwner !== tagName) {
-        throw new Error(`标签「${tagOwner}」与「${tagName}」生成了相同的网址：${href}`);
-      }
-      tagHrefOwners.set(href, tagName);
-    }
   }
 
   const posts: PublishedPost[] = entries
@@ -130,7 +126,7 @@ async function createPublishedCatalog(
         id: entry.data.id,
         href: `/posts/${entry.data.id}/`,
         title: entry.data.title,
-        description: entry.data.description.trim(),
+        description: entry.data.description,
         publishedAt: {
           value: entry.data.publishedAt,
           iso: entry.data.publishedAt.toISOString(),
