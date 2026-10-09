@@ -388,7 +388,8 @@
 
 .post-body hr {
   height: 1px;
-  margin: calc(var(--spacing-text-size) * 1.35) 0;
+  /* 上下间距由前面的 pre / details / hr 共用规则拥有。 */
+  margin-inline: 0;
   padding: 0;
   border: 0;
   background: var(--body-border);
