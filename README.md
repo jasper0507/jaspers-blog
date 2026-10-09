@@ -87,7 +87,7 @@ make publish m="自定义提交说明"
 - Pagefind 只索引已发布技术文章；没有公开技术文章时不生成搜索入口。
 - RSS 同时包含文章摘要和说说摘要，站点地图只收录公开页面。
 - Anthropic Sans / Serif / Mono 与 Noto Sans SC 均由本站托管，不依赖访客本机字体。
-  字体角色、Markdown token、合成字形限制与回退方式见[排版说明](docs/typography.md)。
+  字体角色、Markdown token、旧版间距、合成字形限制与回退方式见[排版说明](docs/typography.md)。
 
 ## 目录
 

@@ -31,6 +31,57 @@ const description = `关于 ${blogSettings.author.name} 与 ${blogSettings.site.
     font-optical-sizing: auto;
   }
 
+  /* 关于页在字体更新前不使用公共正文间距；只恢复 margin / padding。 */
+  :global(
+    .about-page
+      .post-body
+      :is(
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        p,
+        ul,
+        ol,
+        li,
+        blockquote,
+        img,
+        pre,
+        table,
+        th,
+        td,
+        hr,
+        details,
+        summary,
+        code,
+        mark
+      )
+  ) {
+    margin: 0;
+    padding: 0;
+  }
+
+  :global(.about-page .post-body input[type="checkbox"]),
+  :global(.about-page .post-body details[open] summary),
+  :global(.about-page .post-body .katex-display),
+  :global(.about-page .post-body .astro-code[data-title]::before) {
+    margin: 0;
+    padding: 0;
+  }
+
+  :global(.about-page .post-body p) {
+    margin-bottom: 1.4rem;
+  }
+
+  :global(.about-page .post-body p:first-of-type) {
+    margin-bottom: 1.85rem;
+  }
+
+  :global(.about-page .post-body ul) {
+    padding-left: 1.35rem;
+  }
+
   :global(.about-page .post-body) {
     max-width: 38rem;
   }
