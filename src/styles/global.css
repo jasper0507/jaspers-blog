@@ -40,8 +40,8 @@
 
 :root {
   color-scheme: light dark;
-  /* 浅色页底按 Anthropic 排版裁定；UI 强调色与暗色沿用现有纸面 token。 */
-  --background: light-dark(#fcfcfb, #272421);
+  /* 恢复旧版纸面色板（docs/typography.md）；字体与 UI 排版沿用当前方案。 */
+  --background: light-dark(#f5f2ea, #272421);
   --surface: light-dark(#fbf9f4, #322f29);
   --text: light-dark(#292520, #e9e6dd);
   --muted: light-dark(#6e675b, #b8b2a5);
