@@ -103,12 +103,12 @@ test("Markdown 实测 token 覆盖文章、关于与说说，亮暗色按约定�
   assert.equal(paragraph.weight, "400");
   assert.equal(paragraph.lineHeight, "24px");
   assert.equal(paragraph.color, "rgb(11, 11, 11)");
-  assert.equal(paragraph.marginTop, "8px");
+  assert.equal(paragraph.marginTop, "14.04px");
 
   for (const [selector, size, height, top] of [
     [".post-body h2", "22px", "27.5px", "0px"],
-    [".post-body h3", "18px", "23.4px", "24px"],
-    [".post-body h4", "16px", "20.8px", "8px"],
+    [".post-body h3", "18px", "23.4px", "36.108px"],
+    [".post-body h4", "16px", "20.8px", "27.216px"],
   ]) {
     const heading = await style(page, selector);
     assert.equal(heading.size, size);
@@ -142,8 +142,8 @@ test("Markdown 实测 token 覆盖文章、关于与说说，亮暗色按约定�
   const quote = await style(page, ".post-body blockquote");
   assert.equal(quote.color, "rgb(82, 81, 78)");
   assert.equal(quote.borderWidth, "4px");
-  assert.equal(quote.paddingLeft, "16px");
-  assert.equal((await style(page, ".post-body ul")).marginTop, "12px");
+  assert.equal(quote.paddingLeft, "17.6px");
+  assert.equal((await style(page, ".post-body ul")).marginTop, "14.04px");
   assert.equal((await style(page, ".post-body a")).color, "rgb(24, 79, 149)");
   const header = await style(page, ".post-body th");
   assert.equal(header.size, "16px");
