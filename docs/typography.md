@@ -65,7 +65,7 @@ Anthropic 字体按[来源 README](https://github.com/Isilsolme/dsh-anthropic-fo
 
 关于页普通 p 顶距 0、底距 22.4px；每个父元素内的首个 p 底距 29.6px（包括引用与 details 内）。ul 左 padding 21.6px，h1 底距 24px；其他标准 Markdown 元素的 margin / padding 为 0。公式只恢复外层留白，KaTeX 内部排版保留。
 
-验收在 `tests/site/fixture/spacing-baseline.ts` 保存独立测得的旧值，浏览器测试同时覆盖桌面/手机、文章/说说列表/说说详情/关于页、标题和表格中的行内码、嵌套结构与首尾例外。恢复 margin / padding 不保证换行和元素总高度与旧版一致；这些仍受当前字体、字号、行高影响。自定义内联 HTML 若另设字体尺寸，不属于此标准上下文基线。
+验收在 `tests/site/fixture/spacing-baseline.ts` 保存独立测得的旧值；说说列表和详情实测一致，共用一份数据，但两个页面仍分别验收。浏览器测试同时覆盖桌面/手机、文章/说说列表/说说详情/关于页、标题和表格中的行内码、嵌套结构与首尾例外。恢复 margin / padding 不保证换行和元素总高度与旧版一致；这些仍受当前字体、字号、行高影响。自定义内联 HTML 若另设字体尺寸，不属于此标准上下文基线。
 
 ## 回退
 
