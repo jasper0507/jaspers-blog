@@ -1,33 +1,32 @@
-/* 正文内容层：Anthropic 字体与色值；间距恢复旧版实测像素（docs/typography.md）。 */
+/* 正文内容层：Anthropic 字体与尺度、旧版纸面色板与表格、旧版实测间距（docs/typography.md）。 */
 .post-body {
   /* 仅用于间距：文章旧正文 18px，说说由页面覆盖为 17px。 */
   --spacing-body-size: 18px;
   --spacing-text-size: var(--spacing-body-size);
 
-  /* 浅色正文 token；暗色沿用现有内容色板。 */
-  --body-text: light-dark(#0b0b0b, #e8e6de);
-  --body-heading: light-dark(#0b0b0b, #f5f3ec);
+  /* 恢复 Kraft 内容色板；字体与非表格的字号、行高沿用当前方案。 */
+  --body-text: light-dark(#2b2621, #e8e6de);
+  --body-heading: light-dark(#1c1815, #f5f3ec);
   --body-muted: light-dark(#72695e, #a29a8d);
-  --body-quote: light-dark(#52514e, #b5ac9f);
-  --body-quote-border: light-dark(rgb(11 11 11 / 10%), #d97757);
-  --body-border: light-dark(rgb(11 11 11 / 10%), #3e3b36);
-  --body-accent: light-dark(#184f95, #d97757);
-  --body-accent-hover: light-dark(#184f95, #e69373);
-  --body-inline-color: light-dark(#8e2626, #e39a82);
-  --body-inline-bg: light-dark(rgb(11 11 11 / 5%), #363430);
-  --body-inline-border: light-dark(rgb(11 11 11 / 10%), #47443e);
-  --body-code-bg: light-dark(rgb(11 11 11 / 5%), #2d2c29);
-  --body-code-border: light-dark(rgb(11 11 11 / 10%), #3e3b36);
-  --body-table-strong: light-dark(rgb(11 11 11 / 10%), #9a9286);
-  --body-table-row: light-dark(rgb(11 11 11 / 10%), #4a463f);
-  --body-table-soft: light-dark(rgb(11 11 11 / 10%), #3a3733);
-  --body-table-heading: light-dark(rgb(11 11 11 / 5%), transparent);
+  --body-quote: light-dark(#625950, #b5ac9f);
+  --body-quote-border: light-dark(#c15f3c, #d97757);
+  --body-border: light-dark(#ddd5ca, #3e3b36);
+  --body-accent: light-dark(#a14d2e, #d97757);
+  --body-accent-hover: light-dark(#8f3f2d, #e69373);
+  --body-inline-color: light-dark(#a34a3a, #e39a82);
+  --body-inline-bg: light-dark(#f2eeea, #363430);
+  --body-inline-border: light-dark(#d7cec5, #47443e);
+  --body-code-bg: light-dark(#f7f5ef, #2d2c29);
+  --body-code-border: light-dark(#e4ddd2, #3e3b36);
+  --body-table-strong: light-dark(#6f675c, #9a9286);
+  --body-table-row: light-dark(#c9bfb2, #4a463f);
+  --body-table-soft: light-dark(#e4dcd0, #3a3733);
   --body-table-hover: light-dark(rgb(193 95 60 / 5%), rgb(217 119 87 / 7%));
   --body-details-bg: light-dark(#f4efe7, #2c2a25);
 
   /* Shiki 语法色：正文作用域内对齐 Kraft 代码 token */
   --code-background: var(--body-code-bg);
-  --code-foreground: light-dark(#14181f, #e8e6de);
+  --code-foreground: light-dark(#1c1815, #e8e6de);
   --code-comment: light-dark(#766c61, #9b9386);
   --code-string: light-dark(#477436, #9cbd84);
   --code-constant: light-dark(#9f5225, #e0a175);
@@ -198,7 +197,7 @@
   margin-block: calc(var(--spacing-text-size) * 1.75);
 }
 
-/* 引用：中性 4px 左边线。 */
+/* 引用：旧珊瑚色，保留当前 4px 左边线。 */
 .post-body blockquote {
   margin-block: calc(var(--spacing-text-size) * 1.7);
   padding: calc(var(--spacing-text-size) * 0.15) 0 calc(var(--spacing-text-size) * 0.15) 1.1rem;
@@ -333,7 +332,7 @@
   box-shadow: inset 3px 0 light-dark(#a64d43, #e58376);
 }
 
-/* 表格：浅色表头与行边线；宽表整块自滚动。 */
+/* 表格：恢复旧字号、字重、行高与透明表头；宽表整块自滚动。 */
 .post-body table {
   --spacing-text-size: 14.88px;
   width: max-content;
@@ -343,7 +342,7 @@
   border-bottom: 1px solid var(--body-table-soft);
   overflow-x: auto;
   font-family: var(--font-serif);
-  font-size: 1rem;
+  font-size: 0.93rem;
   font-variant-numeric: lining-nums tabular-nums;
   background: transparent;
 }
@@ -366,15 +365,15 @@
   border: 0;
   text-align: left;
   vertical-align: top;
-  line-height: 1.5;
+  line-height: 1.56;
 }
 
 .post-body th {
   color: var(--body-heading);
-  font-weight: 500;
+  font-weight: 600;
   vertical-align: bottom;
-  line-height: 1.5;
-  background: var(--body-table-heading);
+  line-height: 1.48;
+  background: transparent;
 }
 
 .post-body th:last-child,
@@ -393,7 +392,7 @@
   padding: 0;
   border: 0;
   background: var(--body-border);
-  opacity: 1;
+  opacity: 0.75;
 }
 
 .post-body .contains-task-list {

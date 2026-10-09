@@ -70,7 +70,7 @@ const structuredData = JSON.stringify(
       title={siteTitle}
       href={new URL("rss.xml", url).href}
     />
-    <meta name="theme-color" content="#fcfcfb" />
+    <meta name="theme-color" content="#f5f2ea" />
     <meta property="og:type" content={pageData.ogType ?? "website"} />
     <meta property="og:locale" content="zh_CN" />
     <meta property="og:site_name" content={siteTitle} />
@@ -106,7 +106,7 @@ const structuredData = JSON.stringify(
         const applyResolved = (theme = savedTheme() ?? systemTheme()) => {
           root.dataset.theme = theme;
           const meta = document.querySelector('meta[name="theme-color"]');
-          const color = getComputedStyle(root).getPropertyValue("--background").trim();
+          const color = getComputedStyle(root).backgroundColor;
           if (meta && color) meta.setAttribute("content", color);
         };
 
