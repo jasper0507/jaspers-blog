@@ -1,0 +1,16 @@
+Anthropic Sans Web Text / Anthropic Serif Web Text / Anthropic Mono Variable
+Copyright 2025 Anthropic PBC. All rights reserved.
+
+Source: https://github.com/Isilsolme/dsh-anthropic-fonts
+Revision: 70deb78a198ebd3786d772d92a23d41eeb7510c0
+Files: fonts/AnthropicSansWebText.ttf, fonts/AnthropicSerifWebText.ttf,
+       fonts/AnthropicMonoVariable.ttf
+Upstream font statement: https://github.com/Isilsolme/dsh-anthropic-fonts/blob/70deb78a198ebd3786d772d92a23d41eeb7510c0/LICENSE
+
+Upstream identifies these fonts as proprietary Anthropic typefaces extracted
+from Anthropic web products, for personal use only, outside the repository's
+MIT license. The site owner confirmed authorization for this site's hosting.
+This notice does not grant downstream font usage or redistribution rights.
+
+All three supplied files contain upright Regular 400 only; none has a fvar
+axis. Additional weights and italic styles are synthesized by the browser.

@@ -1,15 +1,16 @@
 /**
  * 从 Google Fonts CSS API 拉取可自托管的 Noto Sans SC 可变字重分包，
  * 写入 public/fonts，并重生 src/styles/fonts.css。
- * 拉丁资源手维，不随本次下载改写文件。
+ * 同时从固定 GitHub 提交下载 Anthropic 拉丁字体并校验 SHA-256。
  *
  * 使用 Chrome UA 以拿到带 unicode-range 的 WOFF2 分段；可变 wght 200–900
- * 覆盖正文 400、标题 500/600、粗体 700，避免宋体伪粗。
- * 跳过拉丁/西里尔/越南分包：这些字形由 Source Serif 4 / IBM Plex 承担。
+ * 覆盖中文正文 400、标题 500/600 等真实字重。
+ * 跳过拉丁/西里尔/越南分包：拉丁字形由 Anthropic 字体承担。
  *
  * 只在维护时运行：node scripts/fetch-fonts.mjs
  * 页面运行时不请求字体 CDN。
  */
+import { createHash } from "node:crypto";
 import { createWriteStream } from "node:fs";
 import {
   cp,
@@ -29,41 +30,46 @@ import { join } from "node:path";
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-const LATIN_FACES = `/* 拉丁：既有单文件策略，不随 Noto 分包重建 */
-@font-face {
-  font-family: "Source Serif 4";
-  font-style: normal;
-  font-weight: 200 900;
-  font-display: swap;
-  src: url("/fonts/source-serif-4-latin.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
+// 固定上游版本；更新版本时同时核对字体声明及 SHA-256。
+const ANTHROPIC_REVISION = "70deb78a198ebd3786d772d92a23d41eeb7510c0";
+export const ANTHROPIC_FONTS = [
+  {
+    name: "AnthropicSansWebText.ttf",
+    sha256: "23d4e1fd7be1c5660deb039dfee29dc284417aea90b744a435ce9ad752e50254",
+  },
+  {
+    name: "AnthropicSerifWebText.ttf",
+    sha256: "aa2b11a302488b87acd0fbc6e30dcae2640404d529a316c647e765440c22e914",
+  },
+  {
+    name: "AnthropicMonoVariable.ttf",
+    sha256: "974d8304ca3ce5db421d4b4aa02cff170d41f5179a7acd155e934f4218d1d803",
+  },
+];
 
+const LATIN_FACES = `/* Anthropic TTF 只有直立 400；其余字重与斜体由浏览器合成。 */
 @font-face {
-  font-family: "Source Serif 4";
-  font-style: italic;
-  font-weight: 200 900;
-  font-display: swap;
-  src: url("/fonts/source-serif-4-latin-italic.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-@font-face {
-  font-family: "IBM Plex Sans";
-  font-style: normal;
-  font-weight: 400 700;
-  font-display: swap;
-  src: url("/fonts/ibm-plex-sans-latin.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-@font-face {
-  font-family: "IBM Plex Mono";
+  font-family: "anthropic-sans";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("/fonts/ibm-plex-mono-latin.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url("/fonts/AnthropicSansWebText.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "anthropic-serif";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/AnthropicSerifWebText.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "anthropic-mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/AnthropicMonoVariable.ttf") format("truetype");
 }
 `;
 
@@ -149,7 +155,7 @@ const formatFace = (family, localName, unicodeRange) => `@font-face {
 `;
 
 /**
- * 更新仓库的中文分包及字体样式；调用期间须暂停其他字体更新和构建。
+ * 更新仓库的 Anthropic 字体、中文分包及字体样式；调用期间须暂停其他字体更新和构建。
  * 可捕获错误会尝试回滚；回滚失败的 AggregateError 带 recoveryDirectory，
  * 保留恢复文件供人工处理。进程中断后同样由维护者人工恢复。
  * @param {string} root
@@ -230,6 +236,16 @@ export async function refreshFonts(root, { fetch = globalThis.fetch, rename = re
       }
     }
 
+    for (const { name, sha256 } of ANTHROPIC_FONTS) {
+      const url = `https://raw.githubusercontent.com/Isilsolme/dsh-anthropic-fonts/${ANTHROPIC_REVISION}/fonts/${name}`;
+      const dest = join(nextFontsDir, name);
+      await download(url, dest, fetch);
+      const font = await readFile(dest);
+      if (createHash("sha256").update(font).digest("hex") !== sha256) {
+        throw new Error(`Anthropic 字体校验失败：${name}`);
+      }
+    }
+
     const stagedNotoNames = (await readdir(nextFontsDir))
       .filter(name => /^noto-sans-sc-.*\.woff2$/.test(name))
       .sort();
@@ -242,13 +258,14 @@ export async function refreshFonts(root, { fetch = globalThis.fetch, rename = re
     }
 
     const generated = jobs.map(job => formatFace(job.family, job.localName, job.unicodeRange));
-    const header = `/* 由 scripts/fetch-fonts.mjs 生成。拉丁资源手维；Noto Sans SC 为可变字重 unicode-range 分包。 */\n\n`;
+    const header = `/* 由 scripts/fetch-fonts.mjs 生成。Anthropic 固定版本 TTF；Noto Sans SC 为可变字重 unicode-range 分包。 */\n\n`;
     await writeFile(nextCssPath, header + LATIN_FACES + "\n" + generated.join("\n"), "utf8");
 
     try {
       await readFile(join(nextFontsDir, "LICENSE-noto-sans-sc.txt"), "utf8");
+      await readFile(join(nextFontsDir, "NOTICE-anthropic.txt"), "utf8");
     } catch {
-      throw new Error("缺少 public/fonts/LICENSE-noto-sans-sc.txt");
+      throw new Error("缺少 Noto Sans SC 许可或 Anthropic 字体声明");
     }
 
     let fontsBackedUp = false;

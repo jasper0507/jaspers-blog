@@ -8,13 +8,14 @@
  */
 @theme {
   --font-serif:
-    "Source Serif 4", "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei",
-    "Noto Sans CJK SC", sans-serif;
+    "anthropic-serif", "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei",
+    "Noto Sans CJK SC", serif;
   --font-sans:
-    "IBM Plex Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Source Han Sans SC",
+    "anthropic-sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Source Han Sans SC",
     "Noto Sans CJK SC", sans-serif;
   --font-mono:
-    "IBM Plex Mono", "Sarasa Mono SC", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    "anthropic-mono", "Noto Sans SC", "Sarasa Mono SC", "SFMono-Regular", Consolas,
+    "Liberation Mono", monospace;
 }
 
 @theme inline {
@@ -39,8 +40,8 @@
 
 :root {
   color-scheme: light dark;
-  /* 温暖克制的纸面 token（ADR-0020）：羊皮底、暖灰字、珊瑚强调 */
-  --background: light-dark(#f5f2ea, #272421);
+  /* 浅色页底按 Anthropic 排版裁定；UI 强调色与暗色沿用现有纸面 token。 */
+  --background: light-dark(#fcfcfb, #272421);
   --surface: light-dark(#fbf9f4, #322f29);
   --text: light-dark(#292520, #e9e6dd);
   --muted: light-dark(#6e675b, #b8b2a5);
@@ -133,7 +134,7 @@ html[data-theme="dark"] {
     display: flex;
     flex-direction: column;
     font-size: 1rem;
-    line-height: 1.75;
+    line-height: 1.5;
     text-rendering: optimizeLegibility;
   }
 

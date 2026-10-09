@@ -15,11 +15,15 @@ id: 2
 
 用于验证三级标题进入目录。
 
+<p id="typography-sample">Anthropic Latin 与中文。</p>
+
+<h4>四级标题样式</h4>
+
 - 无序列表
 
 1. 有序列表
 
-正文包含[链接](https://example.com)、`行内代码`、==高亮标记==、引用与脚注[^toc]，以及 *italic-latin*、**bold-latin**、***both-latin*** 与中文*强调*：
+正文包含[链接](https://example.com)、`行内代码`、==高亮标记==、引用与脚注[^toc]，以及 _italic-latin_、**bold-latin**、_**both-latin**_ 与中文*强调*：
 
 > 引用内容。
 
@@ -28,7 +32,7 @@ E = mc^2
 $$
 
 | 能力 | 状态 |
-| --- | --- |
+| ---- | ---- |
 | 表格 | 正常 |
 
 ```js

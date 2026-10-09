@@ -35,15 +35,15 @@ make dev
 
 开发服务器默认运行在 `http://localhost:4321`。常用命令：
 
-| 命令               | 用途                                       |
-| ------------------ | ------------------------------------------ |
-| `make dev`         | 使用公开示例启动开发服务器                 |
-| `make build`       | 校验示例内容、构建站点并生成 Pagefind 索引 |
-| `make preview`     | 预览最近一次生产构建                       |
-| `make check`       | 运行 Astro 与 TypeScript 检查              |
-| `make test`        | 运行格式、类型、领域规则和 Chromium 验收   |
-| `make test-smoke`  | 运行 Firefox 核心场景                      |
-| `make fonts-fetch` | 更新自托管 Noto Sans SC 中文字体分包       |
+| 命令               | 用途                                        |
+| ------------------ | ------------------------------------------- |
+| `make dev`         | 使用公开示例启动开发服务器                  |
+| `make build`       | 校验示例内容、构建站点并生成 Pagefind 索引  |
+| `make preview`     | 预览最近一次生产构建                        |
+| `make check`       | 运行 Astro 与 TypeScript 检查               |
+| `make test`        | 运行格式、类型、领域规则和 Chromium 验收    |
+| `make test-smoke`  | 运行 Firefox 核心场景                       |
+| `make fonts-fetch` | 更新 Anthropic 字体与 Noto Sans SC 中文分包 |
 
 如需验证另一个完整内容目录，显式指定：
 
@@ -86,7 +86,8 @@ make publish m="自定义提交说明"
 - Markdown 支持 GFM、脚注、KaTeX、`==高亮==`、原生 `<details>` 和 Shiki 代码块。
 - Pagefind 只索引已发布技术文章；没有公开技术文章时不生成搜索入口。
 - RSS 同时包含文章摘要和说说摘要，站点地图只收录公开页面。
-- Source Serif 4、IBM Plex Sans、IBM Plex Mono 和 Noto Sans SC 均由本站托管。
+- Anthropic Sans / Serif / Mono 与 Noto Sans SC 均由本站托管，不依赖访客本机字体。
+  字体角色、Markdown token、合成字形限制与回退方式见[排版说明](docs/typography.md)。
 
 ## 目录
 

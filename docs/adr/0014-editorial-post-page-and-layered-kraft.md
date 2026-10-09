@@ -1,5 +1,7 @@
 # 单篇页改为编辑排版，正文分层对齐 Kraft Paper
 
+> 2026-10-09 修订：字体角色、Markdown 浅色 token 和全站浅色页底以[排版说明](../typography.md)为准，取代本文对应旧约定；布局与暗色色值保留。
+
 v2 收工前调整单篇技术文章页与少量外壳：废弃 ADR-0001 / ADR-0013 中「768px 纸张卡片 + 页边目录、非独立双栏」的合同，改为编辑长文版式；列宽与页眉/目录气质对齐 JacksBlog 文章页（以 `https://jackchou00.com/posts/photo-compress-beta/` 为参照），正文组件视觉以 `kraft-paper-v2`（及对应暗色）为唯一基准，但 **font-family 继续使用站点现有配置**。
 
 ## 版式

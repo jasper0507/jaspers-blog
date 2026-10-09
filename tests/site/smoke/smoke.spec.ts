@@ -22,6 +22,23 @@ test("核心阅读与站点壳交互可用", async ({ page }) => {
   await page.goto(`${host}/posts/2/`);
   assert.equal((await page.locator("#post-title").textContent())?.includes("视觉验收"), true);
 
+  const loadedFonts = await page.evaluate(async () => {
+    const names = ["anthropic-sans", "anthropic-serif", "anthropic-mono", "Noto Sans SC"];
+    return Promise.all(
+      names.map(async name => {
+        const faces = await document.fonts.load(
+          `16px "${name}"`,
+          name === "Noto Sans SC" ? "中文" : "Latin",
+        );
+        return { name, loaded: faces.length > 0 && faces.every(face => face.status === "loaded") };
+      }),
+    );
+  });
+  assert.ok(
+    loadedFonts.every(font => font.loaded),
+    JSON.stringify(loadedFonts),
+  );
+
   await page.goto(`${host}/shuoshuo/`);
   const toggle = page.locator('[data-shuoshuo-toggle="20250101-000001"]');
   await toggle.click();
