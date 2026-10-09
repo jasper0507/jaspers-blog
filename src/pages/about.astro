@@ -1,5 +1,6 @@
 ---
 import { getEntry, render } from "astro:content";
+import MarkdownBody from "../components/MarkdownBody.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { blogSettings } from "../lib/site";
 
@@ -12,12 +13,16 @@ const description = `关于 ${blogSettings.author.name} 与 ${blogSettings.site.
 
 <BaseLayout title="关于" description={description} pageClass="page-shell about-page">
   <h1 class="sr-only">关于</h1>
-  <Content />
+  <MarkdownBody>
+    <Content />
+  </MarkdownBody>
 </BaseLayout>
 
 <style>
-  :global(.about-page h1) {
+  /* 未提供新的 Markdown h1 尺度，保留关于页原有标题排版。 */
+  :global(.about-page .post-body h1) {
     margin: 0 0 1.5rem;
+    color: var(--body-heading);
     font-family: var(--font-serif);
     font-size: clamp(2.5rem, 5vw, 3.5rem);
     font-weight: 400;
@@ -26,40 +31,7 @@ const description = `关于 ${blogSettings.author.name} 与 ${blogSettings.site.
     font-optical-sizing: auto;
   }
 
-  :global(.about-page p),
-  :global(.about-page li) {
-    color: var(--text);
-    font-family: var(--font-serif);
-    font-size: clamp(1.0625rem, 1.5vw, 1.125rem);
-    line-height: 1.85;
-    font-optical-sizing: auto;
-  }
-
-  :global(.about-page strong),
-  :global(.about-page b) {
-    font-weight: 700;
-  }
-
-  :global(.about-page p),
-  :global(.about-page ul) {
+  :global(.about-page .post-body) {
     max-width: 38rem;
-  }
-
-  :global(.about-page p) {
-    margin-block: 0 1.4rem;
-  }
-
-  :global(.about-page p:first-of-type) {
-    margin-bottom: 1.85rem;
-    font-size: clamp(1.7rem, 3.2vw, 2.35rem);
-    font-weight: 600;
-    letter-spacing: var(--track-display);
-    line-height: 1.2;
-  }
-
-  :global(.about-page ul) {
-    padding-left: 1.35rem;
-    /* Tailwind preflight 抹掉浏览器默认列表记号，这里显式恢复 */
-    list-style: disc;
   }
 </style>

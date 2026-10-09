@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { ANTHROPIC_FONTS } from "./fetch-fonts.mjs";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,7 +12,17 @@ const css = await readFile(cssPath, "utf8");
 const files = await readdir(fontsDir);
 
 assert.match(css, /font-family:\s*"Noto Sans SC"/);
-assert.match(css, /source-serif-4-latin-italic\.woff2/);
+for (const { name, sha256 } of ANTHROPIC_FONTS) {
+  assert.ok(css.includes(`/fonts/${name}`), `缺少 Anthropic 字体声明：${name}`);
+  const font = await readFile(join(fontsDir, name));
+  assert.equal(
+    createHash("sha256").update(font).digest("hex"),
+    sha256,
+    `字体内容与固定来源不一致：${name}`,
+  );
+}
+assert.ok(files.includes("NOTICE-anthropic.txt"), "缺少 Anthropic 字体声明");
+assert.doesNotMatch(css, /Source Serif 4|IBM Plex|local\(/);
 assert.doesNotMatch(css, /fonts\.googleapis\.com/);
 assert.ok(files.includes("LICENSE-noto-sans-sc.txt"), "缺少 Noto Sans SC 的 OFL 许可文件");
 assert.ok(

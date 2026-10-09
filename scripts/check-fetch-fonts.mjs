@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { refreshFonts } from "./fetch-fonts.mjs";
+import { ANTHROPIC_FONTS, refreshFonts } from "./fetch-fonts.mjs";
 
 const repositoryFonts = fileURLToPath(new URL("../public/fonts", import.meta.url));
 const sampleName = (await readdir(repositoryFonts)).find(name =>
@@ -26,6 +26,14 @@ const remoteCss = fontUrls
 function fixtureFetch(download = () => new Response(font)) {
   return async url => {
     if (new URL(url).hostname === "fonts.googleapis.com") return new Response(remoteCss);
+    if (new URL(url).hostname === "raw.githubusercontent.com") {
+      const name = new URL(url).pathname.split("/").at(-1);
+      assert.ok(
+        ANTHROPIC_FONTS.some(font => font.name === name),
+        `意外的拉丁字体请求：${url}`,
+      );
+      return new Response(await readFile(join(repositoryFonts, name)));
+    }
     const index = fontUrls.indexOf(url);
     assert.notEqual(index, -1, `意外的字体请求：${url}`);
     return download(index);
@@ -40,10 +48,7 @@ async function fixture(t) {
   await mkdir(fontsDirectory, { recursive: true });
   await mkdir(join(root, "src/styles"), { recursive: true });
   for (const name of [
-    "source-serif-4-latin.woff2",
-    "source-serif-4-latin-italic.woff2",
-    "ibm-plex-sans-latin.woff2",
-    "ibm-plex-mono-latin.woff2",
+    "NOTICE-anthropic.txt",
     "LICENSE-noto-sans-sc.txt",
     "noto-sans-sc-old.woff2",
   ]) {
@@ -79,7 +84,7 @@ async function assertClean(root) {
   assert.deepEqual((await readdir(root)).sort(), ["public", "src"], "完成后不得留下事务文件");
 }
 
-test("字体更新使分包与 CSS 配套，并保留拉丁资源和许可", async t => {
+test("字体更新使 Anthropic、中文分包与 CSS 配套，并保留声明与许可", async t => {
   const target = await fixture(t);
   const before = await assets(target);
   await refreshFonts(target.root, { fetch: fixtureFetch() });
@@ -93,7 +98,10 @@ test("字体更新使分包与 CSS 配套，并保留拉丁资源和许可", asy
   assert.equal(notoNames.length, 3);
   const css = after.css.toString("utf8");
   const references = [...css.matchAll(/url\("\/fonts\/([^"]+)"\)/g)].map(match => match[1]);
-  assert.equal(references.length, 7, "样式应引用四份拉丁资源和三份中文分包");
+  assert.equal(references.length, 6, "样式应引用三份 Anthropic 资源和三份中文分包");
+  for (const { name } of ANTHROPIC_FONTS) {
+    assert.deepEqual(after.fonts[name], await readFile(join(repositoryFonts, name)));
+  }
   assert.doesNotMatch(css, /https?:\/\//);
   for (const name of references) assert.ok(after.fonts[name], `样式引用缺失的字体：${name}`);
   for (const name of notoNames) {
@@ -225,4 +233,21 @@ test("回滚失败仍尝试恢复其他资源，并保留恢复目录和原始�
     before.fonts,
     "CSS 恢复失败不应阻断字体恢复",
   );
+});
+
+test("Anthropic 字体下载内容不符时保留原字体和 CSS", async t => {
+  const target = await fixture(t);
+  const before = await assets(target);
+  const validFetch = fixtureFetch();
+  await assert.rejects(
+    refreshFonts(target.root, {
+      fetch: url =>
+        new URL(url).hostname === "raw.githubusercontent.com"
+          ? new Response("invalid font")
+          : validFetch(url),
+    }),
+    /Anthropic 字体校验失败/,
+  );
+  assert.deepEqual(await assets(target), before);
+  await assertClean(target.root);
 });
