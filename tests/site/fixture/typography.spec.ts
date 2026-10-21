@@ -153,6 +153,8 @@ test("纸面配色与旧表格样式恢复，保留当前字体和正文尺度",
   assert.equal(quote.borderWidth, "4px");
   assert.equal(quote.paddingLeft, "17.6px");
   assert.equal((await style(page, ".post-body ul")).marginTop, "14.04px");
+  assert.equal((await style(page, ".post-body .image-paragraph img")).marginTop, "31.5px");
+  assert.equal((await style(page, ".post-body p:not(.image-paragraph) img")).marginTop, "0px");
   assert.equal((await style(page, ".post-body a")).color, "rgb(161, 77, 46)");
   const header = await style(page, ".post-body th");
   assert.equal(header.size, "14.88px");

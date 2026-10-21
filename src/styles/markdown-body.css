@@ -209,7 +209,11 @@
 .post-body img {
   max-width: 100%;
   height: auto;
-  /* 独立成段的插图节奏；不吃 typography 出厂的 2em 边距 */
+}
+
+/* 只给独立成段的插图留白；行内图片的上下 margin 会撑高所在行。 */
+.post-body > img,
+.post-body :where(.image-paragraph) img {
   margin-block: calc(var(--spacing-text-size) * 1.75);
 }
 

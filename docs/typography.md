@@ -64,7 +64,7 @@ margin / padding 延续作者确认的旧版实际像素距离。关于页保留
 | ul / ol 左 padding；li 左 padding         | 27px；3.6px                  | 25.5px；3.4px                |
 | blockquote 上下 margin；上下 / 左 padding | 30.6px；2.7px / 17.6px       | 28.9px；2.55px / 17.6px      |
 | blockquote p 上下 margin                  | 6.3px                        | 5.95px                       |
-| img 上下 margin                           | 31.5px                       | 29.75px                      |
+| 独立插图 img 上下 margin                  | 31.5px                       | 29.75px                      |
 | Shiki pre 上 / 下 margin                  | 17.028px / 19.35px           | 16.082px / 18.275px          |
 | hr / details 上下 margin                  | 24.3px                       | 22.95px                      |
 | 块级公式外层上下 margin / padding         | 19.8px / 8px                 | 18.7px / 8px                 |
@@ -73,6 +73,8 @@ margin / padding 延续作者确认的旧版实际像素距离。关于页保留
 | 普通段落 mark 上下 / 左右 padding         | 0.9px / 3.24px               | 0.85px / 3.06px              |
 
 标题与表格中的 code / mark 分别按旧父元素字号恢复内距，而实际 code 始终为当前 14.4px。Shiki 代码块内距、表格单元格内距、文件名条留白、details 内距等原先以 rem 计算的规则保留；普通 HTML pre 恢复为无内距，其上下 margin 为文章 24.3px / 说说 22.95px。
+
+插图间距只用于独立成段的图片：渲染时把只含图片（可包在链接里）与空白的段落标为 `image-paragraph`，正文直接子元素 img 同样适用。与文字同段的行内图片上下 margin 为 0，不撑高所在行。
 
 旧规则有级联例外：Shiki pre、hr、details 与块级公式作为正文唯一子元素时，上下 margin 仍保留上表的值；普通段落、标题、列表、引用、表格的首项顶距/末项底距归零。嵌套列表 margin 为 0，嵌套引用左 margin 为 8px；引用最后一个子元素底距为 0。恢复的是这些实际结果。
 
