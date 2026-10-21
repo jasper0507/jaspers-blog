@@ -213,7 +213,14 @@ test("技术文章阅读能力", async ({ page }) => {
   const tocLinks = page.locator('.post-toc a[href^="#"]');
   assert.deepEqual(
     await tocLinks.evaluateAll(links => links.map(link => link.getAttribute("href"))),
-    ["#第一节", "#第一节子节", "#第二节"],
+    ["#第一节", "#第一节子节", "#第二部分", "#第二节"],
+  );
+  // 缩进相对正文最高一级标题计算，本例最高为 h1。
+  assert.deepEqual(
+    await page
+      .locator(".post-toc li")
+      .evaluateAll(items => items.map(item => getComputedStyle(item).paddingLeft)),
+    ["10.4px", "20.8px", "0px", "10.4px"],
   );
   await page
     .locator(".post-body h2")
@@ -298,7 +305,8 @@ test("说说和移动端基本可用", async ({ page }) => {
   for (const path of ["/", "/posts/2/"]) {
     const response = await page.goto(`${host}${path}`, { waitUntil: "networkidle" });
     assert.equal(response?.ok(), true);
-    assert.equal(await page.locator("h1").count(), 1);
+    // 页面壳只提供一个页面标题；正文允许作者使用 h1。
+    assert.equal(await page.locator("h1:not(.post-body h1)").count(), 1);
     assert.ok(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,

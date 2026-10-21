@@ -56,9 +56,8 @@
   margin-bottom: 0;
 }
 
-.post-body :is(h2, h3, h4, h5, h6) {
+.post-body :is(h1, h2, h3, h4, h5, h6) {
   scroll-margin-top: 1.5rem;
-  margin: 1.75rem 0 0.7rem;
   color: var(--body-heading);
   font-family: var(--font-serif);
   font-weight: 600;
@@ -67,22 +66,39 @@
   text-wrap: balance;
 }
 
+/* h1–h3 的上下间距按各级 --spacing-text-size 与倍率计算；h4–h6 另走固定间距。 */
+.post-body :is(h1, h2, h3) {
+  margin-top: calc(var(--spacing-text-size) * var(--heading-space-before));
+  margin-bottom: calc(var(--spacing-text-size) * var(--heading-space-after));
+}
+
+.post-body :is(h4, h5, h6) {
+  margin: 1.75rem 0 0.7rem;
+}
+
+.post-body h1 {
+  --spacing-text-size: calc(var(--spacing-body-size) * 1.625);
+  --heading-space-before: 2.2;
+  --heading-space-after: 0.7;
+  font-size: 1.625rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
 .post-body h2 {
   --spacing-text-size: calc(var(--spacing-body-size) * 1.42);
-  margin-top: calc(var(--spacing-text-size) * 2.2);
-  margin-bottom: calc(var(--spacing-text-size) * 0.7);
+  --heading-space-before: 2.2;
+  --heading-space-after: 0.7;
   font-size: 1.375rem;
   line-height: 1.25;
 }
 
 .post-body h3 {
   --spacing-text-size: calc(var(--spacing-body-size) * 1.18);
-  margin-top: calc(var(--spacing-text-size) * 1.7);
-  margin-bottom: calc(var(--spacing-text-size) * 0.55);
+  --heading-space-before: 1.7;
+  --heading-space-after: 0.55;
   font-size: 1.125rem;
-  font-weight: 600;
   letter-spacing: -0.012em;
-  line-height: 1.3;
 }
 
 .post-body h4 {
@@ -163,11 +179,10 @@
 }
 
 .post-body :is(code, kbd, pre, .astro-code) {
-  font-synthesis: weight style;
   text-autospace: no-autospace;
 }
 
-.post-body :is(h2, h3, h4, h5, h6, pre, code, kbd) :is(strong, b) {
+.post-body :is(h1, h2, h3, h4, h5, h6, pre, code, kbd) :is(strong, b) {
   font-family: inherit;
 }
 
@@ -193,7 +208,11 @@
 .post-body img {
   max-width: 100%;
   height: auto;
-  /* 独立成段的插图节奏；不吃 typography 出厂的 2em 边距 */
+}
+
+/* 只给独立成段的插图留白；行内图片的上下 margin 会撑高所在行。 */
+.post-body > img,
+.post-body :where(.image-paragraph) img {
   margin-block: calc(var(--spacing-text-size) * 1.75);
 }
 
@@ -262,7 +281,7 @@
   background-color: var(--scrollbar-thumb);
   background-clip: padding-box;
   border: 2px solid transparent;
-  border-radius: 50%;
+  border-radius: 999px;
 }
 
 .post-body .astro-code::-webkit-scrollbar-thumb:hover,

@@ -42,6 +42,10 @@ console.log("visual fixture");
 
 行内公式 $a + b$。
 
+行内图标 ![行内图标](/favicon.svg) 跟随文字。
+
+![独立插图](/favicon.svg)
+
 ```js title="example.js" {2}
 const keep = 1;
 const highlight = 2;
@@ -67,6 +71,8 @@ const after = 2; // [!code ++]
 第一节滚动填充段落七。
 
 第一节滚动填充段落八。
+
+# 第二部分
 
 ## 第二节
 

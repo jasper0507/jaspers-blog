@@ -27,6 +27,29 @@ const lazyImagesPlugin = {
   },
 };
 
+/** 段落只含图片（可包在链接里）与空白时才是插图段，其余图片随文字排版。 */
+function imageOnly(nodes) {
+  const content = nodes.filter(node => !(node.type === "text" && !node.value.trim()));
+  return (
+    content.length > 0 &&
+    content.every(
+      node =>
+        node.type === "element" &&
+        (node.tagName === "img" || (node.tagName === "a" && imageOnly(node.children))),
+    )
+  );
+}
+
+const imageParagraphPlugin = {
+  name: "image-paragraph",
+  element: {
+    filter: ["p"],
+    visit(node, context) {
+      if (imageOnly(node.children)) context.setProperty(node, "className", ["image-paragraph"]);
+    },
+  },
+};
+
 export function assertSiteMarkdown(source) {
   const tree = markdownToMdast(source, { features: siteMarkdownFeatures });
   const visit = node => {
@@ -192,7 +215,7 @@ export function siteMarkdown() {
     processor: satteri({
       features: siteMarkdownFeatures,
       mdastPlugins: [katexPlugin, markPlugin],
-      hastPlugins: [lazyImagesPlugin],
+      hastPlugins: [lazyImagesPlugin, imageParagraphPlugin],
     }),
     shikiConfig: {
       theme: kraftPaperTheme,

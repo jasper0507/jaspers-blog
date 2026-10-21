@@ -18,6 +18,7 @@ async function style(page: Page, selector: string) {
         color: css.color,
         background: css.backgroundColor,
         marginTop: css.marginTop,
+        marginBottom: css.marginBottom,
         borderWidth: css.borderLeftWidth,
         borderColor: css.borderLeftColor,
         paddingLeft: css.paddingLeft,
@@ -152,6 +153,8 @@ test("纸面配色与旧表格样式恢复，保留当前字体和正文尺度",
   assert.equal(quote.borderWidth, "4px");
   assert.equal(quote.paddingLeft, "17.6px");
   assert.equal((await style(page, ".post-body ul")).marginTop, "14.04px");
+  assert.equal((await style(page, ".post-body .image-paragraph img")).marginTop, "31.5px");
+  assert.equal((await style(page, ".post-body p:not(.image-paragraph) img")).marginTop, "0px");
   assert.equal((await style(page, ".post-body a")).color, "rgb(161, 77, 46)");
   const header = await style(page, ".post-body th");
   assert.equal(header.size, "14.88px");
@@ -204,6 +207,35 @@ test("纸面配色与旧表格样式恢复，保留当前字体和正文尺度",
       assert.equal(prose.size, "16px");
       assert.equal(prose.lineHeight, "24px");
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    }
+  }
+});
+
+test("正文 h1 高于 h2，文章与说说按各自正文基准留白", async ({ page }) => {
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 960 });
+    for (const [path, top, bottom] of [
+      ["/posts/2/", 64.35, 20.475],
+      ["/shuoshuo/20250101-000001/", 60.775, 19.3375],
+    ] as const) {
+      await page.goto(`${host}${path}`);
+      await page
+        .locator(".post-body")
+        .first()
+        .evaluate(body =>
+          body.insertAdjacentHTML(
+            "beforeend",
+            '<p>before</p><h1 id="h1-sample">一级标题</h1><p>after</p>',
+          ),
+        );
+      const heading = await style(page, "#h1-sample");
+      assert.match(heading.family, /^anthropic-serif/);
+      assert.equal(heading.size, "26px");
+      assert.equal(heading.weight, "600");
+      assert.equal(heading.lineHeight, "31.2px");
+      assert.equal(heading.color, "rgb(28, 24, 21)");
+      assert.ok(Math.abs(parseFloat(heading.marginTop) - top) < 0.001, heading.marginTop);
+      assert.ok(Math.abs(parseFloat(heading.marginBottom) - bottom) < 0.001, heading.marginBottom);
     }
   }
 });
