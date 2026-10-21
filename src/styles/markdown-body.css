@@ -179,7 +179,6 @@
 }
 
 .post-body :is(code, kbd, pre, .astro-code) {
-  font-synthesis: weight style;
   text-autospace: no-autospace;
 }
 
@@ -282,7 +281,7 @@
   background-color: var(--scrollbar-thumb);
   background-clip: padding-box;
   border: 2px solid transparent;
-  border-radius: 50%;
+  border-radius: 999px;
 }
 
 .post-body .astro-code::-webkit-scrollbar-thumb:hover,
