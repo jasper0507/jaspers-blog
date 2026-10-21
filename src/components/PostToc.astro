@@ -6,10 +6,12 @@ interface Props {
 }
 
 const toc = Astro.props.headings.filter(
-  ({ depth, slug }) => (depth === 2 || depth === 3) && slug !== "footnote-label",
+  ({ depth, slug }) => depth <= 3 && slug !== "footnote-label",
 );
 
 if (toc.length === 0) return;
+
+const topDepth = Math.min(...toc.map(({ depth }) => depth));
 ---
 
 <nav class="post-toc" aria-label="文章目录">
@@ -17,7 +19,7 @@ if (toc.length === 0) return;
   <ol>
     {
       toc.map(heading => (
-        <li class:list={[`toc-depth-${heading.depth}`]}>
+        <li class:list={[`toc-level-${heading.depth - topDepth}`]}>
           <a href={`#${heading.slug}`} data-heading-id={heading.slug}>
             {heading.text}
           </a>
@@ -79,8 +81,12 @@ if (toc.length === 0) return;
     line-height: 1.45;
   }
 
-  .post-toc .toc-depth-3 {
+  .post-toc .toc-level-1 {
     padding-left: 0.65rem;
+  }
+
+  .post-toc .toc-level-2 {
+    padding-left: 1.3rem;
   }
 
   .post-toc a {
