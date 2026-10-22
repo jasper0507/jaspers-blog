@@ -156,8 +156,8 @@ test("纸面配色与旧表格样式恢复，保留当前字体和正文尺度",
   assert.equal((await style(page, ".post-body pre code")).size, "14px");
   const quote = await style(page, ".post-body blockquote");
   assert.equal(quote.color, "rgb(98, 89, 80)");
-  assert.equal(quote.borderWidth, "4px");
-  assert.equal(quote.paddingLeft, "16px");
+  assert.equal(quote.borderWidth, "3px");
+  assert.equal(quote.paddingLeft, "20px");
   assert.equal((await style(page, ".post-body ul")).marginTop, "12px");
   assert.equal((await style(page, ".post-body .image-paragraph img")).marginTop, "0px");
   assert.equal((await style(page, ".post-body p:not(.image-paragraph) img")).marginTop, "0px");
@@ -184,7 +184,7 @@ test("纸面配色与旧表格样式恢复，保留当前字体和正文尺度",
   assert.equal(separator.background, "rgb(221, 213, 202)");
   assert.equal(separator.opacity, "0.75");
   assert.equal(pre.borderColor, "rgb(228, 221, 210)");
-  assert.equal(quote.borderColor, "rgb(193, 95, 60)");
+  assert.equal(quote.borderColor, "rgb(228, 221, 209)");
   const link = page.locator(".post-body a").first();
   await link.hover();
   await expect(link).toHaveCSS("color", "rgb(143, 63, 45)");
@@ -199,7 +199,7 @@ test("纸面配色与旧表格样式恢复，保留当前字体和正文尺度",
   );
   assert.equal((await style(page, "#typography-sample")).color, "rgb(232, 230, 222)");
   assert.equal((await style(page, ".post-body pre")).background, "rgb(45, 44, 41)");
-  assert.equal((await style(page, ".post-body blockquote")).borderColor, "rgb(217, 119, 87)");
+  assert.equal((await style(page, ".post-body blockquote")).borderColor, "rgb(74, 69, 61)");
   assert.equal((await style(page, ".post-body th")).background, "rgba(0, 0, 0, 0)");
   assert.equal((await style(page, ".post-body th")).weight, "600");
   assert.equal((await style(page, "#separator-rollback-sample")).opacity, "0.75");
