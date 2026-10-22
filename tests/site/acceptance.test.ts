@@ -65,6 +65,21 @@ test("独立验收进程不会复用同一个场景目录", async () => {
   assert.notEqual(results[0].stdout.trim(), results[1].stdout.trim());
 });
 
+test("产物目录在仓库之外时构建直接失败，避免共用 .astro 中间目录", async () => {
+  const outside = await mkdtemp(join(tmpdir(), "acceptance-outside-"));
+  try {
+    await assert.rejects(
+      execFileAsync(process.execPath, [join(root, "node_modules/astro/bin/astro.mjs"), "build"], {
+        cwd: root,
+        env: { ...process.env, JASPER_ACCEPTANCE_DIST: join(outside, "dist") },
+      }),
+      { stderr: /outDir 必须位于/ },
+    );
+  } finally {
+    await rm(outside, { recursive: true, force: true });
+  }
+});
+
 test("构建内容预检拒绝未选择、空或不存在的来源，不回退到源码内容", async () => {
   for (const selected of [undefined, "", "/missing-jasper-content-directory"]) {
     const env = { ...process.env };

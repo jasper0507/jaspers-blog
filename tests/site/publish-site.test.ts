@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { chmod, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { chmod, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -10,6 +9,7 @@ import {
   PUBLISH_REQUEST_ID_FIELD,
   PUBLISH_RESULT_ARTIFACT,
 } from "../../packages/content-tools/publish-task.js";
+import { scratchDirectory } from "./acceptance-site.ts";
 
 const exec = promisify(execFile);
 const root = fileURLToPath(new URL("../../", import.meta.url));
@@ -33,7 +33,7 @@ async function writeBin(bin: string, name: string, script: string) {
 }
 
 async function workspace(t: { after: (fn: () => Promise<void>) => void }) {
-  const dir = await mkdtemp(join(tmpdir(), "publish-site-"));
+  const dir = await scratchDirectory("publish-site-");
   t.after(() => rm(dir, { recursive: true, force: true }));
   const bin = join(dir, "bin");
   await writeBin(bin, "gh", fakeGh);

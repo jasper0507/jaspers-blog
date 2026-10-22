@@ -2,8 +2,7 @@ import { preview as astroPreview } from "astro";
 import { execFile, type ExecFileException } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, rmSync, statSync } from "node:fs";
-import { mkdir, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -14,6 +13,8 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 const astroCli = join(root, "node_modules/astro/bin/astro.mjs");
 const previewPort = 4321;
 const previewOrigin = `http://127.0.0.1:${previewPort}`;
+// 构建产物必须在仓库根之下，见 astro.config.mjs 的 outDir 检查。
+const scratchRoot = join(root, "artifacts/scratch");
 
 const ENV_DIST = "JASPER_ACCEPTANCE_DIST";
 const ENV_CACHE = "JASPER_ACCEPTANCE_CACHE";
@@ -121,7 +122,15 @@ async function occupyAndServe() {
 }
 
 function createWorkspace() {
-  return join(tmpdir(), `jasper-blog-acceptance-${process.pid}-${randomBytes(4).toString("hex")}`);
+  return join(
+    scratchRoot,
+    `jasper-blog-acceptance-${process.pid}-${randomBytes(4).toString("hex")}`,
+  );
+}
+
+export async function scratchDirectory(prefix: string) {
+  await mkdir(scratchRoot, { recursive: true });
+  return mkdtemp(join(scratchRoot, prefix));
 }
 
 function webServerConfig(occupancy: Occupancy) {
