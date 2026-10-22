@@ -26,6 +26,9 @@ async function style(page: Page, selector: string) {
         opacity: css.opacity,
         borderBottomColor: css.borderBottomColor,
         overflowX: css.overflowX,
+        letterSpacing: css.letterSpacing,
+        textAlign: css.textAlign,
+        fontStyle: css.fontStyle,
       };
     });
 }
@@ -111,12 +114,16 @@ test("纸面配色与旧表格样式恢复，保留当前字体和正文尺度",
   assert.equal(paragraph.weight, "400");
   assert.equal(paragraph.lineHeight, "24px");
   assert.equal(paragraph.color, "rgb(43, 38, 33)");
-  assert.equal(paragraph.marginTop, "14.04px");
+  assert.equal(paragraph.marginTop, "12px");
+  assert.equal(paragraph.marginBottom, "24px");
+  assert.equal(paragraph.letterSpacing, "0.32px");
+  assert.equal(paragraph.textAlign, "justify");
 
   for (const [selector, size, height, top] of [
-    [".post-body h2", "22px", "27.5px", "0px"],
-    [".post-body h3", "18px", "23.4px", "36.108px"],
-    [".post-body h4", "16px", "20.8px", "27.216px"],
+    // h2 为正文首个元素；h3 紧跟 h2，按相邻标题压缩为半行。
+    [".post-body h2", "24px", "36px", "0px"],
+    [".post-body h3", "20px", "36px", "12px"],
+    [".post-body h4", "18px", "24px", "24px"],
   ]) {
     const heading = await style(page, selector);
     assert.equal(heading.size, size);
@@ -126,18 +133,17 @@ test("纸面配色与旧表格样式恢复，保留当前字体和正文尺度",
     assert.equal(heading.color, "rgb(28, 24, 21)");
   }
   assert.equal((await style(page, ".post-body strong")).weight, "600");
-  assert.equal(
-    await page
-      .locator(".post-body em")
-      .first()
-      .evaluate(element => getComputedStyle(element).fontStyle),
-    "italic",
-  );
+  // 中文强调不用合成斜体，以加粗表达。
+  const emphasis = await style(page, ".post-body em");
+  assert.equal(emphasis.fontStyle, "normal");
+  assert.equal(emphasis.weight, "600");
+  assert.equal((await style(page, ".post-body h2")).letterSpacing, "1.2px");
   const inline = await style(page, ".post-body p code");
   assert.match(inline.family, /^anthropic-mono/);
   assert.equal(inline.size, "14.4px");
   assert.equal(inline.lineHeight, "14.4px");
   assert.equal(inline.weight, "400");
+  assert.equal(inline.letterSpacing, "normal");
   assert.equal(inline.color, "rgb(163, 74, 58)");
   assert.equal(inline.background, "rgb(242, 238, 234)");
   assert.equal(inline.borderColor, "rgb(215, 206, 197)");
@@ -151,9 +157,9 @@ test("纸面配色与旧表格样式恢复，保留当前字体和正文尺度",
   const quote = await style(page, ".post-body blockquote");
   assert.equal(quote.color, "rgb(98, 89, 80)");
   assert.equal(quote.borderWidth, "4px");
-  assert.equal(quote.paddingLeft, "17.6px");
-  assert.equal((await style(page, ".post-body ul")).marginTop, "14.04px");
-  assert.equal((await style(page, ".post-body .image-paragraph img")).marginTop, "31.5px");
+  assert.equal(quote.paddingLeft, "16px");
+  assert.equal((await style(page, ".post-body ul")).marginTop, "12px");
+  assert.equal((await style(page, ".post-body .image-paragraph img")).marginTop, "0px");
   assert.equal((await style(page, ".post-body p:not(.image-paragraph) img")).marginTop, "0px");
   assert.equal((await style(page, ".post-body a")).color, "rgb(161, 77, 46)");
   const header = await style(page, ".post-body th");
@@ -211,12 +217,12 @@ test("纸面配色与旧表格样式恢复，保留当前字体和正文尺度",
   }
 });
 
-test("正文 h1 高于 h2，文章与说说按各自正文基准留白", async ({ page }) => {
+test("正文 h1 高于 h2、低于手机端主标题，文章与说说同一网格留白", async ({ page }) => {
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 960 });
     for (const [path, top, bottom] of [
-      ["/posts/2/", 64.35, 20.475],
-      ["/shuoshuo/20250101-000001/", 60.775, 19.3375],
+      ["/posts/2/", 24, 24],
+      ["/shuoshuo/20250101-000001/", 24, 24],
     ] as const) {
       await page.goto(`${host}${path}`);
       await page
@@ -230,9 +236,9 @@ test("正文 h1 高于 h2，文章与说说按各自正文基准留白", async (
         );
       const heading = await style(page, "#h1-sample");
       assert.match(heading.family, /^anthropic-serif/);
-      assert.equal(heading.size, "26px");
+      assert.equal(heading.size, "28px");
       assert.equal(heading.weight, "600");
-      assert.equal(heading.lineHeight, "31.2px");
+      assert.equal(heading.lineHeight, "36px");
       assert.equal(heading.color, "rgb(28, 24, 21)");
       assert.ok(Math.abs(parseFloat(heading.marginTop) - top) < 0.001, heading.marginTop);
       assert.ok(Math.abs(parseFloat(heading.marginBottom) - bottom) < 0.001, heading.marginBottom);

@@ -4,7 +4,9 @@ import { origin } from "../acceptance-site.ts";
 import { spacingSamples } from "./spacing-baseline.ts";
 
 for (const width of [1440, 390]) {
-  test(`正文 margin / padding 恢复旧版浏览器实测像素（${width}px）`, async ({ page }) => {
+  test(`正文 margin / padding 符合 heti 网格，关于页保留专用留白（${width}px）`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width, height: 960 });
     for (const sample of spacingSamples) {
       await page.goto(`${origin()}${sample.route}`);
@@ -64,7 +66,7 @@ for (const width of [1440, 390]) {
         }
       }
 
-      // 文件名伪元素与公式只恢复外层留白，内部排版不参与回退。
+      // 文件名条随代码块内距对齐网格；公式内部排版由 KaTeX 负责。
       if (sample.edges.length) {
         const filename = await page.locator("#spacing-sample").evaluate(body => {
           body.innerHTML = '<pre class="astro-code" data-title="sample.ts"><code>x</code></pre>';
@@ -80,7 +82,7 @@ for (const width of [1440, 390]) {
             css.paddingLeft,
           ].map(parseFloat);
         });
-        assert.deepEqual(filename, [-16, -17.6, 12.8, -17.6, 8, 17.6, 8, 17.6]);
+        assert.deepEqual(filename, [-12, -16, 12, -16, 6, 16, 6, 16]);
       }
     }
   });
