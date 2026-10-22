@@ -5,7 +5,7 @@
   --body-heading: light-dark(#1c1815, #f5f3ec);
   --body-muted: light-dark(#72695e, #a29a8d);
   --body-quote: light-dark(#625950, #b5ac9f);
-  --body-quote-border: light-dark(#c15f3c, #d97757);
+  --body-quote-border: light-dark(#e4ddd1, #4a453d);
   --body-border: light-dark(#ddd5ca, #3e3b36);
   --body-accent: light-dark(#a14d2e, #d97757);
   --body-accent-hover: light-dark(#8f3f2d, #e69373);
@@ -208,10 +208,10 @@
   margin: 0.75rem 0 1.5rem;
 }
 
-/* 引用：珊瑚 4px 左边线；不采用 heti 的灰底与两侧缩进。 */
+/* 引用：暖灰 3px 左边线；不采用 heti 的灰底与两侧缩进。 */
 .post-body blockquote {
-  padding: 0.75rem 1rem;
-  border-left: 4px solid var(--body-quote-border);
+  padding: 0.75rem 1.25rem;
+  border-left: 3px solid var(--body-quote-border);
   color: var(--body-quote);
 }
 
