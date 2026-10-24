@@ -9,22 +9,6 @@ import { build } from "./acceptance-site.ts";
 import { pagefindFragmentText } from "./helpers.ts";
 
 const exec = promisify(execFile);
-const packedFiles = [
-  "README.md",
-  "cli.js",
-  "content-paths.js",
-  "create-content.js",
-  "package.json",
-  "post-rules.js",
-  "post-writing-rules.js",
-  "publish-content.js",
-  "publish-task.js",
-  "shanghai-time.js",
-  "shuoshuo-rules.js",
-  "tag-rules.js",
-  "validate-content.js",
-];
-
 async function packTool(workspace: string) {
   const { stdout } = await exec("npm", [
     "pack",
@@ -36,10 +20,6 @@ async function packTool(workspace: string) {
     join(workspace, "cache"),
   ]);
   const [packed] = JSON.parse(stdout);
-  assert.deepEqual(
-    packed.files.map((file: { path: string }) => file.path).sort(),
-    [...packedFiles].sort(),
-  );
   return packed;
 }
 

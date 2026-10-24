@@ -100,17 +100,6 @@ const localFileName = (prefix, url, unicodeRange) => {
   return `${prefix}-${Buffer.from(unicodeRange).toString("base64url").slice(0, 10)}.woff2`;
 };
 
-const isSkippedExtra = (fileName, unicodeRange) => {
-  if (
-    /\.woff2$/.test(fileName) &&
-    /-(latin|latin-ext|cyrillic|vietnamese)\.woff2$/.test(fileName)
-  ) {
-    return true;
-  }
-  const kind = extraKind(unicodeRange);
-  return kind === "latin" || kind === "latin-ext" || kind === "cyrillic" || kind === "vietnamese";
-};
-
 const fetchText = async (url, fetch) => {
   const res = await fetch(url, { headers: { "User-Agent": UA } });
   if (!res.ok) throw new Error(`GET ${url} → ${res.status}`);
@@ -189,16 +178,18 @@ export async function refreshFonts(root, { fetch = globalThis.fetch, rename = re
     const css = await fetchText(cssUrl, fetch);
     const faces = uniqueVariableFaces(
       parseFaces(css).filter(face => face.family === FAMILY.cssFamily),
-    ).filter(face => {
-      const name = localFileName(FAMILY.filePrefix, face.url, face.unicodeRange);
-      return !isSkippedExtra(name, face.unicodeRange);
-    });
+    )
+      .map(face => ({
+        ...face,
+        localName: localFileName(FAMILY.filePrefix, face.url, face.unicodeRange),
+      }))
+      .filter(face => !extraKind(face.unicodeRange));
     if (faces.length === 0) throw new Error(`${FAMILY.cssFamily} 没有可用的中文分包`);
     console.log(`  ${faces.length} CJK subsets`);
 
     const localNames = new Set();
     const jobs = faces.map(face => {
-      const localName = localFileName(FAMILY.filePrefix, face.url, face.unicodeRange);
+      const { localName } = face;
       if (localNames.has(localName)) throw new Error(`字体文件名重复：${localName}`);
       localNames.add(localName);
       return { ...face, family: FAMILY.cssFamily, localName, dest: join(nextFontsDir, localName) };

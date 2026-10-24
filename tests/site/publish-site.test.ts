@@ -5,10 +5,6 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import {
-  PUBLISH_REQUEST_ID_FIELD,
-  PUBLISH_RESULT_ARTIFACT,
-} from "../../packages/content-tools/publish-task.js";
 import { scratchDirectory } from "./acceptance-site.ts";
 
 const exec = promisify(execFile);
@@ -45,24 +41,11 @@ async function workspace(t: { after: (fn: () => Promise<void>) => void }) {
     statePath,
     `${JSON.stringify(
       {
-        repo: "jasper0507/blog-content",
-        sourceSha,
         commits: {
           "jasper0507/blog-content": { main: contentSha },
           "jasper0507/jaspers-blog": { main: sourceSha },
         },
-        runs: [
-          {
-            databaseId: 2,
-            displayTitle: "发布 old",
-            event: "push",
-            headSha: contentSha,
-            status: "in_progress",
-            conclusion: null,
-            createdAt: "2026-01-01T00:00:00Z",
-            url: "https://example/2",
-          },
-        ],
+        runs: [{ databaseId: 2 }],
         dispatches: [],
       },
       null,
@@ -224,16 +207,7 @@ test("上传失败时记录部署阶段且不提供网站地址", { timeout: 300
 test("已有更新任务时构建成功也不上传，以免旧结果覆盖", { timeout: 300_000 }, async t => {
   const dir = await workspace(t);
   const state = JSON.parse(await readFile(dir.statePath, "utf8"));
-  state.runs.push({
-    databaseId: 9,
-    displayTitle: "发布 newer",
-    event: "push",
-    headSha: "ee".repeat(20),
-    status: "in_progress",
-    conclusion: null,
-    createdAt: "2026-01-01T00:01:00Z",
-    url: "https://example/9",
-  });
+  state.runs.push({ databaseId: 9 });
   await writeFile(dir.statePath, `${JSON.stringify(state, null, 2)}\n`);
   const content = join(dir.dir, "content");
   const resultPath = join(dir.dir, "publish-result.json");
@@ -277,8 +251,8 @@ test("内容仓工作流接收两种触发与重试，并固定检出已确定�
   assert.match(source, /repository_dispatch:[\s\S]*source-updated/);
   assert.match(source, /uses: actions\/upload-artifact@v7/);
   assert.match(source, /workflow_dispatch:/);
-  assert.match(source, new RegExp(`${PUBLISH_REQUEST_ID_FIELD}:`));
-  assert.match(source, new RegExp(`name:\\s*${PUBLISH_RESULT_ARTIFACT}`));
+  assert.match(source, /request_id:/);
+  assert.match(source, /name:\s*publish-result/);
   assert.match(source, /concurrency:[\s\S]*group:\s*site-publish[\s\S]*cancel-in-progress:\s*true/);
   assert.match(source, /ref:\s*\$\{\{\s*steps\.pin\.outputs\.content_sha\s*\}\}/);
   assert.match(source, /ref:\s*\$\{\{\s*steps\.pin\.outputs\.source_sha\s*\}\}/);
