@@ -145,6 +145,32 @@ export function extractMarkdownContent(source) {
   return { text: collapse(sequence.replaceAll(IMAGE_MARK, "")), imageCount, sequence };
 }
 
+const IMAGE_TOKEN = "[Image]";
+const graphemeSegmenter = new Intl.Segmenter("zh-CN", { granularity: "grapheme" });
+
+/**
+ * 把 `sequence` 投影为纯文本摘要：图片在原位写成 [Image]，按其全部字符计入上限，截断不切开 [Image]。
+ * @param {string} sequence
+ * @param {number} limit 用户感知字符上限，含结尾省略号
+ */
+export function projectSummary(sequence, limit) {
+  const units = [...graphemeSegmenter.segment(sequence)].map(({ segment }) =>
+    segment === IMAGE_MARK ? IMAGE_TOKEN : segment,
+  );
+  const weight = unit => (unit === IMAGE_TOKEN ? IMAGE_TOKEN.length : 1);
+  const total = units.reduce((sum, unit) => sum + weight(unit), 0);
+  if (total <= limit) return { summary: units.join(""), truncated: false };
+
+  const kept = [];
+  let length = 0;
+  for (const unit of units) {
+    if (length + weight(unit) > limit - 1) break;
+    kept.push(unit);
+    length += weight(unit);
+  }
+  return { summary: `${kept.join("").trimEnd()}…`, truncated: true };
+}
+
 /** Typora / 部分编辑器的 `==高亮==`，代码块与行内代码保持字面量。 */
 const markPlugin = defineMdastPlugin({
   name: "inline-mark",

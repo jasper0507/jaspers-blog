@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { extractMarkdownContent, IMAGE_MARK } from "../../src/lib/site-markdown.js";
+import { extractMarkdownContent, IMAGE_MARK, projectSummary } from "../../src/lib/site-markdown.js";
 
 test("Markdown 提取保留文字、段落间隔与高亮内容", () => {
   const source = `开头==甲==中间==乙 & 丙==结尾。
@@ -41,6 +41,25 @@ test("Markdown 提取按原文顺序标出图片位置", () => {
       sequence: `这是一条${IMAGE_MARK}测试说说 ${IMAGE_MARK} 结尾`,
     },
   );
+});
+
+test("摘要在图片原位写 [Image]，按全部字符计入上限且不切开 [Image]", () => {
+  assert.deepEqual(projectSummary(`这是一条${IMAGE_MARK}测试说说 ${IMAGE_MARK} 结尾`, 80), {
+    summary: "这是一条[Image]测试说说 [Image] 结尾",
+    truncated: false,
+  });
+  assert.deepEqual(projectSummary(`${"字".repeat(8)}${IMAGE_MARK}`, 15), {
+    summary: `${"字".repeat(8)}[Image]`,
+    truncated: false,
+  });
+  assert.deepEqual(projectSummary(`${"字".repeat(8)}${IMAGE_MARK}尾`, 15), {
+    summary: `${"字".repeat(8)}…`,
+    truncated: true,
+  });
+  assert.deepEqual(projectSummary("🙂".repeat(81), 80), {
+    summary: `${"🙂".repeat(79)}…`,
+    truncated: true,
+  });
 });
 
 test("Markdown 空投影正常返回，代码、公式与 HTML 不产生摘要内容", () => {

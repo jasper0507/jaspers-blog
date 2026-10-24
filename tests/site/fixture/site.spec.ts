@@ -6,7 +6,7 @@ import { assertInOrder, expectedHome, expectedSite, pagefindFragmentText } from 
 
 const host = origin();
 const longShuoshuoSummary =
-  "这是发布时间最新的公开说说。它故意使用与发布时间不同的文件名，用来确认稳定 ID 不会从可修改的时间重新推导。 这里继续放入足够长的正文，… [1 Image]";
+  "这是发布时间最新的公开说说。它故意使用与发布时间不同的文件名，用来确认稳定 ID 不会从可修改的时间重新推导。 这里继续放入足够长的正文，验证时间流默认只展示…";
 const emojiShuoshuoSummary = `${"🙂".repeat(79)}…`;
 
 test("公开内容合同", async () => {
@@ -24,9 +24,10 @@ test("公开内容合同", async () => {
   const [heroImage] = expectedHome.hero.images;
   assert.ok(home.includes(heroImage));
   assert.match(home, new RegExp(`<noscript>[\\s\\S]*src="${heroImage}"`));
+  // 首页说说预览长于 80 字摘要，图片在原位写成 [Image]。
   assert.match(home, /class="shuoshuo-preview"[^>]*>[\s\S]*?这是发布时间最新的公开说说。/);
-  // 首页说说按原文顺序用占位标出图片，不使用 RSS 摘要里的英文图片计数，也不再包成引用。
-  assert.doesNotMatch(home, /\[\d+ Images?\]|<blockquote/);
+  assert.ok(home.includes("一致地渲染：。 [Image] 隐藏"));
+  assert.doesNotMatch(home, /<blockquote/);
   assert.doesNotMatch(
     `${home}${timeline}${archive}${tags}${rss}${sitemap}`,
     /不应公开的技术文章草稿|这是一条不应公开的草稿|草稿标签/,
@@ -59,14 +60,14 @@ test("公开内容合同", async () => {
     longShuoshuoSummary,
     "这是相同 发布时间下编号较早的说说。",
     emojiShuoshuoSummary,
-    "[2 Images]",
+    "[Image] [Image]",
   ]) {
     assert.ok(
       rss.includes(`<description>${summary}</description>`),
       `RSS 缺少说说摘要：${summary}`,
     );
   }
-  for (const summary of [longShuoshuoSummary, emojiShuoshuoSummary, "[2 Images]"]) {
+  for (const summary of [longShuoshuoSummary, emojiShuoshuoSummary, "[Image] [Image]"]) {
     assert.ok(timeline.includes(summary), `时间流缺少折叠摘要：${summary}`);
   }
   assert.equal((rss.match(/<item>/g) ?? []).length, 8);
@@ -440,43 +441,47 @@ test("说说和移动端基本可用", async ({ page }) => {
   }
 });
 
-test("首页最近文章与最近说说各占固定高度并截断长内容", async ({ page }) => {
-  for (const width of [1440, 900]) {
+test("首页说说末行对齐主视觉下沿，两区保持最小间隔并截断长说说", async ({ page }) => {
+  for (const [width, minGap] of [
+    [1440, 28],
+    [900, 20],
+  ] as const) {
     await page.setViewportSize({ width, height: 960 });
     await page.goto(`${host}/`, { waitUntil: "networkidle" });
     const layout = await page.evaluate(() => {
-      const rect = (element: Element) => element.getBoundingClientRect();
-      const sections = [...document.querySelectorAll(".feed-section")];
-      const texts = [
-        ...document.querySelectorAll(".post-preview-description, .shuoshuo-preview p"),
-      ].map(text => ({
-        bottom: rect(text).bottom,
-        boxBottom: rect(text.parentElement!).bottom,
-        lines: Math.round(rect(text).height / parseFloat(getComputedStyle(text).lineHeight)),
-        clamp: getComputedStyle(text).webkitLineClamp,
-      }));
+      const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+      const section = rect(".feed-shuoshuo");
+      const note = document.querySelector(".shuoshuo-preview p")!;
+      const lineHeight = parseFloat(getComputedStyle(note).lineHeight);
       return {
-        hero: rect(document.querySelector(".hero-media")!).height,
-        sections: sections.map(section => ({
-          height: rect(section).height,
-          overflow: section.scrollHeight - section.clientHeight,
-        })),
-        texts,
+        hero: rect(".hero-media"),
+        feed: rect(".home-feed"),
+        postsBottom: rect(".post-preview").bottom,
+        sectionTop: section.top,
+        headingTop: rect(".feed-shuoshuo .section-heading").top,
+        noteBottom: note.getBoundingClientRect().bottom,
+        lines: Math.round(note.getBoundingClientRect().height / lineHeight),
+        clamp: getComputedStyle(note).webkitLineClamp,
+        clipped: note.scrollHeight > note.clientHeight + 1,
       };
     });
-    const [posts, shuoshuo] = layout.sections;
+    const detail = JSON.stringify(layout);
     assert.ok(
-      Math.abs(posts.height - shuoshuo.height) < 1 &&
-        Math.abs(posts.height + shuoshuo.height - layout.hero) < 1,
-      `${width}px 下两区应平分主视觉高度：${JSON.stringify(layout)}`,
+      Math.abs(layout.feed.top - layout.hero.top) < 1 &&
+        Math.abs(layout.feed.bottom - layout.hero.bottom) < 1,
+      `${width}px 下信息流应贴合主视觉上下沿：${detail}`,
     );
-    for (const section of layout.sections) {
-      assert.ok(section.overflow <= 1, `${width}px 下分区内容不得溢出：${JSON.stringify(layout)}`);
-    }
-    const note = layout.texts.at(-1)!;
-    assert.ok(note.lines >= 1, `${width}px 下长说说至少显示一行`);
-    assert.ok(note.bottom <= note.boxBottom + 0.5, `${width}px 下长说说应在便签内截断`);
-    assert.equal(note.clamp, String(note.lines), `${width}px 下截断行数应与可见行数一致`);
+    assert.ok(
+      Math.abs(layout.noteBottom - layout.hero.bottom) < 1,
+      `${width}px 下说说末行应落在主视觉下沿：${detail}`,
+    );
+    assert.ok(
+      layout.headingTop >= layout.sectionTop + minGap - 0.5 &&
+        layout.headingTop - layout.postsBottom >= minGap - 0.5,
+      `${width}px 下两区间隔不得小于 ${minGap}px：${detail}`,
+    );
+    assert.ok(layout.lines >= 1 && layout.clipped, `${width}px 下长说说应至少显示一行并被截断`);
+    assert.equal(layout.clamp, String(layout.lines), `${width}px 下截断行数应与可见行数一致`);
   }
 });
 

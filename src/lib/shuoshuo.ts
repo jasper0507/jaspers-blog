@@ -1,6 +1,6 @@
 import { getCollection, render } from "astro:content";
 import { SHANGHAI_TIME_ZONE } from "../../packages/content-tools/shanghai-time.js";
-import { extractMarkdownContent, IMAGE_MARK } from "./site-markdown.js";
+import { extractMarkdownContent, projectSummary } from "./site-markdown.js";
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "long",
   timeStyle: "short",
@@ -13,24 +13,6 @@ const compactDateFormatter = new Intl.DateTimeFormat("en-CA", {
   month: "2-digit",
   day: "2-digit",
 });
-const summarySegmenter = new Intl.Segmenter("zh-CN", { granularity: "grapheme" });
-const SUMMARY_LIMIT = 80;
-
-function graphemesOf(value: string) {
-  return [...summarySegmenter.segment(value)].map(segment => segment.segment);
-}
-
-function truncate(value: string, limit: number) {
-  const graphemes = graphemesOf(value);
-  if (graphemes.length <= limit) return { value, truncated: false };
-  return {
-    value: `${graphemes
-      .slice(0, limit - 1)
-      .join("")
-      .trimEnd()}…`,
-    truncated: true,
-  };
-}
 
 function projectShuoshuoBody(id: string, source: string) {
   let text: string;
@@ -43,14 +25,10 @@ function projectShuoshuoBody(id: string, source: string) {
   }
   if (!text && imageCount === 0) throw new Error(`说说 ${id} 没有可见文字或图片`);
 
-  const marker = imageCount > 0 ? `[${imageCount} Image${imageCount === 1 ? "" : "s"}]` : "";
-  const markerLength = marker ? graphemesOf(marker).length + 1 : 0;
-  const projected = truncate(text, SUMMARY_LIMIT - markerLength);
-  const summary = [projected.value, marker].filter(Boolean).join(" ");
-  // 首页预览：图片留在原位，每张计作一个字符；相邻片段之间渲染图片占位。
-  const preview = truncate(sequence, SUMMARY_LIMIT).value.split(IMAGE_MARK);
-
-  return { summary, preview, collapsible: projected.truncated || imageCount > 0 };
+  const { summary, truncated } = projectSummary(sequence, 80);
+  // 首页说说按可用高度截断，大屏能放下的不止 80 字。
+  const { summary: preview } = projectSummary(sequence, 240);
+  return { summary, preview, collapsible: truncated || imageCount > 0 };
 }
 
 export async function getPublishedShuoshuo() {
