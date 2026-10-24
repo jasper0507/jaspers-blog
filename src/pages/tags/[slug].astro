@@ -23,7 +23,10 @@ const { tag } = Astro.props;
   description={`浏览标签“${tag.name}”下的技术文章。`}
   pageClass="page-shell"
 >
-  <h1 id="tag-title" class="sr-only">{tag.name}</h1>
+  <header class="tag-header">
+    <h1 id="tag-title"><span class="tag-hash" aria-hidden="true">#</span>{tag.name}</h1>
+    <p>{tag.posts.length} 篇技术文章</p>
+  </header>
   <ol class="tag-post-list">
     {
       tag.posts.map(post => (
@@ -41,6 +44,41 @@ const { tag } = Astro.props;
 </BaseLayout>
 
 <style>
+  /* 从外链直接进入时需要知道身处哪个标签，因此不同于其他栏目，保留一行可见标题。 */
+  .tag-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .tag-header h1 {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .tag-hash {
+    margin-right: 0.1em;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .tag-header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--track-meta);
+  }
+
   .tag-post-list {
     margin: 0;
     padding: 0;

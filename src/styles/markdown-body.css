@@ -51,7 +51,7 @@
  * 块级元素上半行、下一行；标题上一行、下半行；容器首尾归零。
  * 用 :where 压低特异性，让首尾归零与关于页的专用留白始终胜出。
  */
-.post-body :where(p, ul, ol, blockquote, table, pre, details, .katex-display) {
+.post-body :where(p, ul, ol, blockquote, table, pre, details, .katex-display, .code-block) {
   margin: 0.75rem 0 1.5rem;
 }
 
@@ -208,6 +208,93 @@
   margin: 0.75rem 0 1.5rem;
 }
 
+.post-body img[data-zoomable] {
+  cursor: zoom-in;
+}
+
+/* 图片灯箱：脚本把 dialog 挂到 body，样式不在 .post-body 作用域内。 */
+.image-lightbox {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: max(1rem, env(safe-area-inset-top, 0px)) max(1rem, env(safe-area-inset-right, 0px))
+    max(1rem, env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-left, 0px));
+  border: 0;
+  background: transparent;
+  cursor: zoom-out;
+  opacity: 1;
+  transition:
+    opacity var(--duration) var(--ease-out),
+    display var(--duration) allow-discrete,
+    overlay var(--duration) allow-discrete;
+}
+
+/* 确定尺寸的轨道让图片的百分比上限可解析，大图按视口等比收缩。 */
+.image-lightbox[open] {
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  place-items: center;
+}
+
+.image-lightbox:not([open]) {
+  opacity: 0;
+}
+
+@starting-style {
+  .image-lightbox[open] {
+    opacity: 0;
+  }
+}
+
+.image-lightbox::backdrop {
+  background: light-dark(rgb(40 37 32 / 72%), rgb(0 0 0 / 78%));
+}
+
+.image-lightbox > img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 0.65rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-menu);
+  object-fit: contain;
+}
+
+.image-lightbox-close {
+  position: fixed;
+  top: max(1rem, env(safe-area-inset-top, 0px));
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    border-color var(--duration) var(--ease-out),
+    color var(--duration) var(--ease-out);
+}
+
+.image-lightbox-close:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.image-lightbox-close svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.6;
+}
+
 /* 引用：暖灰 3px 左边线；不采用 heti 的灰底与两侧缩进。 */
 .post-body blockquote {
   padding: 0.75rem 1.25rem;
@@ -306,6 +393,59 @@
   display: block;
   color: var(--body-muted);
   font-size: 0.75rem;
+}
+
+/* 复制按钮由脚本包上 .code-block，网格留白移到外层。 */
+.post-body .code-block {
+  position: relative;
+}
+
+.post-body .code-block > pre {
+  margin: 0;
+}
+
+.post-body .code-copy {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.35rem;
+  min-height: 1.5rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--body-code-border);
+  border-radius: 0.35rem;
+  background: var(--surface);
+  color: var(--body-muted);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  transition:
+    opacity var(--duration) var(--ease-out),
+    color var(--duration) var(--ease-out),
+    border-color var(--duration) var(--ease-out);
+}
+
+.post-body .code-copy:hover,
+.post-body .code-copy[data-state="copied"] {
+  border-color: color-mix(in srgb, var(--body-accent) 45%, var(--body-code-border));
+  color: var(--body-accent);
+}
+
+.post-body .code-copy:active {
+  transform: translateY(1px);
+}
+
+/* 有悬停能力的设备平时收起按钮；触屏始终可见。 */
+@media (hover: hover) and (pointer: fine) {
+  .post-body .code-copy {
+    opacity: 0;
+  }
+
+  .post-body .code-block:hover .code-copy,
+  .post-body .code-copy:focus-visible,
+  .post-body .code-copy[data-state] {
+    opacity: 1;
+  }
 }
 
 .post-body .astro-code .line {

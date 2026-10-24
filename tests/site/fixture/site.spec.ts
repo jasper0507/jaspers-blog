@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import AxeBuilder from "@axe-core/playwright";
-import { test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { origin, readDist } from "../acceptance-site.ts";
 import { assertInOrder, expectedHome, expectedSite, pagefindFragmentText } from "../helpers.ts";
 
@@ -176,6 +176,9 @@ test("主视觉只请求池中一张图片，主题切换不换图", async ({ pa
   await page.goto(host, { waitUntil: "networkidle" });
 
   const pinned = expectedHome.hero.images[0];
+  await page.waitForFunction(
+    () => document.querySelector<HTMLElement>("#hero-image")?.dataset.loaded === "true",
+  );
   assert.equal(await page.locator(".hero-media > img").count(), 1);
   assert.equal(await page.locator(".hero-image").getAttribute("src"), pinned);
   assert.deepEqual(heroRequests, [pinned]);
@@ -243,6 +246,95 @@ test("技术文章阅读能力", async ({ page }) => {
   );
   await backToTop.click();
   await page.waitForFunction(() => scrollY < 8 && document.activeElement?.id === "post-title");
+});
+
+test("代码复制、图片灯箱与上下篇导读", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.goto(`${host}/posts/2/`, { waitUntil: "networkidle" });
+
+  const blocks = page.locator(".post-body .code-block");
+  assert.equal(await blocks.count(), await page.locator(".post-body pre.astro-code").count());
+  const diff = blocks.filter({ has: page.locator(".line.diff") });
+  await diff.hover();
+  const copy = diff.locator(".code-copy");
+  await copy.click();
+  await expect(copy).toHaveText("已复制");
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), "const after = 2;");
+
+  const figure = page.locator(".post-body .image-paragraph > img");
+  assert.equal(
+    await page.locator(".post-body p:not(.image-paragraph) img[data-zoomable]").count(),
+    0,
+  );
+  await figure.click();
+  const lightbox = page.locator("dialog.image-lightbox");
+  await lightbox.waitFor({ state: "visible" });
+  assert.equal(
+    await lightbox.locator("img").getAttribute("src"),
+    await figure.evaluate(image => (image as HTMLImageElement).currentSrc),
+  );
+  await page.keyboard.press("Escape");
+  await lightbox.waitFor({ state: "hidden" });
+  assert.equal(await figure.evaluate(image => image === document.activeElement), true);
+  await page.keyboard.press("Enter");
+  await lightbox.waitFor({ state: "visible" });
+  await lightbox.click({ position: { x: 8, y: 8 } });
+  await lightbox.waitFor({ state: "hidden" });
+
+  // 列表按发布时间倒序：文章 2 的上一篇（更早）是 3，下一篇（更新）是 1。
+  assert.equal(await page.locator('.post-pager a[rel="prev"]').getAttribute("href"), "/posts/3/");
+  assert.equal(await page.locator('.post-pager a[rel="next"]').getAttribute("href"), "/posts/1/");
+  assert.equal(await page.locator("[data-pagefind-body] .post-pager").count(), 0);
+
+  await page.goto(`${host}/posts/1/`);
+  assert.equal(await page.locator('.post-pager a[rel="next"]').count(), 0);
+  assert.equal(await page.locator('.post-pager a[rel="prev"]').getAttribute("href"), "/posts/2/");
+});
+
+test("窄屏文章使用标题区折叠目录", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${host}/posts/2/`);
+  const inline = page.locator(".post-toc-inline");
+  assert.equal(await inline.isVisible(), true);
+  assert.equal(await page.locator(".post-toc").isHidden(), true);
+  assert.equal(await inline.getAttribute("data-pagefind-ignore"), "all");
+  const links = inline.locator("a");
+  assert.equal(await links.first().isHidden(), true);
+  await inline.locator("summary").click();
+  assert.deepEqual(await links.evaluateAll(items => items.map(item => item.getAttribute("href"))), [
+    "#第一节",
+    "#第一节子节",
+    "#第二部分",
+    "#第二节",
+  ]);
+  await links.last().click();
+  await page.waitForFunction(() => decodeURIComponent(location.hash) === "#第二节");
+
+  await page.setViewportSize({ width: 1440, height: 960 });
+  assert.equal(await inline.isHidden(), true);
+  assert.equal(await page.locator(".post-toc").isVisible(), true);
+
+  await page.goto(`${host}/posts/1/`);
+  assert.equal(await page.locator(".post-toc-inline").count(), 0);
+});
+
+test("归档卡片整张可点，标签详情页显示标签名", async ({ page }) => {
+  await page.goto(`${host}/archives/`);
+  const card = page.locator(".archive-card").filter({ hasText: "视觉验收专用技术文章" });
+  const box = await card.boundingBox();
+  assert.ok(box);
+  // 点卡片右下角空白处，而不是标题文字。
+  await page.mouse.click(box.x + box.width - 12, box.y + box.height - 8);
+  await page.waitForURL(`${host}/posts/2/`);
+
+  await page.goto(`${host}/archives/`);
+  await card.locator('.post-tags a[href="/tags/共同/"]').click();
+  await page.waitForURL(url => decodeURIComponent(url.pathname) === "/tags/共同/");
+  const title = page.locator("#tag-title");
+  assert.equal(await title.isVisible(), true);
+  assert.equal((await title.innerText()).trim(), "#共同");
+  assert.equal(await page.locator(".tag-header p").textContent(), "2 篇技术文章");
 });
 
 test("无目录的短文保留标题焦点且不显示回顶", async ({ page }) => {
@@ -459,7 +551,14 @@ test("高亮链接在亮暗主题与交互状态下保持可读", async ({ page 
 
 test("核心页面没有明显无障碍违规", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  for (const path of ["/", "/posts/2/", "/shuoshuo/", "/shuoshuo/20250101-000001/"]) {
+  for (const path of [
+    "/",
+    "/posts/2/",
+    "/archives/",
+    "/tags/共同/",
+    "/shuoshuo/",
+    "/shuoshuo/20250101-000001/",
+  ]) {
     await page.goto(`${host}${path}`);
     const { violations } = await new AxeBuilder({ page }).analyze();
     assert.deepEqual(

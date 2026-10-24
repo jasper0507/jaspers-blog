@@ -6,3 +6,107 @@ import "../styles/markdown-body.css";
 <div class="post-body">
   <slot />
 </div>
+
+<script>
+  // 运行时增强：静态 HTML 里没有这些控件，Pagefind 索引与无脚本阅读都不受影响。
+  const copyLabel = "复制";
+  const resetTimers = new WeakMap<HTMLButtonElement, number>();
+
+  function codeText(pre: HTMLPreElement) {
+    const lines = [...pre.querySelectorAll(".line")];
+    if (lines.length === 0) return pre.textContent ?? "";
+    // diff 代码块只复制改动后的代码；Shiki 移除 [!code …] 注释后会在行尾留下空格。
+    return lines
+      .filter(line => !line.classList.contains("remove"))
+      .map(line => {
+        const text = line.textContent ?? "";
+        return line.classList.length > 1 ? text.trimEnd() : text;
+      })
+      .join("\n");
+  }
+
+  function showCopyState(button: HTMLButtonElement, state: "copied" | "failed") {
+    button.dataset.state = state;
+    button.textContent = state === "copied" ? "已复制" : "复制失败";
+    clearTimeout(resetTimers.get(button));
+    resetTimers.set(
+      button,
+      window.setTimeout(() => {
+        delete button.dataset.state;
+        button.textContent = copyLabel;
+      }, 1600),
+    );
+  }
+
+  for (const pre of document.querySelectorAll<HTMLPreElement>(".post-body pre.astro-code")) {
+    const block = document.createElement("div");
+    block.className = "code-block";
+    pre.before(block);
+    block.append(pre);
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "code-copy";
+    button.textContent = copyLabel;
+    button.setAttribute("aria-live", "polite");
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(codeText(pre));
+        showCopyState(button, "copied");
+      } catch (error) {
+        console.warn("无法复制代码。", error);
+        showCopyState(button, "failed");
+      }
+    });
+    block.append(button);
+  }
+
+  // 只放大独立插图；包在链接里的图片保留原链接行为，行内图标不放大。
+  const zoomable = document.querySelectorAll<HTMLImageElement>(
+    ".post-body > img, .post-body .image-paragraph > img",
+  );
+  if (zoomable.length > 0) {
+    const dialog = document.createElement("dialog");
+    dialog.className = "image-lightbox";
+    dialog.setAttribute("aria-label", "图片预览");
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "image-lightbox-close";
+    close.setAttribute("aria-label", "关闭图片预览");
+    close.innerHTML =
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>';
+    const preview = document.createElement("img");
+    preview.decoding = "async";
+    dialog.append(close, preview);
+    document.body.append(dialog);
+
+    let trigger: HTMLImageElement | undefined;
+    // 点图片、遮罩或关闭钮都退出；Esc 由原生 dialog 处理。
+    dialog.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("close", () => {
+      trigger?.focus({ preventScroll: true });
+      preview.removeAttribute("src");
+    });
+
+    const open = (image: HTMLImageElement) => {
+      trigger = image;
+      preview.src = image.currentSrc || image.src;
+      preview.alt = image.alt;
+      dialog.showModal();
+    };
+
+    for (const image of zoomable) {
+      image.dataset.zoomable = "";
+      image.tabIndex = 0;
+      image.setAttribute("role", "button");
+      image.setAttribute("aria-haspopup", "dialog");
+      image.setAttribute("aria-label", image.alt ? `放大图片：${image.alt}` : "放大图片");
+      image.addEventListener("click", () => open(image));
+      image.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        open(image);
+      });
+    }
+  }
+</script>
