@@ -35,7 +35,11 @@ const shuoshuoCount = publishedShuoshuo.length;
           const image = document.querySelector("#hero-image");
           if (!(image instanceof HTMLImageElement)) return;
           const pool = JSON.parse(image.dataset.heroImages ?? "[]");
+          const reveal = () => (image.dataset.loaded = "true");
+          image.addEventListener("load", reveal, { once: true });
+          image.addEventListener("error", reveal, { once: true });
           image.src = pool[Math.floor(Math.random() * pool.length)];
+          if (image.complete) reveal();
         })();
       </script>
       <noscript>
@@ -160,6 +164,7 @@ const shuoshuoCount = publishedShuoshuo.length;
     aspect-ratio: 3 / 2;
     overflow: hidden;
     border-radius: 0.65rem;
+    background: var(--surface);
   }
 
   .hero-media::after {
@@ -182,6 +187,17 @@ const shuoshuoCount = publishedShuoshuo.length;
 
   #hero-image:not([src]) {
     display: none;
+  }
+
+  /* 只作用于脚本注入的主图；noscript 回退图同用 .hero-image，不能被隐藏。 */
+  @media (prefers-reduced-motion: no-preference) {
+    #hero-image {
+      transition: opacity 400ms var(--ease-out);
+    }
+
+    #hero-image:not([data-loaded]) {
+      opacity: 0;
+    }
   }
 
   /* height: 0 避免信息流撑开行高，min-height: 100% 再贴合影像 */
@@ -208,7 +224,7 @@ const shuoshuoCount = publishedShuoshuo.length;
     overflow: hidden;
     padding-top: 1rem;
     padding-bottom: 0.35rem;
-    border-top: 1px solid var(--text);
+    border-top: 1px solid color-mix(in srgb, var(--text) 30%, var(--line));
   }
 
   .feed-section:last-child {

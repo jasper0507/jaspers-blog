@@ -9,9 +9,11 @@ import type { PublishedPost } from "../lib/posts";
 interface Props {
   post: PublishedPost;
   headings: MarkdownHeading[];
+  older?: PublishedPost;
+  newer?: PublishedPost;
 }
 
-const { post, headings } = Astro.props;
+const { post, headings, older, newer } = Astro.props;
 ---
 
 <div class="post-reading" data-post-reading>
@@ -23,12 +25,36 @@ const { post, headings } = Astro.props;
         <time datetime={post.publishedAt.iso}>{post.publishedAt.compact}</time>
         <PostTags tags={post.tags} />
       </div>
+      <PostToc headings={headings} inline />
     </header>
 
     <MarkdownBody>
       <slot />
     </MarkdownBody>
   </article>
+
+  {
+    (older || newer) && (
+      <nav class="post-pager" aria-label="相邻文章">
+        {older && (
+          <a class="post-pager-link" href={older.href} rel="prev">
+            <span class="post-pager-meta">
+              上一篇 · <time datetime={older.publishedAt.iso}>{older.publishedAt.compact}</time>
+            </span>
+            <span class="post-pager-title">{older.title}</span>
+          </a>
+        )}
+        {newer && (
+          <a class="post-pager-link post-pager-next" href={newer.href} rel="next">
+            <span class="post-pager-meta">
+              下一篇 · <time datetime={newer.publishedAt.iso}>{newer.publishedAt.compact}</time>
+            </span>
+            <span class="post-pager-title">{newer.title}</span>
+          </a>
+        )}
+      </nav>
+    )
+  }
 
   <PostToc headings={headings} />
   <BackToTop />
@@ -154,6 +180,63 @@ const { post, headings } = Astro.props;
     font-size: var(--text-meta);
     font-variant-numeric: tabular-nums;
     letter-spacing: var(--track-meta);
+  }
+
+  /* 时间正序：上一篇更早、居左，下一篇更新、居右。 */
+  .post-pager {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 2rem;
+    max-width: var(--reading-width);
+    margin: 4.5rem auto 0;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-sans);
+  }
+
+  .post-pager-link {
+    display: grid;
+    align-content: start;
+    gap: 0.35rem;
+    min-width: 0;
+    text-decoration: none;
+  }
+
+  .post-pager-next {
+    grid-column: 2;
+    text-align: right;
+  }
+
+  .post-pager-meta {
+    color: var(--muted);
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--track-meta);
+  }
+
+  .post-pager-title {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    transition: color var(--duration) var(--ease-out);
+  }
+
+  .post-pager-link:hover .post-pager-title {
+    color: var(--accent);
+  }
+
+  @media (max-width: 40rem) {
+    .post-pager {
+      grid-template-columns: minmax(0, 1fr);
+      margin-top: 3.5rem;
+    }
+
+    .post-pager-next {
+      grid-column: auto;
+      text-align: left;
+    }
   }
 
   @media (max-width: 52rem) {

@@ -33,7 +33,7 @@ const navItemClass =
   "inline-flex min-h-[2.75rem] cursor-pointer items-center border-0 border-b-2 border-b-transparent bg-transparent px-[0.35rem] text-[0.9rem] font-medium tracking-[0.01em] text-muted no-underline hover:border-b-accent hover:text-text min-[30rem]:px-[0.55rem] min-[30rem]:text-[0.9375rem] is-current:border-b-accent is-current:text-text";
 /* 文章菜单弹出层条目 */
 const menuLinkClass =
-  "flex min-h-[2.75rem] items-center px-3 text-[0.9rem] font-medium tracking-[0.01em] text-muted no-underline hover:bg-background hover:text-text";
+  "flex min-h-[2.75rem] items-center rounded-[0.35rem] px-3 text-[0.9rem] font-medium tracking-[0.01em] text-muted no-underline hover:bg-background hover:text-text";
 const structuredData = JSON.stringify(
   path === "/"
     ? {
@@ -147,7 +147,7 @@ const structuredData = JSON.stringify(
     <a class="skip-link" href="#main-content">跳到主要内容</a>
     <header class="site-header relative z-[var(--z-header)]">
       <div
-        class="header-inner shell-track grid min-h-[4.25rem] grid-cols-[1fr_auto] items-center gap-[0.15rem_1rem] border-b border-text py-3 min-[52rem]:min-h-[4.5rem] min-[52rem]:gap-x-5 min-[52rem]:py-0"
+        class="header-inner shell-track grid min-h-[4.25rem] grid-cols-[1fr_auto] items-center gap-[0.15rem_1rem] border-b border-line py-3 min-[52rem]:min-h-[4.5rem] min-[52rem]:gap-x-5 min-[52rem]:py-0"
       >
         <a
           class="brand w-fit text-[1.125rem] font-semibold tracking-[-0.018em] text-text no-underline"
@@ -288,6 +288,23 @@ const structuredData = JSON.stringify(
         background: var(--surface);
         box-shadow: var(--shadow-menu);
         transform: translateX(-50%);
+        transition:
+          opacity var(--duration) var(--ease-out),
+          translate var(--duration) var(--ease-out),
+          display var(--duration) allow-discrete,
+          overlay var(--duration) allow-discrete;
+      }
+
+      .article-menu-list:not(:popover-open) {
+        opacity: 0;
+        translate: 0 -0.25rem;
+      }
+
+      @starting-style {
+        .article-menu-list:popover-open {
+          opacity: 0;
+          translate: 0 -0.25rem;
+        }
       }
 
       .article-menu-list a[aria-current="page"] {

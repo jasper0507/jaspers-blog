@@ -103,6 +103,7 @@ const { archive } = await getPublishedPostCatalog();
   }
 
   .archive-card {
+    position: relative;
     display: grid;
     gap: 0.5rem;
     min-width: 0;
@@ -148,6 +149,14 @@ const { archive } = await getPublishedPostCatalog();
   .archive-card-title:hover {
     color: var(--accent);
   }
+
+  /* 整张卡片都是标题链接的点击区；标签链接在下方 :global 规则里浮到其上。 */
+  .archive-card-title::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
 </style>
 
 <style is:global>
@@ -155,5 +164,10 @@ const { archive } = await getPublishedPostCatalog();
     margin: 0.15rem 0 0;
     justify-content: flex-start;
     margin-inline-start: 0;
+  }
+
+  .archive-card .post-tags a {
+    position: relative;
+    z-index: 1;
   }
 </style>

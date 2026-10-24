@@ -6,16 +6,19 @@ import { getPublishedPostCatalog, type PublishedPost } from "../../lib/posts";
 
 interface Props {
   post: PublishedPost;
+  older?: PublishedPost;
+  newer?: PublishedPost;
 }
 
 export async function getStaticPaths() {
-  return (await getPublishedPostCatalog()).posts.map(post => ({
+  // 目录按发布时间倒序：前一项更新，后一项更早。
+  return (await getPublishedPostCatalog()).posts.map((post, index, posts) => ({
     params: { id: String(post.id) },
-    props: { post },
+    props: { post, newer: posts[index - 1], older: posts[index + 1] },
   }));
 }
 
-const { post } = Astro.props;
+const { post, older, newer } = Astro.props;
 const { Content, headings } = await post.render();
 const postUrl = new URL(post.href, blogSettings.site.url);
 const structuredData = JSON.stringify({
@@ -39,7 +42,7 @@ const structuredData = JSON.stringify({
 >
   <script slot="head" type="application/ld+json" set:html={structuredData} is:inline />
 
-  <PostReading post={post} headings={headings}>
+  <PostReading post={post} headings={headings} older={older} newer={newer}>
     <Content />
   </PostReading>
 </BaseLayout>

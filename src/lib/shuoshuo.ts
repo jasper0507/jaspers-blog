@@ -1,6 +1,6 @@
 import { getCollection, render } from "astro:content";
 import { SHANGHAI_TIME_ZONE } from "../../packages/content-tools/shanghai-time.js";
-import { extractMarkdownContent } from "./site-markdown.js";
+import { extractMarkdownContent, projectSummary } from "./site-markdown.js";
 const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
   dateStyle: "long",
   timeStyle: "short",
@@ -13,31 +13,19 @@ const compactDateFormatter = new Intl.DateTimeFormat("en-CA", {
   month: "2-digit",
   day: "2-digit",
 });
-const summarySegmenter = new Intl.Segmenter("zh-CN", { granularity: "grapheme" });
 
 function projectShuoshuoBody(id: string, source: string) {
   let text: string;
   let imageCount: number;
+  let sequence: string;
   try {
-    ({ text, imageCount } = extractMarkdownContent(source));
+    ({ text, imageCount, sequence } = extractMarkdownContent(source));
   } catch (error) {
     throw new Error(`说说 ${id} 摘要投影失败`, { cause: error });
   }
   if (!text && imageCount === 0) throw new Error(`说说 ${id} 没有可见文字或图片`);
 
-  const marker = imageCount > 0 ? `[${imageCount} Image${imageCount === 1 ? "" : "s"}]` : "";
-  const graphemes = [...summarySegmenter.segment(text)].map(segment => segment.segment);
-  const markerLength = marker ? [...summarySegmenter.segment(marker)].length + 1 : 0;
-  const textLimit = 80 - markerLength;
-  const truncated = graphemes.length > textLimit;
-  const projectedText = truncated
-    ? `${graphemes
-        .slice(0, textLimit - 1)
-        .join("")
-        .trimEnd()}…`
-    : text;
-  const summary = [projectedText, marker].filter(Boolean).join(" ");
-
+  const { summary, truncated } = projectSummary(sequence, 80);
   return { summary, collapsible: truncated || imageCount > 0 };
 }
 

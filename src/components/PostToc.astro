@@ -3,8 +3,11 @@ import type { MarkdownHeading } from "astro";
 
 interface Props {
   headings: MarkdownHeading[];
+  /** 窄于 80rem 时在标题区内展示的折叠目录；宽屏改用右侧固定目录。 */
+  inline?: boolean;
 }
 
+const { inline = false } = Astro.props;
 const toc = Astro.props.headings.filter(
   ({ depth, slug }) => depth <= 3 && slug !== "footnote-label",
 );
@@ -14,20 +17,35 @@ if (toc.length === 0) return;
 const topDepth = Math.min(...toc.map(({ depth }) => depth));
 ---
 
-<nav class="post-toc" aria-label="文章目录">
-  <p>目录</p>
-  <ol>
-    {
-      toc.map(heading => (
-        <li class:list={[`toc-level-${heading.depth - topDepth}`]}>
-          <a href={`#${heading.slug}`} data-heading-id={heading.slug}>
-            {heading.text}
-          </a>
-        </li>
-      ))
-    }
-  </ol>
-</nav>
+{
+  inline ? (
+    <nav class="post-toc-inline" aria-label="文章目录" data-pagefind-ignore="all">
+      <details>
+        <summary>目录</summary>
+        <ol>
+          {toc.map(heading => (
+            <li class:list={[`toc-level-${heading.depth - topDepth}`]}>
+              <a href={`#${heading.slug}`}>{heading.text}</a>
+            </li>
+          ))}
+        </ol>
+      </details>
+    </nav>
+  ) : (
+    <nav class="post-toc" aria-label="文章目录">
+      <p>目录</p>
+      <ol>
+        {toc.map(heading => (
+          <li class:list={[`toc-level-${heading.depth - topDepth}`]}>
+            <a href={`#${heading.slug}`} data-heading-id={heading.slug}>
+              {heading.text}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  )
+}
 
 <style>
   .post-toc {
@@ -119,8 +137,90 @@ const topDepth = Math.min(...toc.map(({ depth }) => depth));
     }
   }
 
+  .post-toc-inline {
+    margin-top: 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: 0.55rem;
+    background: var(--surface);
+    font-family: var(--font-sans);
+  }
+
+  .post-toc-inline summary {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2.75rem;
+    padding: 0 1rem;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: var(--text-meta);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    list-style: none;
+  }
+
+  .post-toc-inline summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .post-toc-inline summary::after {
+    content: "";
+    width: 0.4rem;
+    height: 0.4rem;
+    margin-top: -0.2rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform var(--duration) var(--ease-out);
+  }
+
+  .post-toc-inline details[open] summary::after {
+    margin-top: 0.15rem;
+    transform: rotate(225deg);
+  }
+
+  .post-toc-inline summary:hover {
+    color: var(--text);
+  }
+
+  .post-toc-inline ol {
+    margin: 0;
+    padding: 0 1rem 0.65rem;
+    list-style: none;
+  }
+
+  .post-toc-inline .toc-level-1 {
+    padding-left: 0.85rem;
+  }
+
+  .post-toc-inline .toc-level-2 {
+    padding-left: 1.7rem;
+  }
+
+  .post-toc-inline a {
+    display: block;
+    padding: 0.4rem 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    letter-spacing: normal;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    text-decoration: none;
+  }
+
+  .post-toc-inline a:hover {
+    color: var(--accent);
+  }
+
+  @media (min-width: 80rem) {
+    .post-toc-inline {
+      display: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .post-toc a {
+    .post-toc a,
+    .post-toc-inline summary::after {
       transition: none;
     }
   }
