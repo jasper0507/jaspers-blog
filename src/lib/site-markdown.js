@@ -109,10 +109,14 @@ const separatedMdastChildren = new Set([
   "footnoteDefinition",
 ]);
 
+/** 图片在 `sequence` 中的位置标记（U+FFFC 对象替换符）。 */
+export const IMAGE_MARK = "\uFFFC";
+
 /**
  * 提取未截断的普通文字与图片数量；空投影有效，解析错误直接传播。
+ * `sequence` 按原文顺序保留文字与图片，图片位置为 IMAGE_MARK。
  * @param {string} source
- * @returns {{ text: string, imageCount: number }}
+ * @returns {{ text: string, imageCount: number, sequence: string }}
  */
 export function extractMarkdownContent(source) {
   let imageCount = 0;
@@ -126,7 +130,7 @@ export function extractMarkdownContent(source) {
         .join("");
     if (node.type === "image" || node.type === "imageReference") {
       imageCount += 1;
-      return "";
+      return IMAGE_MARK;
     }
     if (node.type === "break") return " ";
     if (!("children" in node)) return "";
@@ -136,8 +140,9 @@ export function extractMarkdownContent(source) {
       .join(separatedMdastChildren.has(node.type) ? " " : "");
   };
 
-  const text = visibleText(tree).replace(/\s+/gu, " ").trim();
-  return { text, imageCount };
+  const collapse = value => value.replace(/\s+/gu, " ").trim();
+  const sequence = collapse(visibleText(tree));
+  return { text: collapse(sequence.replaceAll(IMAGE_MARK, "")), imageCount, sequence };
 }
 
 /** Typora / 部分编辑器的 `==高亮==`，代码块与行内代码保持字面量。 */

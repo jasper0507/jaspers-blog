@@ -92,9 +92,14 @@ const shuoshuoCount = publishedShuoshuo.length;
                 <time datetime={latestShuoshuo.publishedAt.iso}>
                   {latestShuoshuo.publishedAt.compact}
                 </time>
-                <blockquote>
-                  <p>{latestShuoshuo.summary}</p>
-                </blockquote>
+                <div class="shuoshuo-preview-text">
+                  <p>
+                    {latestShuoshuo.preview.map((segment, index) => [
+                      index > 0 && <span class="image-token">图片</span>,
+                      segment,
+                    ])}
+                  </p>
+                </div>
               </a>
             </article>
           ) : (
@@ -211,7 +216,7 @@ const shuoshuoCount = publishedShuoshuo.length;
     height: 0;
     min-height: 100%;
     min-width: 0;
-    /* 为便签的轻抬和投影留出空间。 */
+    /* 说说链接的焦点轮廓会伸出分区边缘。 */
     overflow: visible;
   }
 
@@ -286,7 +291,7 @@ const shuoshuoCount = publishedShuoshuo.length;
    * 内部文字用 round(down, 100cqh, 1lh) 只保留完整的行，避免露出半行。
    */
   .post-preview-summary,
-  .shuoshuo-preview blockquote {
+  .shuoshuo-preview-text {
     flex: 1 1 0;
     min-height: 0;
     container-type: size;
@@ -317,74 +322,53 @@ const shuoshuoCount = publishedShuoshuo.length;
     text-decoration: none;
   }
 
+  /* 与文章预览同构的扁平札记：日期 + 正文，不加卡片、阴影或装饰边线。 */
   .shuoshuo-preview {
-    --note-shadow: 0 1px 2px var(--shadow-color);
-    --note-shadow-lifted: 1px 5px 10px var(--shadow-color);
     display: flex;
     flex: 1 1 0;
     flex-direction: column;
-    gap: 0.65rem;
+    gap: 0.5rem;
     min-width: 0;
     min-height: 0;
-    padding: 0.9rem 1.15rem;
-    border-inline-start: 3px solid color-mix(in srgb, var(--accent) 55%, var(--line));
-    border-radius: 0 0.25rem 0.25rem 0;
-    background: var(--surface);
-    box-shadow: var(--note-shadow);
     color: var(--text);
     text-decoration: none;
-    transform-origin: 1.15rem 0.9rem;
-    transition:
-      border-color var(--duration) var(--ease-out),
-      box-shadow var(--duration) var(--ease-out),
-      transform 280ms var(--ease-out);
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .shuoshuo-preview:hover {
-      border-inline-start-color: color-mix(in srgb, var(--accent) 70%, var(--line));
-      box-shadow: var(--note-shadow-lifted);
-    }
-  }
-
-  .shuoshuo-preview:focus-visible {
-    outline-offset: -3px;
-    box-shadow: var(--note-shadow-lifted);
-  }
-
-  @media (prefers-reduced-motion: no-preference) {
-    @media (hover: hover) and (pointer: fine) {
-      .shuoshuo-preview:hover {
-        transform: translateY(-2px) rotate(-0.35deg);
-      }
-    }
-
-    .shuoshuo-preview:focus-visible {
-      transform: translateY(-2px);
-    }
   }
 
   .shuoshuo-preview:active {
-    transform: none;
-    box-shadow: var(--note-shadow);
-    transition-duration: 100ms;
+    transform: translateY(1px);
   }
 
-  .shuoshuo-preview blockquote,
   .shuoshuo-preview p {
     margin: 0;
-  }
-
-  .shuoshuo-preview p {
     font-family: var(--font-sans);
     display: -webkit-box;
     max-height: round(down, 100cqh, 1lh);
     overflow: hidden;
     -webkit-box-orient: vertical;
-    font-size: 1rem;
+    font-size: 1.0625rem;
     font-weight: 400;
-    line-height: 1.75;
+    line-height: 1.7;
     overflow-wrap: anywhere;
+    transition: color var(--duration) var(--ease-out);
+  }
+
+  .shuoshuo-preview:hover p {
+    color: var(--accent);
+  }
+
+  /* 图片在原文中的位置；只是文字占位，不加载图片。 */
+  .image-token {
+    display: inline-block;
+    margin-inline: 0.2em;
+    padding: 0 0.4em;
+    border: 1px solid var(--line);
+    border-radius: 0.25rem;
+    color: var(--muted);
+    font-size: 0.78em;
+    letter-spacing: 0.04em;
+    line-height: 1.55;
+    vertical-align: 0.12em;
+    white-space: nowrap;
   }
 
   .post-preview-summary {
@@ -421,7 +405,6 @@ const shuoshuoCount = publishedShuoshuo.length;
 
     .shuoshuo-preview {
       gap: 0.35rem;
-      padding-block: 0.55rem;
     }
   }
 
@@ -467,7 +450,7 @@ const shuoshuoCount = publishedShuoshuo.length;
     .post-preview-summary,
     .feed-section > article:not(.post-preview),
     .shuoshuo-preview,
-    .shuoshuo-preview blockquote {
+    .shuoshuo-preview-text {
       flex: none;
       container-type: normal;
     }
@@ -494,6 +477,11 @@ const shuoshuoCount = publishedShuoshuo.length;
     .post-preview-description {
       -webkit-line-clamp: 2;
       line-clamp: 2;
+    }
+
+    .shuoshuo-preview p {
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
     }
   }
 </style>

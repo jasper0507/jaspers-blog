@@ -24,7 +24,9 @@ test("公开内容合同", async () => {
   const [heroImage] = expectedHome.hero.images;
   assert.ok(home.includes(heroImage));
   assert.match(home, new RegExp(`<noscript>[\\s\\S]*src="${heroImage}"`));
-  assert.ok(home.includes(longShuoshuoSummary));
+  assert.match(home, /class="shuoshuo-preview"[^>]*>[\s\S]*?这是发布时间最新的公开说说。/);
+  // 首页说说按原文顺序用占位标出图片，不使用 RSS 摘要里的英文图片计数，也不再包成引用。
+  assert.doesNotMatch(home, /\[\d+ Images?\]|<blockquote/);
   assert.doesNotMatch(
     `${home}${timeline}${archive}${tags}${rss}${sitemap}`,
     /不应公开的技术文章草稿|这是一条不应公开的草稿|草稿标签/,
