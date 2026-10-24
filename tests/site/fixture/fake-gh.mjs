@@ -21,74 +21,28 @@ function log(entry) {
   appendFileSync(path, `${JSON.stringify(entry)}\n`);
 }
 
-function failIf(command) {
-  const listed = process.env.FAKE_GH_FAIL ?? "";
-  if (listed.split(",").includes(command)) {
-    console.error(`模拟 gh ${command} 失败`);
-    process.exit(1);
-  }
-}
-
-function takeFlag(args, names) {
+function takeFlag(args, name) {
   for (let index = 0; index < args.length; index += 1) {
-    const current = args[index];
-    for (const name of names) {
-      if (current === name) {
-        const value = args[index + 1];
-        args.splice(index, 2);
-        return value;
-      }
-      if (name.startsWith("--") && current.startsWith(`${name}=`)) {
-        const value = current.slice(name.length + 1);
-        args.splice(index, 1);
-        return value;
-      }
+    if (args[index] === name) {
+      const value = args[index + 1];
+      args.splice(index, 2);
+      return value;
     }
   }
 }
 
-function takeRepeated(args, names) {
+function takeRepeated(args, name) {
   const values = [];
-  let value = takeFlag(args, names);
+  let value = takeFlag(args, name);
   while (value !== undefined) {
     values.push(value);
-    value = takeFlag(args, names);
+    value = takeFlag(args, name);
   }
   return values;
 }
 
-function runFields(run) {
-  return {
-    databaseId: run.databaseId,
-    displayTitle: run.displayTitle,
-    event: run.event,
-    headSha: run.headSha,
-    status: run.status,
-    conclusion: run.conclusion,
-    createdAt: run.createdAt,
-    url: run.url,
-  };
-}
-
-function pickJson(run, fields) {
-  const body = runFields(run);
-  if (fields.length === 0) return body;
-  return Object.fromEntries(fields.map(field => [field, body[field]]));
-}
-
-function jsonFields(args) {
-  const listed = takeFlag(args, ["--json"]) ?? "";
-  return listed
-    .split(",")
-    .map(name => name.trim())
-    .filter(Boolean);
-}
-
 function handleApi(args) {
-  failIf("api");
-  takeFlag(args, ["-X", "--method"]);
-  const jq = takeFlag(args, ["--jq"]);
-  const fields = takeRepeated(args, ["-f", "--raw-field", "-F"]);
+  const fields = takeRepeated(args, "-f");
   const path = args[0] ?? "";
   const state = loadState();
   const commit = path.match(/^repos\/([^/]+\/[^/]+)\/commits\/main$/);
@@ -98,7 +52,7 @@ function handleApi(args) {
       console.error(`找不到 ${commit[1]} 的 main 提交`);
       process.exit(1);
     }
-    process.stdout.write(jq === ".sha" ? `${sha}\n` : `${JSON.stringify({ sha })}\n`);
+    process.stdout.write(`${sha}\n`);
     return;
   }
   const dispatch = path.match(/^repos\/([^/]+\/[^/]+)\/dispatches$/);
@@ -122,17 +76,11 @@ function handleApi(args) {
 
 function handleRun(args) {
   const sub = args.shift();
-  takeFlag(args, ["-R", "--repo"]);
   if (sub === "list") {
-    failIf("run-list");
-    const workflow = takeFlag(args, ["--workflow"]);
-    const commit = takeFlag(args, ["--commit"]);
-    const fields = jsonFields(args);
+    const workflow = takeFlag(args, "--workflow");
     const state = loadState();
-    let runs = state.runs;
-    if (commit) runs = runs.filter(run => run.headSha === commit);
-    if (workflow && workflow !== "publish.yml" && workflow !== "发布网站") runs = [];
-    process.stdout.write(`${JSON.stringify(runs.map(run => pickJson(run, fields)))}\n`);
+    const runs = workflow === "publish.yml" ? state.runs : [];
+    process.stdout.write(`${JSON.stringify(runs.map(({ databaseId }) => ({ databaseId })))}\n`);
     return;
   }
   console.error(`未模拟的 gh run ${sub}`);
@@ -144,21 +92,18 @@ function handleRelease(args) {
   const state = loadState();
   state.releases = state.releases ?? [];
   if (sub === "view") {
-    failIf("release-view");
     const tag = args.shift();
     const release = state.releases.find(item => item.tag === tag);
     if (!release) {
       console.error(`release not found: ${tag}`);
       process.exit(1);
     }
-    process.stdout.write(`${JSON.stringify({ tagName: tag, url: release.url ?? "" })}\n`);
     return;
   }
   if (sub === "create") {
-    failIf("release-create");
     const tag = args.shift();
-    const title = takeFlag(args, ["--title", "-t"]);
-    const notes = takeFlag(args, ["--notes", "-n"]);
+    const title = takeFlag(args, "--title");
+    const notes = takeFlag(args, "--notes");
     const assets = args.filter(item => item && !item.startsWith("-"));
     if (state.releases.some(item => item.tag === tag)) {
       console.error(`already exists: ${tag}`);
@@ -176,21 +121,7 @@ function handleRepo(args) {
   const sub = args.shift();
   const state = loadState();
   if (sub === "view") {
-    failIf("repo-view");
-    const json = takeFlag(args, ["--json"]);
-    const jq = takeFlag(args, ["--jq"]);
-    const name = args.find(item => item && !item.startsWith("-"));
-    const sourceRepo = state.sourceRepo ?? "jasper0507/jaspers-blog";
-    const nameWithOwner = name ?? sourceRepo;
-    if (jq === ".nameWithOwner") {
-      process.stdout.write(`${nameWithOwner}\n`);
-      return;
-    }
-    if (json === "nameWithOwner") {
-      process.stdout.write(`${JSON.stringify({ nameWithOwner })}\n`);
-      return;
-    }
-    process.stdout.write(`${JSON.stringify({ nameWithOwner, visibility: "PRIVATE" })}\n`);
+    process.stdout.write(`${state.sourceRepo}\n`);
     return;
   }
   console.error(`未模拟的 gh repo ${sub}`);

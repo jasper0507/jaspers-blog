@@ -1,16 +1,9 @@
-import { execFile } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
-import {
-  PUBLISH_WORKFLOW,
-  formatPublishResult,
-  initialPublishResult,
-} from "../packages/content-tools/publish-task.js";
 import { indexPublishedPosts } from "./lib/index-published-posts.mjs";
+import { run } from "./lib/run-command.mjs";
 
-const execFileAsync = promisify(execFile);
 const sourceDir = fileURLToPath(new URL("..", import.meta.url));
 
 function required(name) {
@@ -19,23 +12,8 @@ function required(name) {
   return value;
 }
 
-async function run(command, args, options = {}) {
-  try {
-    const { stdout, stderr } = await execFileAsync(command, args, {
-      encoding: "utf8",
-      maxBuffer: 20 * 1024 * 1024,
-      ...options,
-    });
-    return { stdout: stdout ?? "", stderr: stderr ?? "" };
-  } catch (error) {
-    throw new Error(`${error.stdout ?? ""}${error.stderr ?? error.message}`.trim(), {
-      cause: error,
-    });
-  }
-}
-
 async function writeResult(path, result) {
-  await writeFile(path, formatPublishResult(result));
+  await writeFile(path, `${JSON.stringify(result, null, 2)}\n`);
 }
 
 async function newerRunExists(runId, repo, workflow) {
@@ -43,7 +21,7 @@ async function newerRunExists(runId, repo, workflow) {
   const { stdout } = await run(
     "gh",
     ["run", "list", "-R", repo, "--workflow", workflow, "--json", "databaseId"],
-    { env: process.env },
+    { env: process.env, maxBuffer: 20 * 1024 * 1024 },
   );
   const runs = JSON.parse(stdout);
   return runs.some(item => Number(item.databaseId) > Number(runId));
@@ -57,6 +35,7 @@ async function validateAndBuild(result, resultPath, dist) {
     await run(process.execPath, [join(sourceDir, "scripts/check-site-markdown.mjs")], {
       cwd: sourceDir,
       env,
+      maxBuffer: 20 * 1024 * 1024,
     });
   } catch (error) {
     result.error = error instanceof Error ? error.message : String(error);
@@ -70,7 +49,7 @@ async function validateAndBuild(result, resultPath, dist) {
     await run(
       process.execPath,
       [join(sourceDir, "node_modules/astro/bin/astro.mjs"), "build", "--force"],
-      { cwd: sourceDir, env },
+      { cwd: sourceDir, env, maxBuffer: 20 * 1024 * 1024 },
     );
     await indexPublishedPosts(sourceDir, dist);
   } catch (error) {
@@ -84,7 +63,7 @@ async function deploy(result, resultPath, dist) {
   const siteUrl = required("PUBLISH_SITE_URL");
   const project = required("PAGES_PROJECT");
   const wrangler = process.env.PUBLISH_WRANGLER?.trim() || "wrangler";
-  const workflow = process.env.PUBLISH_WORKFLOW?.trim() || PUBLISH_WORKFLOW;
+  const workflow = process.env.PUBLISH_WORKFLOW?.trim() || "publish.yml";
   const runId = process.env.GITHUB_RUN_ID?.trim();
   const repo = process.env.GITHUB_REPOSITORY?.trim();
   result.stage = "deploy";
@@ -113,7 +92,7 @@ async function deploy(result, resultPath, dist) {
         "--commit-message",
         `content:${result.contentSha} source:${result.sourceSha}`,
       ],
-      { cwd: sourceDir, env: process.env },
+      { cwd: sourceDir, env: process.env, maxBuffer: 20 * 1024 * 1024 },
     );
   } catch (error) {
     result.status = "failure";
@@ -141,7 +120,7 @@ export async function publishSite(phase = "all") {
   const resultPath =
     process.env.PUBLISH_RESULT_PATH?.trim() || join(sourceDir, "publish-result.json");
   const dist = process.env.JASPER_ACCEPTANCE_DIST?.trim() || join(sourceDir, "dist");
-  const result = initialPublishResult({ contentSha, sourceSha });
+  const result = { contentSha, sourceSha, stage: "validate", status: "failure" };
 
   if (phase !== "deploy") await validateAndBuild(result, resultPath, dist);
   if (phase === "build") {
