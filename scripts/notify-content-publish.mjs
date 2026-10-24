@@ -1,7 +1,6 @@
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
-import { PUBLISH_REQUEST_ID_FIELD } from "../packages/content-tools/publish-task.js";
 
 const exec = promisify(execFile);
 const token = process.env.CONTENT_DISPATCH_TOKEN?.trim();
@@ -21,7 +20,7 @@ await exec(
     "-f",
     "event_type=source-updated",
     "-f",
-    `client_payload[${PUBLISH_REQUEST_ID_FIELD}]=${requestId}`,
+    `client_payload[request_id]=${requestId}`,
   ],
   {
     encoding: "utf8",
