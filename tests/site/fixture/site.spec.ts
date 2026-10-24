@@ -346,6 +346,46 @@ test("说说和移动端基本可用", async ({ page }) => {
   }
 });
 
+test("首页最近文章与最近说说各占固定高度并截断长内容", async ({ page }) => {
+  for (const width of [1440, 900]) {
+    await page.setViewportSize({ width, height: 960 });
+    await page.goto(`${host}/`, { waitUntil: "networkidle" });
+    const layout = await page.evaluate(() => {
+      const rect = (element: Element) => element.getBoundingClientRect();
+      const sections = [...document.querySelectorAll(".feed-section")];
+      const texts = [
+        ...document.querySelectorAll(".post-preview-description, .shuoshuo-preview p"),
+      ].map(text => ({
+        bottom: rect(text).bottom,
+        boxBottom: rect(text.parentElement!).bottom,
+        lines: Math.round(rect(text).height / parseFloat(getComputedStyle(text).lineHeight)),
+        clamp: getComputedStyle(text).webkitLineClamp,
+      }));
+      return {
+        hero: rect(document.querySelector(".hero-media")!).height,
+        sections: sections.map(section => ({
+          height: rect(section).height,
+          overflow: section.scrollHeight - section.clientHeight,
+        })),
+        texts,
+      };
+    });
+    const [posts, shuoshuo] = layout.sections;
+    assert.ok(
+      Math.abs(posts.height - shuoshuo.height) < 1 &&
+        Math.abs(posts.height + shuoshuo.height - layout.hero) < 1,
+      `${width}px 下两区应平分主视觉高度：${JSON.stringify(layout)}`,
+    );
+    for (const section of layout.sections) {
+      assert.ok(section.overflow <= 1, `${width}px 下分区内容不得溢出：${JSON.stringify(layout)}`);
+    }
+    const note = layout.texts.at(-1)!;
+    assert.ok(note.lines >= 1, `${width}px 下长说说至少显示一行`);
+    assert.ok(note.bottom <= note.boxBottom + 0.5, `${width}px 下长说说应在便签内截断`);
+    assert.equal(note.clamp, String(note.lines), `${width}px 下截断行数应与可见行数一致`);
+  }
+});
+
 test("归档页与其他栏目共用对齐基准", async ({ page }) => {
   for (const width of [1440, 320]) {
     await page.setViewportSize({ width, height: 960 });
