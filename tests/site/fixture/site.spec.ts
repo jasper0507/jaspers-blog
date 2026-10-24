@@ -24,10 +24,7 @@ test("公开内容合同", async () => {
   const [heroImage] = expectedHome.hero.images;
   assert.ok(home.includes(heroImage));
   assert.match(home, new RegExp(`<noscript>[\\s\\S]*src="${heroImage}"`));
-  // 首页说说预览长于 80 字摘要，图片在原位写成 [Image]。
-  assert.match(home, /class="shuoshuo-preview"[^>]*>[\s\S]*?这是发布时间最新的公开说说。/);
-  assert.ok(home.includes("一致地渲染：。 [Image] 隐藏"));
-  assert.doesNotMatch(home, /<blockquote/);
+  assert.ok(home.includes(longShuoshuoSummary));
   assert.doesNotMatch(
     `${home}${timeline}${archive}${tags}${rss}${sitemap}`,
     /不应公开的技术文章草稿|这是一条不应公开的草稿|草稿标签/,
@@ -414,7 +411,7 @@ test("说说和移动端基本可用", async ({ page }) => {
         page.locator(".hero-media").boundingBox(),
         page.locator(".site-header").boundingBox(),
         page.locator("#theme-toggle").boundingBox(),
-        page.locator(".section-more").first().boundingBox(),
+        page.locator(".section-heading a").first().boundingBox(),
         page.locator(".post-preview h3 a").boundingBox(),
         page.locator("a.shuoshuo-preview").boundingBox(),
       ]);
@@ -441,59 +438,43 @@ test("说说和移动端基本可用", async ({ page }) => {
   }
 });
 
-test("首页两区平分主视觉高度，分区线固定，正文在区头与底部链接之间按整行截断", async ({ page }) => {
+test("首页最近文章与最近说说各占固定高度并截断长内容", async ({ page }) => {
   for (const width of [1440, 900]) {
     await page.setViewportSize({ width, height: 960 });
     await page.goto(`${host}/`, { waitUntil: "networkidle" });
     const layout = await page.evaluate(() => {
       const rect = (element: Element) => element.getBoundingClientRect();
+      const sections = [...document.querySelectorAll(".feed-section")];
+      const texts = [
+        ...document.querySelectorAll(".post-preview-description, .shuoshuo-preview p"),
+      ].map(text => ({
+        bottom: rect(text).bottom,
+        boxBottom: rect(text.parentElement!).bottom,
+        lines: Math.round(rect(text).height / parseFloat(getComputedStyle(text).lineHeight)),
+        clamp: getComputedStyle(text).webkitLineClamp,
+      }));
       return {
-        hero: rect(document.querySelector(".hero-media")!),
-        sections: [...document.querySelectorAll(".feed-section")].map(section => ({
-          top: rect(section).top,
-          bottom: rect(section).bottom,
+        hero: rect(document.querySelector(".hero-media")!).height,
+        sections: sections.map(section => ({
+          height: rect(section).height,
           overflow: section.scrollHeight - section.clientHeight,
-          moreTop: rect(section.querySelector(".section-more")!).top,
-          moreBottom: rect(section.querySelector(".section-more")!).bottom,
-          text: [...section.querySelectorAll(".feed-clip p")].map(text => ({
-            bottom: rect(text).bottom,
-            lines: Math.round(rect(text).height / parseFloat(getComputedStyle(text).lineHeight)),
-            clamp: getComputedStyle(text).webkitLineClamp,
-            clipped: text.scrollHeight > text.clientHeight + 1,
-          }))[0],
         })),
+        texts,
       };
     });
-    const detail = JSON.stringify(layout);
     const [posts, shuoshuo] = layout.sections;
     assert.ok(
-      Math.abs(posts.top - layout.hero.top) < 1 &&
-        Math.abs(posts.bottom - shuoshuo.top) < 1 &&
-        Math.abs(shuoshuo.bottom - layout.hero.bottom) < 1 &&
-        Math.abs(posts.bottom - posts.top - (shuoshuo.bottom - shuoshuo.top)) < 1,
-      `${width}px 下两区应平分主视觉高度：${detail}`,
-    );
-    assert.ok(
-      Math.abs(shuoshuo.moreBottom - layout.hero.bottom) < 1,
-      `${width}px 下说说区底部链接应落在主视觉下沿：${detail}`,
+      Math.abs(posts.height - shuoshuo.height) < 1 &&
+        Math.abs(posts.height + shuoshuo.height - layout.hero) < 1,
+      `${width}px 下两区应平分主视觉高度：${JSON.stringify(layout)}`,
     );
     for (const section of layout.sections) {
-      assert.ok(section.overflow <= 1, `${width}px 下分区内容不得溢出：${detail}`);
-      const { text } = section;
-      // 底部链接的 padding-top 就是截断后的最小间隔，正文只需不进入链接盒。
-      assert.ok(
-        text.bottom <= section.moreTop + 0.5,
-        `${width}px 下正文不得压到底部链接：${detail}`,
-      );
-      // 只有被截断时，可见行数才必须等于截断行数，省略号才落在最后一行。
-      if (text.clipped) {
-        assert.equal(text.clamp, String(text.lines), `${width}px 下截断行数应与可见行数一致`);
-      }
+      assert.ok(section.overflow <= 1, `${width}px 下分区内容不得溢出：${JSON.stringify(layout)}`);
     }
-    assert.ok(
-      shuoshuo.text.lines >= 1 && shuoshuo.text.clipped,
-      `${width}px 下长说说应至少显示一行并被截断`,
-    );
+    const note = layout.texts.at(-1)!;
+    assert.ok(note.lines >= 1, `${width}px 下长说说至少显示一行`);
+    assert.ok(note.bottom <= note.boxBottom + 0.5, `${width}px 下长说说应在便签内截断`);
+    assert.equal(note.clamp, String(note.lines), `${width}px 下截断行数应与可见行数一致`);
   }
 });
 

@@ -26,9 +26,7 @@ function projectShuoshuoBody(id: string, source: string) {
   if (!text && imageCount === 0) throw new Error(`说说 ${id} 没有可见文字或图片`);
 
   const { summary, truncated } = projectSummary(sequence, 80);
-  // 首页说说按可用高度截断，大屏能放下的不止 80 字。
-  const { summary: preview } = projectSummary(sequence, 240);
-  return { summary, preview, collapsible: truncated || imageCount > 0 };
+  return { summary, collapsible: truncated || imageCount > 0 };
 }
 
 export async function getPublishedShuoshuo() {

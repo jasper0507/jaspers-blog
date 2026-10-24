@@ -59,20 +59,17 @@ const shuoshuoCount = publishedShuoshuo.length;
       <section class="feed-section" aria-labelledby="recent-posts">
         <div class="section-heading">
           <h2 id="recent-posts">最近文章</h2>
-          {
-            latestPost && (
-              <time datetime={latestPost.publishedAt.iso}>{latestPost.publishedAt.compact}</time>
-            )
-          }
+          <a href="/archives/">查看全部 ({postCount})</a>
         </div>
         {
           latestPost ? (
-            <article class="feed-item post-preview">
+            <article class="post-preview">
+              <time datetime={latestPost.publishedAt.iso}>{latestPost.publishedAt.compact}</time>
               <h3>
                 <a href={latestPost.href}>{latestPost.title}</a>
               </h3>
               {latestPost.description ? (
-                <div class="feed-clip">
+                <div class="post-preview-summary">
                   <p class="post-preview-description">{latestPost.description}</p>
                 </div>
               ) : null}
@@ -81,55 +78,49 @@ const shuoshuoCount = publishedShuoshuo.length;
             <p class="empty-state">技术文章尚未发布。</p>
           )
         }
-        <a class="section-more" href="/archives/">查看全部 ({postCount})</a>
       </section>
 
       <section class="feed-section" aria-labelledby="recent-shuoshuo">
         <div class="section-heading">
           <h2 id="recent-shuoshuo">最近说说</h2>
-          {
-            latestShuoshuo && (
-              <time datetime={latestShuoshuo.publishedAt.iso}>
-                {latestShuoshuo.publishedAt.compact}
-              </time>
-            )
-          }
+          <a href="/shuoshuo/">查看全部 ({shuoshuoCount})</a>
         </div>
         {
           latestShuoshuo ? (
-            <article class="feed-item" aria-label={latestShuoshuo.label}>
-              <div class="feed-clip">
-                <a class="shuoshuo-preview" href={latestShuoshuo.href}>
-                  <p>{latestShuoshuo.preview}</p>
-                </a>
-              </div>
+            <article aria-label={latestShuoshuo.label}>
+              <a class="shuoshuo-preview" href={latestShuoshuo.href}>
+                <time datetime={latestShuoshuo.publishedAt.iso}>
+                  {latestShuoshuo.publishedAt.compact}
+                </time>
+                <blockquote>
+                  <p>{latestShuoshuo.summary}</p>
+                </blockquote>
+              </a>
             </article>
           ) : (
             <p class="empty-state">暂无说说</p>
           )
         }
-        <a class="section-more" href="/shuoshuo/">查看全部 ({shuoshuoCount})</a>
       </section>
       <script is:inline>
         (() => {
-          // CSS 只能按整行裁剪；按截断区高度设置行数，让截断处出现省略号。
-          const fit = box => {
-            const text = box.querySelector("p");
-            if (!text) return;
+          // CSS 只能按整行裁剪；按剩余高度设置行数，让截断处出现省略号。
+          const texts = document.querySelectorAll(".post-preview-description, .shuoshuo-preview p");
+          const fit = text => {
+            const box = text.parentElement;
             if (getComputedStyle(box).containerType !== "size") {
               text.style.removeProperty("-webkit-line-clamp");
               return;
             }
-            // 与 CSS 的 round(down, 100cqh, 1lh) 取同一行数，省略号才会落在最后一行。
             const lines = Math.floor(
               box.clientHeight / parseFloat(getComputedStyle(text).lineHeight),
             );
             text.style.setProperty("-webkit-line-clamp", String(Math.max(lines, 1)));
           };
           const observer = new ResizeObserver(entries => {
-            for (const entry of entries) fit(entry.target);
+            for (const entry of entries) fit(entry.target.firstElementChild);
           });
-          for (const box of document.querySelectorAll(".feed-clip")) observer.observe(box);
+          for (const text of texts) observer.observe(text.parentElement);
         })();
       </script>
     </div>
@@ -139,7 +130,7 @@ const shuoshuoCount = publishedShuoshuo.length;
 <style>
   /*
    * 双行两栏：行1 caption | 空；行2 图 | 信息流。
-   * 桌面信息流贴合影像上下沿，两区平分高度，放不下的文字按整行截断。
+   * 桌面信息流贴合影像上下沿；文章与说说各占一半固定高度，放不下的文字按整行截断。
    */
   .home-grid {
     display: grid;
@@ -209,44 +200,49 @@ const shuoshuoCount = publishedShuoshuo.length;
     }
   }
 
-  /*
-   * 信息流贴合影像上下沿，两区平分高度，分区线位置固定。
-   * 每区上有区头（标题 + 日期）、下有「查看全部」，内容少时也有完整轮廓；
-   * 正文在两者之间按整行截断，与底部链接保持固定间隔。说说区的底部链接落在影像下沿。
-   * height: 0 避免信息流撑开行高，min-height: 100% 再贴合影像。
-   */
+  /* height: 0 避免信息流撑开行高，min-height: 100% 再贴合影像 */
   .home-feed {
     grid-column: 2;
     grid-row: 2;
     display: grid;
     grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0;
     width: 100%;
     height: 0;
     min-height: 100%;
     min-width: 0;
+    /* 为便签的轻抬和投影留出空间。 */
+    overflow: visible;
   }
 
   .feed-section {
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
     min-width: 0;
     min-height: 0;
-    padding-top: 0.875rem;
+    overflow: hidden;
+    padding-top: 1rem;
+    padding-bottom: 0.35rem;
     border-top: 1px solid color-mix(in srgb, var(--text) 30%, var(--line));
   }
 
-  /* 文章区底部到分区线的留白；说说区贴底，不留。 */
-  .feed-section:first-of-type {
-    padding-bottom: 1.25rem;
+  .feed-section:last-child {
+    overflow: visible;
+    padding-bottom: 0.35rem;
   }
 
   .section-heading {
+    margin-bottom: 0.75rem;
     display: flex;
     flex-shrink: 0;
     align-items: baseline;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 0.5rem;
+  }
+
+  .feed-section:last-child .section-heading {
+    margin-bottom: 0.55rem;
   }
 
   .section-heading h2 {
@@ -256,48 +252,55 @@ const shuoshuoCount = publishedShuoshuo.length;
     letter-spacing: 0.01em;
   }
 
-  .section-heading time {
+  .section-heading a {
     color: var(--muted);
-    font-family: var(--font-sans);
-    font-size: var(--text-meta);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: var(--track-meta);
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    font-size: 0.82rem;
+    letter-spacing: 0.01em;
     white-space: nowrap;
+    text-decoration: none;
   }
 
-  .feed-item {
+  .section-heading a:hover {
+    color: var(--text);
+  }
+
+  .section-heading a:active,
+  .post-preview h3 a:active {
+    transform: translateY(1px);
+  }
+
+  .post-preview {
     display: flex;
     flex: 1 1 0;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.4rem;
     min-width: 0;
     min-height: 0;
   }
 
-  /* 截断区是尺寸容器：高度由区内剩余空间决定，round(down, 100cqh, 1lh) 只保留完整的行。 */
-  .feed-clip {
+  /*
+   * 摘要区与便签正文是尺寸容器：高度由分区剩余空间决定，
+   * 内部文字用 round(down, 100cqh, 1lh) 只保留完整的行，避免露出半行。
+   */
+  .post-preview-summary,
+  .shuoshuo-preview blockquote {
     flex: 1 1 0;
     min-height: 0;
     container-type: size;
   }
 
-  .feed-clip p {
-    margin: 0;
-    display: -webkit-box;
-    max-height: round(down, 100cqh, 1lh);
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    overflow-wrap: anywhere;
+  .feed-section > article:not(.post-preview) {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-height: 0;
   }
 
   .post-preview h3 {
     margin: 0;
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    flex-shrink: 0;
     font-family: var(--font-sans);
     font-size: 1.125rem;
     font-weight: 600;
@@ -308,69 +311,117 @@ const shuoshuoCount = publishedShuoshuo.length;
   }
 
   .post-preview h3 a {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
     text-decoration: none;
   }
 
-  .post-preview-description {
-    color: var(--muted);
-    line-height: 1.65;
-  }
-
-  /* 与文章预览同构的扁平札记，不加卡片、阴影或装饰边线。 */
   .shuoshuo-preview {
-    display: block;
+    --note-shadow: 0 1px 2px var(--shadow-color);
+    --note-shadow-lifted: 1px 5px 10px var(--shadow-color);
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    gap: 0.65rem;
+    min-width: 0;
+    min-height: 0;
+    padding: 0.9rem 1.15rem;
+    border-inline-start: 3px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+    border-radius: 0 0.25rem 0.25rem 0;
+    background: var(--surface);
+    box-shadow: var(--note-shadow);
     color: var(--text);
     text-decoration: none;
+    transform-origin: 1.15rem 0.9rem;
+    transition:
+      border-color var(--duration) var(--ease-out),
+      box-shadow var(--duration) var(--ease-out),
+      transform 280ms var(--ease-out);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .shuoshuo-preview:hover {
+      border-inline-start-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+      box-shadow: var(--note-shadow-lifted);
+    }
+  }
+
+  .shuoshuo-preview:focus-visible {
+    outline-offset: -3px;
+    box-shadow: var(--note-shadow-lifted);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @media (hover: hover) and (pointer: fine) {
+      .shuoshuo-preview:hover {
+        transform: translateY(-2px) rotate(-0.35deg);
+      }
+    }
+
+    .shuoshuo-preview:focus-visible {
+      transform: translateY(-2px);
+    }
+  }
+
+  .shuoshuo-preview:active {
+    transform: none;
+    box-shadow: var(--note-shadow);
+    transition-duration: 100ms;
+  }
+
+  .shuoshuo-preview blockquote,
+  .shuoshuo-preview p {
+    margin: 0;
   }
 
   .shuoshuo-preview p {
     font-family: var(--font-sans);
-    font-size: 1.0625rem;
+    display: -webkit-box;
+    max-height: round(down, 100cqh, 1lh);
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    font-size: 1rem;
     font-weight: 400;
-    line-height: 1.7;
-    transition: color var(--duration) var(--ease-out);
+    line-height: 1.75;
+    overflow-wrap: anywhere;
   }
 
-  .shuoshuo-preview:hover p {
-    color: var(--accent);
+  .post-preview-summary {
+    margin-top: 0.45rem;
   }
 
-  /* margin-top: auto 把链接压到区底；padding-top 是正文截断后的最小间隔。 */
-  .section-more {
-    flex-shrink: 0;
-    align-self: flex-start;
-    margin-top: auto;
-    padding-top: 0.75rem;
+  .post-preview-description {
+    margin: 0;
     color: var(--muted);
-    font-size: 0.82rem;
-    letter-spacing: 0.01em;
-    line-height: 1.5;
-    white-space: nowrap;
-    text-decoration: none;
+    overflow-wrap: anywhere;
+    max-height: round(down, 100cqh, 1lh);
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    line-height: 1.65;
   }
 
-  .section-more:hover {
-    color: var(--text);
+  .post-preview time,
+  .shuoshuo-preview time {
+    color: var(--muted);
+    font-family: var(--font-sans);
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--track-meta);
   }
 
-  .section-more:active,
-  .post-preview h3 a:active,
-  .shuoshuo-preview:active {
-    transform: translateY(1px);
-  }
-
-  /* 窄桌面信息流只有约 20rem 高，收紧留白，至少留出一行说说。 */
+  /* 窄桌面信息流只有约 20rem 高，收紧便签留白，至少留出一行说说。 */
   @media (max-width: 64rem) {
     .feed-section {
       padding-top: 0.75rem;
     }
 
-    .feed-section:first-of-type {
-      padding-bottom: 1rem;
-    }
-
-    .section-more {
-      padding-top: 0.5rem;
+    .shuoshuo-preview {
+      gap: 0.35rem;
+      padding-block: 0.55rem;
     }
   }
 
@@ -395,10 +446,12 @@ const shuoshuoCount = publishedShuoshuo.length;
 
     .home-feed {
       order: 2;
+      display: grid;
       grid-template-rows: none;
-      gap: 1.5rem;
+      gap: 2rem;
       height: auto;
       min-height: 0;
+      overflow: visible;
     }
 
     .hero-media {
@@ -410,46 +463,37 @@ const shuoshuoCount = publishedShuoshuo.length;
       order: 2;
     }
 
-    .feed-section,
-    .feed-section:first-of-type {
-      display: block;
-      padding-block: 1rem 0;
-    }
-
-    .feed-item,
-    .feed-clip {
-      display: block;
+    .post-preview,
+    .post-preview-summary,
+    .feed-section > article:not(.post-preview),
+    .shuoshuo-preview,
+    .shuoshuo-preview blockquote {
       flex: none;
       container-type: normal;
     }
 
-    .feed-clip p {
+    .post-preview-description,
+    .shuoshuo-preview p {
       max-height: none;
-      -webkit-line-clamp: 3;
-      line-clamp: 3;
+    }
+
+    .feed-section,
+    .feed-section:last-child {
+      display: block;
+      overflow: visible;
+      padding-top: 1.25rem;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .section-heading,
+    .feed-section:last-child .section-heading {
+      margin-bottom: 1.25rem;
     }
 
     .post-preview-description {
-      margin-top: 0.35rem;
-    }
-
-    .post-preview .feed-clip p {
       -webkit-line-clamp: 2;
       line-clamp: 2;
-    }
-
-    /* 单栏多为触屏，链接保留 2.75rem 触控高度。 */
-    .section-more,
-    .post-preview h3 a,
-    .shuoshuo-preview {
-      display: flex;
-      align-items: center;
-      min-height: 2.75rem;
-    }
-
-    .section-more {
-      width: fit-content;
-      padding-top: 0;
     }
   }
 </style>
