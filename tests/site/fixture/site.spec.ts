@@ -414,7 +414,7 @@ test("说说和移动端基本可用", async ({ page }) => {
         page.locator(".hero-media").boundingBox(),
         page.locator(".site-header").boundingBox(),
         page.locator("#theme-toggle").boundingBox(),
-        page.locator(".section-heading a").first().boundingBox(),
+        page.locator(".section-more").first().boundingBox(),
         page.locator(".post-preview h3 a").boundingBox(),
         page.locator("a.shuoshuo-preview").boundingBox(),
       ]);
@@ -441,47 +441,59 @@ test("说说和移动端基本可用", async ({ page }) => {
   }
 });
 
-test("首页说说末行对齐主视觉下沿，两区保持最小间隔并截断长说说", async ({ page }) => {
-  for (const [width, minGap] of [
-    [1440, 28],
-    [900, 20],
-  ] as const) {
+test("首页两区平分主视觉高度，分区线固定，正文在区头与底部链接之间按整行截断", async ({ page }) => {
+  for (const width of [1440, 900]) {
     await page.setViewportSize({ width, height: 960 });
     await page.goto(`${host}/`, { waitUntil: "networkidle" });
     const layout = await page.evaluate(() => {
-      const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
-      const section = rect(".feed-shuoshuo");
-      const note = document.querySelector(".shuoshuo-preview p")!;
-      const lineHeight = parseFloat(getComputedStyle(note).lineHeight);
+      const rect = (element: Element) => element.getBoundingClientRect();
       return {
-        hero: rect(".hero-media"),
-        feed: rect(".home-feed"),
-        postsBottom: rect(".post-preview").bottom,
-        sectionTop: section.top,
-        headingTop: rect(".feed-shuoshuo .section-heading").top,
-        noteBottom: note.getBoundingClientRect().bottom,
-        lines: Math.round(note.getBoundingClientRect().height / lineHeight),
-        clamp: getComputedStyle(note).webkitLineClamp,
-        clipped: note.scrollHeight > note.clientHeight + 1,
+        hero: rect(document.querySelector(".hero-media")!),
+        sections: [...document.querySelectorAll(".feed-section")].map(section => ({
+          top: rect(section).top,
+          bottom: rect(section).bottom,
+          overflow: section.scrollHeight - section.clientHeight,
+          moreTop: rect(section.querySelector(".section-more")!).top,
+          moreBottom: rect(section.querySelector(".section-more")!).bottom,
+          text: [...section.querySelectorAll(".feed-clip p")].map(text => ({
+            bottom: rect(text).bottom,
+            lines: Math.round(rect(text).height / parseFloat(getComputedStyle(text).lineHeight)),
+            clamp: getComputedStyle(text).webkitLineClamp,
+            clipped: text.scrollHeight > text.clientHeight + 1,
+          }))[0],
+        })),
       };
     });
     const detail = JSON.stringify(layout);
+    const [posts, shuoshuo] = layout.sections;
     assert.ok(
-      Math.abs(layout.feed.top - layout.hero.top) < 1 &&
-        Math.abs(layout.feed.bottom - layout.hero.bottom) < 1,
-      `${width}px 下信息流应贴合主视觉上下沿：${detail}`,
+      Math.abs(posts.top - layout.hero.top) < 1 &&
+        Math.abs(posts.bottom - shuoshuo.top) < 1 &&
+        Math.abs(shuoshuo.bottom - layout.hero.bottom) < 1 &&
+        Math.abs(posts.bottom - posts.top - (shuoshuo.bottom - shuoshuo.top)) < 1,
+      `${width}px 下两区应平分主视觉高度：${detail}`,
     );
     assert.ok(
-      Math.abs(layout.noteBottom - layout.hero.bottom) < 1,
-      `${width}px 下说说末行应落在主视觉下沿：${detail}`,
+      Math.abs(shuoshuo.moreBottom - layout.hero.bottom) < 1,
+      `${width}px 下说说区底部链接应落在主视觉下沿：${detail}`,
     );
+    for (const section of layout.sections) {
+      assert.ok(section.overflow <= 1, `${width}px 下分区内容不得溢出：${detail}`);
+      const { text } = section;
+      // 底部链接的 padding-top 就是截断后的最小间隔，正文只需不进入链接盒。
+      assert.ok(
+        text.bottom <= section.moreTop + 0.5,
+        `${width}px 下正文不得压到底部链接：${detail}`,
+      );
+      // 只有被截断时，可见行数才必须等于截断行数，省略号才落在最后一行。
+      if (text.clipped) {
+        assert.equal(text.clamp, String(text.lines), `${width}px 下截断行数应与可见行数一致`);
+      }
+    }
     assert.ok(
-      layout.headingTop >= layout.sectionTop + minGap - 0.5 &&
-        layout.headingTop - layout.postsBottom >= minGap - 0.5,
-      `${width}px 下两区间隔不得小于 ${minGap}px：${detail}`,
+      shuoshuo.text.lines >= 1 && shuoshuo.text.clipped,
+      `${width}px 下长说说应至少显示一行并被截断`,
     );
-    assert.ok(layout.lines >= 1 && layout.clipped, `${width}px 下长说说应至少显示一行并被截断`);
-    assert.equal(layout.clamp, String(layout.lines), `${width}px 下截断行数应与可见行数一致`);
   }
 });
 
